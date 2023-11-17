@@ -97,16 +97,6 @@ export default function Map({ navigation }) {
     }, []);
 
     function loadMap() {
-        const test = () => {
-            console.log('================================================================================================');
-            state.coordinates.map((marker) => {
-                console.log(marker.name);
-                console.log(marker.latitude);
-                console.log(marker.longitude);
-                console.log(marker.image);
-            })
-        }
-
         const reload = () => {
             setState({ coordinates: [] });
             userUploads.map((pin) => {
@@ -127,7 +117,6 @@ export default function Map({ navigation }) {
                     console.log(e);
                 }
             })
-            test();
         }
 
         const quickRoute = () => {
