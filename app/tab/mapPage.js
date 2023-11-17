@@ -33,39 +33,6 @@ export default function Map({ navigation }) {
     const [currentLat, setCurrentLat] = useState(null);
     const [currentLon, setCurrentLon] = useState(null);
 
-    // =============================================================================================================================================================================================
-    useEffect(() => {
-        if(!isFocused) {
-            setOpenSideBar();
-        }
-    });
-
-    function SideNavigation(navigation) {
-        return (
-            <>
-                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
-                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
-                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                    </TouchableOpacity>
-                    {SideBar(navigation)}
-                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
-                </View>
-            </>
-        );
-    }
-
-    const moveCameraTo = (latitude, longitude) => {
-        const region = {
-            latitude,
-            longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.02,
-        };
-      
-        mapRef.current.animateToRegion(region, 1000);
-    }
-    // =============================================================================================================================================================================================
-
     useEffect(() => {
         reportRef.onSnapshot(
             querySnapshot => {
@@ -94,112 +61,124 @@ export default function Map({ navigation }) {
                         })
                     })
                 })
-            }
-        )
-    }, []);
-
-    function loadMap() {
-        const test = () => {
-            console.log('================================================================================================');
-            state.coordinates.map((marker) => {
-                console.log(marker.name);
-                console.log(marker.latitude);
-                console.log(marker.longitude);
-                console.log(marker.image);
-            })
-        }
-
-        const reload = () => {
-            setState({ coordinates: [] });
-            userUploads.map((pin) => {
-                let imageURL;
-                imageCol.map((url) => {
-                    if(url.includes(pin.associatedImage)) {
-                        imageURL = url;
+                
+                setState({ coordinates: [] });
+                userUploads.map((pin) => {
+                    let imageURL;
+                    imageCol.map((url) => {
+                        if(url.includes(pin.associatedImage)) {
+                            imageURL = url;
+                        }
+                    })
+                    try {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    } catch (e) {
+                        console.log(e);
                     }
                 })
-                try {
-                    const lat = parseFloat(pin.latitude);
-                    const long = parseFloat(pin.longitude);
-                    setState((prevState) => ({
-                        ...prevState,
-                        coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
-                    }));
-                } catch (e) {
-                    console.log(e);
-                }
-            })
-            test();
-        }
+            }
+        )
+    },[]);
+    
+    const reload = async () => {
+        reportRef.onSnapshot(
+            querySnapshot => {
+                const uploads = []
+                querySnapshot.forEach((doc) => {
+                    const {associatedImage, dateTime, description, location, status, userId, longitude, latitude} = doc.data();
+                    uploads.push({
+                        id: doc.id,
+                        associatedImage,
+                        dateTime,
+                        description,
+                        location,
+                        status,
+                        userId,
+                        longitude,
+                        latitude
+                    })
+                })
+                setUserUploads(uploads)
 
-        const quickRoute = () => {
-            (async() => {
-                let {status} = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') {
-                    setErrorMsg('Permission to access location was denied');
-                    return;
-                }
-                let currentLocation = await Location.getCurrentPositionAsync({});
-                setCurrentLat(currentLocation.coords.latitude);
-                setCurrentLon(currentLocation.coords.longitude);
-            })();
-        }
+                listAll(imageColRef).then((response) => {
+                    setImageCol([]);
+                    response.items.forEach((item) => {
+                        getDownloadURL(item).then((url) => {
+                            setImageCol((prev) => [...prev, url])
+                        })
+                    })
+                })
+                
+                setState({ coordinates: [] });
+                userUploads.map((pin) => {
+                    let imageURL;
+                    imageCol.map((url) => {
+                        if(url.includes(pin.associatedImage)) {
+                            imageURL = url;
+                        }
+                    })
+                    try {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    } catch (e) {
+                        console.log(e);
+                    }
+                })
+            }
+        )
+    }
 
+    const moveCameraTo = (latitude, longitude) => {
+        const region = {
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.02,
+        };
+      
+        mapRef.current.animateToRegion(region, 1000);
+    }
+
+    useEffect(() => {
+        if(!isFocused) {
+            setOpenSideBar();
+        }
+    });
+
+    function SideNavigation(navigation) {
         return (
             <>
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
-                    <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
-                </TouchableOpacity>
-                <MapView
-                    ref={mapRef}
-                    style={{width: '100%', height: '100%'}}
-                    provider={PROVIDER_GOOGLE}
-                    initialRegion={{
-                        latitude: 10.3156992,
-                        longitude: 123.88543660000005,
-                        latitudeDelta: 0.0922,
-                        longitudeDelta: 0.0421,
-                    }}
-                >
-                    {state.coordinates.map(marker => (
-                        <Marker
-                            key={marker.name}
-                            coordinate={{
-                                latitude: parseFloat(marker.latitude),
-                                longitude: parseFloat(marker.longitude)
-                            }}
-                            title='My Location'
-                            onCalloutPress={() => {quickRoute(); console.log(marker.latitude); console.log(marker.longitude);}}
-                            style={{zIndex: 100}}
-                        >
-                            <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
-                            <Callout>
-                                <View style={{width: 80, height: 80}}>
-                                    <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
-                                        <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
-                                    </Text>
-                                </View>
-                            </Callout>
-                        </Marker>
-                    ))}
-
-                    {currentLat !== null && currentLon !== null ? 
-                        <Marker
-                            key={"My Location"}
-                            coordinate={{
-                                latitude: parseFloat(currentLat),
-                                longitude: parseFloat(currentLon)
-                            }}
-                        >
-                            <Ionicons name='location' style={{fontSize: 35, color: '#D31111'}} />
-                            <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
-                        </Marker>
-                        :
-                        <></>
-                    }
-                </MapView>
+                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
+                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
+                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+                    </TouchableOpacity>
+                    {SideBar(navigation)}
+                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
+                </View>
             </>
         );
+    }
+
+    const quickRoute = () => {
+        (async() => {
+            let {status} = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+            let currentLocation = await Location.getCurrentPositionAsync({});
+            setCurrentLat(currentLocation.coords.latitude);
+            setCurrentLon(currentLocation.coords.longitude);
+        })();
     }
 
     return (
@@ -251,6 +230,16 @@ export default function Map({ navigation }) {
                     />
                 </View>
             </View>
+            <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 90, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                        <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
+            </TouchableOpacity>
+            {/* <View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
+                <TouchableOpacity activeOpacity={0.5}>
+                    <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                        <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
+                    </View>
+                </TouchableOpacity>
+            </View> */}
             {openSideBar}
 
             <View>
@@ -269,7 +258,53 @@ export default function Map({ navigation }) {
                     }}
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
-                    {loadMap()}
+                    <MapView
+                        ref={mapRef}
+                        style={{width: '100%', height: '100%'}}
+                        provider={PROVIDER_GOOGLE}
+                        initialRegion={{
+                            latitude: 10.3156992,
+                            longitude: 123.88543660000005,
+                            latitudeDelta: 0.0922,
+                            longitudeDelta: 0.0421,
+                        }}
+                    >
+                        {state.coordinates.map(marker => (
+                            <Marker
+                                key={marker.name}
+                                coordinate={{
+                                    latitude: parseFloat(marker.latitude),
+                                    longitude: parseFloat(marker.longitude)
+                                }}
+                                title='My Location'
+                                onCalloutPress={() => {quickRoute();}}
+                            >
+                                <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
+                                <Callout>
+                                    <View style={{width: 80, height: 80}}>
+                                        <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                            <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                        </Text>
+                                    </View>
+                                </Callout>
+                            </Marker>
+                        ))}
+
+                        {currentLat !== null && currentLon !== null ? 
+                            <Marker
+                                key={"My Location"}
+                                coordinate={{
+                                    latitude: parseFloat(currentLat),
+                                    longitude: parseFloat(currentLon)
+                                }}
+                            >
+                                <Ionicons name='location' style={{fontSize: 35, color: '#D31111'}} />
+                                <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
+                            </Marker>
+                            :
+                            <></>
+                        }
+                    </MapView>
                 </View>
 
             </View>
