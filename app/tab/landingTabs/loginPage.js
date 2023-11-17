@@ -2,9 +2,10 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView } from 
 import { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-import { db, auth } from '../../../firebase_config';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+// Start Here
+import { db, auth, storage, firebase } from '../../../firebase_config';
+import { collection, addDoc, getDocs, query } from 'firebase/firestore';
+import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function Login({navigation}) {
@@ -13,132 +14,162 @@ export default function Login({navigation}) {
     const [users, setUsers] = useState([]);
 
     const usersCollection = collection(db, "users");
+    const reportRef = firebase.firestore().collection("users");
 
     useEffect(() => {
-        const getUsers = async () => {
-            const data = await getDocs(usersCollection);
-
-            setUsers(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })))
-        };
-        getUsers();
+        // const getUsers = async () => {
+        //     const data = await getDocs(usersCollection);
+        //     setUsers(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+        // };
+        // getUsers();
+        reportRef.onSnapshot(
+            querySnapshot => {
+                const uploads = []
+                querySnapshot.forEach((doc) => {
+                    const {accountType, username, firstName, lastName, province, municipality, barangay, email, contactNo, plateNo} = doc.data();
+                    uploads.push({
+                        id: doc.id,
+                        accountType,
+                        username,
+                        firstName,
+                        lastName,
+                        province,
+                        municipality,
+                        barangay,
+                        email,
+                        contactNo,
+                        plateNo
+                    })
+                })
+                setUsers(uploads)
+            }
+        )
     }, [])
 
-    const loginUser = async () => {
-        let email;
-        let usernameUsed = false;
-
-        let accountId;
-        let accountType;
-        let firstName;
-        let lastName;
-        let username;
-        let province;
-        let municipality;
-        let barangay;
-        let contactNo;
-        let plateNo;
-        
-        users.map((user) => {
-            if(user.username === usernameEmail) {
-                usernameUsed = true;
-            }
-        })
-
-        if(usernameUsed) {
+    function SignIn() {
+        const loginUser = async () => {
+            let email;
+            let usernameUsed = false;
+    
+            let accountId;
+            let accountType;
+            let firstName;
+            let lastName;
+            let username;
+            let province;
+            let municipality;
+            let barangay;
+            let contactNo;
+            let plateNo;
+            
             users.map((user) => {
                 if(user.username === usernameEmail) {
-                    email = user.email;
-
-                    accountId = user.id;
-                    accountType = user.accountType;
-                    firstName = user.firstName;
-                    lastName = user.lastName;
-                    username = user.username;
-                    province = user.province;
-                    municipality = user.municipality;
-                    barangay = user.barangay;
-                    contactNo = user.contactNo;
-                    if(user.plateNo !== undefined)
-                        plateNo = user.plateNo;
-                    else
-                        plateNo = 'N/A';
+                    usernameUsed = true;
                 }
             })
-        } else if(!usernameUsed) {
-            email = usernameEmail;
+    
+            if(usernameUsed) {
+                users.map((user) => {
+                    if(user.username === usernameEmail) {
+                        email = user.email;
+    
+                        accountId = user.id;
+                        accountType = user.accountType;
+                        firstName = user.firstName;
+                        lastName = user.lastName;
+                        username = user.username;
+                        province = user.province;
+                        municipality = user.municipality;
+                        barangay = user.barangay;
+                        contactNo = user.contactNo;
+                        if(user.plateNo !== undefined)
+                            plateNo = user.plateNo;
+                        else
+                            plateNo = 'N/A';
+                    }
+                })
+            } else if(!usernameUsed) {
+                email = usernameEmail;
+                users.map((user) => {
+                    if(user.email === email) {
+                        accountId = user.id;
+                        accountType = user.accountType;
+                        firstName = user.firstName;
+                        lastName = user.lastName;
+                        username = user.username;
+                        province = user.province;
+                        municipality = user.municipality;
+                        barangay = user.barangay;
+                        contactNo = user.contactNo;
+                        if(user.plateNo !== undefined)
+                            plateNo = user.plateNo;
+                        else
+                            plateNo = 'N/A';
+                    }
+                })
+            }
+    
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                await AsyncStorage.clear();
+                await AsyncStorage.setItem('userId', accountId);
+                await AsyncStorage.setItem('userType', accountType);
+                await AsyncStorage.setItem('userFName', firstName);
+                await AsyncStorage.setItem('userLName', lastName);
+                await AsyncStorage.setItem('userUName', username);
+                await AsyncStorage.setItem('userEmail', email);
+                await AsyncStorage.setItem('userProvince', province);
+                await AsyncStorage.setItem('userMunicipality', municipality);
+                await AsyncStorage.setItem('userBarangay', barangay);
+                await AsyncStorage.setItem('userContact', contactNo);
+                await AsyncStorage.setItem('userPlateNo', plateNo);
+                
+                console.log(
+                    await AsyncStorage.getItem('userId') + ", " +
+                    await AsyncStorage.getItem('userType') + ", " +
+                    await AsyncStorage.getItem('userFName') + ", " +
+                    await AsyncStorage.getItem('userLName') + ", " +
+                    await AsyncStorage.getItem('userUName') + ", " +
+                    await AsyncStorage.getItem('userEmail') + ", " +
+                    await AsyncStorage.getItem('userProvince') + ", " +
+                    await AsyncStorage.getItem('userMunicipality') + ", " +
+                    await AsyncStorage.getItem('userBarangay') + ", " +
+                    await AsyncStorage.getItem('userContact') + ", and " +
+                    await AsyncStorage.getItem('userPlateNo')
+                );
+    
+                Redirect(email);
+            } catch(error) {
+                alert(error.message);
+            }
+        }
+        loginUser();
+    
+        function Redirect(email) {
+            let navTo;
+            
             users.map((user) => {
                 if(user.email === email) {
-                    accountId = user.id;
-                    accountType = user.accountType;
-                    firstName = user.firstName;
-                    lastName = user.lastName;
-                    username = user.username;
-                    province = user.province;
-                    municipality = user.municipality;
-                    barangay = user.barangay;
-                    contactNo = user.contactNo;
-                    if(user.plateNo !== undefined)
-                        plateNo = user.plateNo;
-                    else
-                        plateNo = 'N/A';
+                    navTo = user.accountType;
                 }
             })
-        }
-
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            await AsyncStorage.clear();
-            await AsyncStorage.setItem('userId', accountId);
-            await AsyncStorage.setItem('userType', accountType);
-            await AsyncStorage.setItem('userFName', firstName);
-            await AsyncStorage.setItem('userLName', lastName);
-            await AsyncStorage.setItem('userUName', username);
-            await AsyncStorage.setItem('userEmail', email);
-            await AsyncStorage.setItem('userProvince', province);
-            await AsyncStorage.setItem('userMunicipality', municipality);
-            await AsyncStorage.setItem('userBarangay', barangay);
-            await AsyncStorage.setItem('userContact', contactNo);
-            await AsyncStorage.setItem('userPlateNo', plateNo);
+    
+            clearForm();
             
-            console.log(
-                await AsyncStorage.getItem('userId') + ", " +
-                await AsyncStorage.getItem('userType') + ", " +
-                await AsyncStorage.getItem('userFName') + ", " +
-                await AsyncStorage.getItem('userLName') + ", " +
-                await AsyncStorage.getItem('userUName') + ", " +
-                await AsyncStorage.getItem('userEmail') + ", " +
-                await AsyncStorage.getItem('userProvince') + ", " +
-                await AsyncStorage.getItem('userMunicipality') + ", " +
-                await AsyncStorage.getItem('userBarangay') + ", " +
-                await AsyncStorage.getItem('userContact') + ", and " +
-                await AsyncStorage.getItem('userPlateNo')
-            );
-
-            Redirect(email);
-        } catch(error) {
-            alert(error.message);
-        }
-    }
-
-    function Redirect(email) {
-        let navTo;
-        
-        users.map((user) => {
-            if(user.email === email) {
-                navTo = user.accountType;
+            if (navTo === 'Residents / General Users') {
+                navigation.navigate('userRoute');
             }
-        })
-
-        clearForm();
-        
-        if (navTo === 'Residents / General Users') {
-            navigation.navigate('userRoute');
+            if (navTo === 'LGU / Waste Management Head') {
+                navigation.navigate('authorityRoute');
+            }
+            if (navTo === 'Garbage Collector') {
+                navigation.navigate('collectorRoute');
+            }
         }
-        if (navTo === 'LGU / Waste Management Head') {
-            navigation.navigate('authorityRoute');
-        }
-        if (navTo === 'Garbage Collector') {
-            navigation.navigate('collectorRoute');
+    
+        function clearForm() {
+            setUsernameEmail("");
+            setPassword("");
         }
     }
 
@@ -189,7 +220,7 @@ export default function Login({navigation}) {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.button1}>
-                        <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5} onPress={() => { loginUser() }}>
+                        <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5} onPress={() => { SignIn() }}>
                             <Text style={styles.buttonTxt1}>
                                 Sign in
                             </Text>
