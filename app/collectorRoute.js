@@ -6,7 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import NewsfeedCol from './tab/homePageC';
 import ReportCol from './tab/reportPageC';
 import Map from './tab/mapPage';
-import ScheduleCol from './tab/schedPageC';
+import SchedColLayout from './tab/schedRouteCol';
 import Message from './tab/messagePage';
 import NotificationsCol from './tab/notifPageC';
 import Profile from './tab/profilePage';
@@ -67,7 +67,7 @@ export default function CollectorLayout() {
             <Tab.Screen name='home' component={NewsfeedCol} options={{headerShown: false}} />
             <Tab.Screen name='report' component={ReportCol} options={{ headerShown: false }} />
             <Tab.Screen name='map' component={Map} options={{ headerShown: false }} />
-            <Tab.Screen name='schedule' component={ScheduleCol} options={{ headerShown: false }} />
+            <Tab.Screen name='schedule' component={SchedColLayout} options={{ headerShown: false }} />
             <Tab.Screen name='message' component={Message} options={{ headerShown: false }} />
             <Tab.Screen name='notification' component={NotificationsCol} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
             <Tab.Screen name='profile' component={Profile} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' }  }} />

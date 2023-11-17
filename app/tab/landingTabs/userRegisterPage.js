@@ -6,7 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { db, auth } from '../../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 export default function Registration1({ navigation }) {
     const [agree, setAgree] = useState(false);
@@ -58,18 +58,7 @@ export default function Registration1({ navigation }) {
             contactNo: contactNo
         });
         await AsyncStorage.clear();
-        await AsyncStorage.setItem('userId', account.id);
-        await AsyncStorage.setItem('userType', accountType);
-        await AsyncStorage.setItem('userFName', firstName);
-        await AsyncStorage.setItem('userLName', lastName);
-        await AsyncStorage.setItem('userUName', username);
-        await AsyncStorage.setItem('userEmail', email);
-        await AsyncStorage.setItem('userProvince', province);
-        await AsyncStorage.setItem('userMunicipality', municipality);
-        await AsyncStorage.setItem('userBarangay', barangay);
-        await AsyncStorage.setItem('userContact', contactNo);
-        await AsyncStorage.setItem('userPlateNo', 'N/A');
-
+        await signOut(auth);
         clearForm();
         Redirect();
     };
@@ -82,7 +71,8 @@ export default function Registration1({ navigation }) {
     }
 
     function Redirect() {
-        navigation.navigate('userRoute');
+        alert('Account Created.');
+        navigation.navigate('login');
     }
 
     return (

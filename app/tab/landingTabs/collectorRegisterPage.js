@@ -1,25 +1,31 @@
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView } from "react-native";
-import { useState } from "react";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Image } from "react-native";
+import { useState, useEffect } from "react";
 import CheckBox from '../../../components/CheckBox';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import uuid from 'react-native-uuid';
 
-import { db, auth } from '../../../firebase_config';
+import { db, auth, storage } from '../../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 
-export default function Registration2({ navigation }) {
+import * as ImagePicker from 'expo-image-picker';
+
+export default function Registration3({ navigation }) {
     const [agree, setAgree] = useState(false);
     const [province, setProvince] = useState("");
     const [municipality, setMunicipality] = useState("");
     const [barangay, setBarangay] = useState("");
     const [contactNo, setContactNo] = useState("");
     const [plateNo, setPlateNo] = useState("");
+    const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
+    const [image, setImage] = useState(null);
     
-    const usersCollection = collection(db, "users");
+    const usersCollection = collection(db, "pendingUsers");
 
     const retrieveData = async () => {
-        if ((province && municipality && barangay && contactNo) && (province.length > 0 && municipality.length > 0 && barangay.length > 0 && contactNo.length > 0)) {
+        if ((province && municipality && barangay && contactNo) && (province.length > 0 && municipality.length > 0 && barangay.length > 0 && contactNo.length > 0) && (image !== null)) {
             try {
                 const accountType = await AsyncStorage.getItem('accountType');
                 const firstName = await AsyncStorage.getItem('accountFName');
@@ -28,7 +34,7 @@ export default function Registration2({ navigation }) {
                 const email = await AsyncStorage.getItem('accountEmail');
                 const password = await AsyncStorage.getItem('accountPass');
                 AsyncStorage.flushGetRequests();
-                registerUser(accountType, firstName, lastName, username, email, password);
+                createUser(accountType, firstName, lastName, username, email, password);
             } catch (error) {
                 alert(error.message);
             }   
@@ -37,40 +43,35 @@ export default function Registration2({ navigation }) {
         }
     }
     
-    const registerUser = async (accountType, firstName, lastName, username, email, password) => {
-        try {
-            await createUserWithEmailAndPassword(auth, email, password);
-            createUser(accountType, firstName, lastName, username, email);
-        } catch(error) {
-            alert(error.message);
-        }
-    };
-    
-    const createUser = async (accountType, firstName, lastName, username, email) => {
+    const createUser = async (accountType, firstName, lastName, username, email, password) => {
+        const imageURI = image.uri;
+        const imageName = imageURI.substring(imageURI.lastIndexOf('/') + 1);
+        const finalImageName = uuid.v1() + imageName;
+        const imageDestination = 'userWorkID/' + finalImageName;
+        
+        const response = await fetch(imageURI);
+        const blob = await response.blob();
+        const imageRef = ref(storage, imageDestination);
+        uploadBytes(imageRef, blob).then(() => {
+            console.log("Image Uploaded");
+        });
+
         const account = await addDoc(usersCollection, {
             accountType: accountType,
             firstName: firstName,
             lastName: lastName,
             username: username,
             email: email,
+            password: password,
             province: province,
             municipality: municipality,
             barangay: barangay,
             contactNo: contactNo,
+            associatedImage: finalImageName,
             plateNo: plateNo
         });
         await AsyncStorage.clear();
-        await AsyncStorage.setItem('userId', account.id);
-        await AsyncStorage.setItem('userType', accountType);
-        await AsyncStorage.setItem('userFName', firstName);
-        await AsyncStorage.setItem('userLName', lastName);
-        await AsyncStorage.setItem('userUName', username);
-        await AsyncStorage.setItem('userEmail', email);
-        await AsyncStorage.setItem('userProvince', province);
-        await AsyncStorage.setItem('userMunicipality', municipality);
-        await AsyncStorage.setItem('userBarangay', barangay);
-        await AsyncStorage.setItem('userContact', contactNo);
-        await AsyncStorage.setItem('userPlateNo', plateNo);
+        setImage(null);
         clearForm();
         Redirect();
     };
@@ -84,14 +85,33 @@ export default function Registration2({ navigation }) {
     }
 
     function Redirect() {
-        navigation.navigate('collectorRoute');
+        alert('Account details submitted. Pending ID verification.');
+        navigation.navigate('landing');
+    }
+
+    useEffect(() => {
+        (async () => {
+            const galleryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            setHasGalleryPermission(galleryStatus.status === 'granted');
+        })();
+    }, [])
+    
+    const pickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 1
+            });
+            console.log(result.assets[0]);
+            setImage(result.assets[0]);
+        } catch(e) {}
     }
 
     return (
         <ScrollView contentContainerStyle={{flexGrow:1}}>
             <View style={styles.container}>
                 <View style={{position: 'absolute',width: '100%', alignItems: 'flex-start', top: 30, left: 20}}>
-                    <TouchableOpacity onPress={() => {clearForm(); navigation.navigate('register')}}>
+                    <TouchableOpacity onPress={() => {clearForm(); navigation.navigate('register'); setImage(null)}}>
                         <Ionicons name='arrow-back' style={{fontSize: 40, color: 'rgba(16, 139, 0, 1)'}} />
                     </TouchableOpacity>
                 </View>
@@ -127,6 +147,29 @@ export default function Registration2({ navigation }) {
                         placeholder="Plate Number"
                         onChangeText={(e) => {setPlateNo(e)}}
                     />
+                    {!image ?
+                        <View style={{marginTop: 10}}>
+                            <Text style={{paddingLeft: 10, color: 'rgba(45, 105, 35, 1)', fontSize: 13, fontWeight: 700}}>JOB ID PHOTO</Text>
+                            <TouchableOpacity activeOpacity={0.5} onPress={pickImage} style={{height: 200, width: 280, backgroundColor: '#EEF1ED', borderRadius: 20, justifyContent: 'center', alignItems: 'center'}}>
+                                <View style={{height: 150, width: 230, borderStyle: "dashed", borderWidth: 2, borderRadius: 20, borderColor: '#8E928C', justifyContent: 'center', alignItems: 'center'}}>
+                                    <Ionicons name='image' style={{fontSize: 100, color: '#8E928C'}} />
+                                    <Text style={{fontSize: 11, fontWeight: 700, color: '#8E928C'}}>Select Photo of ID from Gallery</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                        :
+                        <View style={{marginTop: 10}}>
+                            <Text style={{paddingLeft: 10, color: 'rgba(45, 105, 35, 1)', fontSize: 13, fontWeight: 700}}>JOB ID PHOTO</Text>
+                            <View style={{height: 200, width: 280, backgroundColor: '#EEF1ED', borderRadius: 20, justifyContent: 'center', alignItems: 'center', padding: 5}}>
+                                <TouchableOpacity activeOpacity={0.5} onPress={() => {setImage(null)}} style={{position: 'absolute', height: 20, width: 20, backgroundColor: 'white', borderRadius: 100, justifyContent: 'center', alignItems: 'center', zIndex: 100, top: 15, right: 15}}>
+                                    <Ionicons name='close-circle' style={{fontSize: 20, left: 0.6, bottom: 0.6}} />
+                                </TouchableOpacity>
+                                <View style={{height: '100%', width: '100%'}}>
+                                    <Image source={{uri: image.uri}} style={{flex: 1, resizeMode: 'cover', height: 1, borderRadius: 15}} />
+                                </View>
+                            </View>
+                        </View>
+                    }
                 </View>
                 <View style={styles.containerChkbx}>
                     <CheckBox
@@ -161,7 +204,7 @@ export default function Registration2({ navigation }) {
         </ScrollView>
     );
 }
-
+// Start Here
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -171,24 +214,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     containerBtn: {
-        top: 210,
+        marginTop: 30,
         gap: 10,
+        marginBottom: 30
     },
     containerFrm: {
         justifyContent: 'center',
         alignItems: 'center',
-        top: 130,
+        marginTop: 100,
     },
     containerChkbx: {
         flexDirection: "row",
-        top: 170,
+        marginTop: 15,
         left: -12,
         width: 260,
     },
     title: {
         fontWeight: "900",
         fontSize: 30,
-        bottom: 30,
+        bottom: 20,
         color: 'rgba(16, 139, 0, 1)',
     },
     input: {
