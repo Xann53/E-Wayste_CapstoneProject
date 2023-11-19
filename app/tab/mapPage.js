@@ -11,6 +11,7 @@ import { collection, addDoc, getDocs, query } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import SideBar from '../../components/SideNav';
@@ -21,15 +22,28 @@ export default function Map({ navigation }) {
     const mapRef = useRef(null);
     let searchLongitude, searchLatitude;
 
+    const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
 
+    const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
 
     const [currentLat, setCurrentLat] = useState(null);
     const [currentLon, setCurrentLon] = useState(null);
+
+    const [origin, setOrigin] = useState({});
+    const [destination, setDestination] = useState({});
+
+    const [infoID, setInfoID] = useState();
+    const [infoImage, setInfoImage] = useState();
+
+    let userId
+    let description
+    let location
+    let dateTime
 
     // =============================================================================================================================================================================================
     useEffect(() => {
@@ -65,6 +79,12 @@ export default function Map({ navigation }) {
     // =============================================================================================================================================================================================
 
     useEffect(() => {
+        const getUsers = async () => {
+            const data = await getDocs(usersCollection);
+            setUsers(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+        };
+        getUsers();
+
         reportRef.onSnapshot(
             querySnapshot => {
                 const uploads = []
@@ -119,7 +139,7 @@ export default function Map({ navigation }) {
             })
         }
 
-        const quickRoute = () => {
+        const quickRoute = (desLatitude, desLongitude) => {
             (async() => {
                 let {status} = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted') {
@@ -127,8 +147,14 @@ export default function Map({ navigation }) {
                     return;
                 }
                 let currentLocation = await Location.getCurrentPositionAsync({});
+                
                 setCurrentLat(currentLocation.coords.latitude);
                 setCurrentLon(currentLocation.coords.longitude);
+                
+                setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
+                setDestination({latitude: desLatitude, longitude: desLongitude})
+                console.log(origin);
+                console.log(destination);
             })();
         }
 
@@ -156,7 +182,8 @@ export default function Map({ navigation }) {
                                 longitude: parseFloat(marker.longitude)
                             }}
                             title='My Location'
-                            onCalloutPress={() => {quickRoute(); console.log(marker.latitude); console.log(marker.longitude);}}
+                            onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                            onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
                             style={{zIndex: 100}}
                         >
                             <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
@@ -184,7 +211,43 @@ export default function Map({ navigation }) {
                         :
                         <></>
                     }
+
+                    {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
+                        <MapViewDirections
+                            origin={origin}
+                            destination={destination}
+                            apikey={PROVIDER_GOOGLE}
+                        />
+                        :
+                        <></>
+                    }
                 </MapView>
+                {infoID ?
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 130, width: '90%', padding: 5, bottom: 75, shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                        <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
+                            <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10}}>
+                                <Image style={{width: '100%', height: '100%',  flex: 1, resizeMode: 'cover', borderRadius: 5}} source={{uri: infoImage}} />
+                            </View>
+                            <View style={{flex: 2}}>
+                                <View style={{flex: 1, padding: 5, overflow: 'hidden'}}>
+                                    {userUploads.map((upload) => {
+                                        if(upload.id.includes(infoID)) {
+                                            userId=upload.userId;
+                                            description=upload.description;
+                                            location=upload.location;
+                                            dateTime=upload.dateTime;
+                                        }
+                                    })}
+                                    <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>{users.map((user) => {if(user.id.includes(userId))return user.username})}</Text>
+                                    <Text style={{fontSize: 10}}>{dateTime}</Text>
+                                    <Text style={{fontSize: 12, marginTop: 10}}><Ionicons name='location' /> {location}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                    :
+                    <></>
+                }
             </>
         );
     }
