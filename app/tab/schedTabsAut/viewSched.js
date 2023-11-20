@@ -54,7 +54,7 @@ export default function ViewSchedDetails({ navigation, route }) {
   const handleFieldBlur = () => {
     setFocusedField(null);
   };
-
+ 
   return (
     <>
       <View style={{ position: "absolute", height: "100%", width: "100%", justifyContent: "flex-start", alignItems: "center", zIndex: 10, backgroundColor: "rgba(0, 0, 0, 0.85)" }}>

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from '@react-navigation/native';
 
-import SideBar from '../../components/SideNav';
+import SideBar from '../../../components/SideNav';
 
 export default function Message({navigation}) {
     const [refreshing, setRefreshing] = React.useState(false);
@@ -45,7 +45,7 @@ export default function Message({navigation}) {
         for (let i = 0; i < 10; i++) {
             temp.push(
                 <View style={[styles.contentButton]}>
-                    <TouchableOpacity activeOpacity={0.5}>
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('chatView')}}>
                         <View style={styles.contentButtonFront}>
                             <View style={{width: '90%', flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginVertical: 15}}>
                                 <View style={styles.containerPfp}>
@@ -101,7 +101,7 @@ export default function Message({navigation}) {
             </View>
             <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgb(75,163,84)', zIndex: -99}}>
                 <Image
-                    source={require('../../assets/NatureVector.jpg')}
+                    source={require('../../../assets/NatureVector.jpg')}
                     style={{
                         position: 'absolute',
                         resizeMode: 'stretch',
@@ -123,7 +123,7 @@ export default function Message({navigation}) {
                 backgroundColor: 'rgb(13, 86, 1)',
                 overflow: 'hidden',
             }}>
-                    <TouchableOpacity style={{width: '100%', height: '100%'}}>
+                    <TouchableOpacity style={{width: '100%', height: '100%'}} onPress={() => {navigation.navigate('createMessage')}}>
                         <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(20, 120, 2)'}}>
                             <Ionicons name='pencil' style={{fontSize: 35, color: '#ffffff'}} />
                         </View>

@@ -212,7 +212,7 @@ export default function Map({ navigation }) {
                         <MapViewDirections
                             origin={origin}
                             destination={destination}
-                            apikey={PROVIDER_GOOGLE}
+                            apikey={GOOGLE_API_KEY }
                         />
                         :
                         <></>
