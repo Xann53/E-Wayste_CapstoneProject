@@ -33,7 +33,6 @@ export default function Map({ navigation }) {
 
     const [currentLat, setCurrentLat] = useState(null);
     const [currentLon, setCurrentLon] = useState(null);
-
     const [origin, setOrigin] = useState({});
     const [destination, setDestination] = useState({});
 
@@ -44,7 +43,6 @@ export default function Map({ navigation }) {
     let description
     let location
     let dateTime
-
     // =============================================================================================================================================================================================
     useEffect(() => {
         if(!isFocused) {
@@ -146,8 +144,7 @@ export default function Map({ navigation }) {
                     setErrorMsg('Permission to access location was denied');
                     return;
                 }
-                let currentLocation = await Location.getCurrentPositionAsync({});
-                
+                let currentLocation = await Location.getCurrentPositionAsync({});   
                 setCurrentLat(currentLocation.coords.latitude);
                 setCurrentLon(currentLocation.coords.longitude);
                 
@@ -211,7 +208,6 @@ export default function Map({ navigation }) {
                         :
                         <></>
                     }
-
                     {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
                         <MapViewDirections
                             origin={origin}

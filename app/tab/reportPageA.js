@@ -6,8 +6,10 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, query } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
+import { Circle } from 'react-native-progress';
+
 
 import SideBar from '../../components/SideNav';
 
@@ -24,6 +26,73 @@ export default function ReportAut({navigation}) {
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
+
+    const [reportsToday, setReportsToday] = useState(0);
+    const [totalReports, setTotalReports] = useState(0);
+
+    const [collectedCount, setCollectedCount] = useState(0);
+    const [uncollectedCount, setUncollectedCount] = useState(0);
+   
+    const [circleSize, setCircleSize] = useState(100); 
+    const [circleThickness, setCircleThickness] = useState(10); 
+    const [progress1, setProgress1] = useState(0); // Initialize progress1
+    const [progress2, setProgress2] = useState(0);
+
+    useEffect(() => {
+        const fetchData = async () => {
+          const reportsCollection = collection(db, "generalUsersReports");
+          const collectedQuery = query(reportsCollection, where("status", "==", "collected"));
+          const uncollectedQuery = query(reportsCollection, where("status", "==", "uncollected"));
+          const collectedSnapshot = await getDocs(collectedQuery);
+          const uncollectedSnapshot = await getDocs(uncollectedQuery);
+          setProgress1(collectedSnapshot.size);
+          setProgress2(uncollectedSnapshot.size);
+        };
+    
+        fetchData();
+      }, []);
+  
+    useEffect(() => {
+      const fetchData = async () => {
+        const reportsCollection = collection(db, 'generalUsersReports');
+        const collectedQuery = query(reportsCollection, where('status', '==', 'collected'));
+        const uncollectedQuery = query(reportsCollection, where('status', '==', 'uncollected'));
+  
+        const collectedSnapshot = await getDocs(collectedQuery);
+        const uncollectedSnapshot = await getDocs(uncollectedQuery);
+  
+        setCollectedCount(collectedSnapshot.size);
+        setUncollectedCount(uncollectedSnapshot.size);
+      };
+  
+      fetchData();
+    }, []);
+
+    useEffect(() => {
+        const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
+    
+        const fetchReports = async () => {
+          try {
+            // Query for reports today   
+            const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '==', currentDate));
+            const todaySnapshot = await getDocs(todayQuery);
+            const reportsTodayCount = todaySnapshot.size;
+            setReportsToday(reportsTodayCount);
+    
+            // Query for all reports
+            const allReportsQuery = query(collection(db, 'generalUsersReports'));
+            const allReportsSnapshot = await getDocs(allReportsQuery);
+            const totalReportsCount = allReportsSnapshot.size;
+            setTotalReports(totalReportsCount);
+          } catch (error) {
+            console.log('Error fetching reports:', error);
+          }
+        };
+    
+        fetchReports();
+    }, []);
+
+
 
     useEffect(() => {
         if(!isFocused) {
@@ -120,24 +189,22 @@ export default function ReportAut({navigation}) {
                 <View style={[styles.contentButton, styles.contentGap]}>
                     <TouchableOpacity activeOpacity={0.5}>
                         <View style={styles.contentButtonFront}>
-                            <View style={{width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15}}>
-                                <View style={styles.containerPfp}>
-                                    <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                                </View>
-                                <Text style={{fontSize: 16, fontWeight: 500, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(post.userId === user.id) {return user.username;}})}</Text>
-                            </View>
                             <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)'}}>
-                                <Text style={{fontSize: 13, marginBottom: 5,}}>{post.location}</Text>
-                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', fontWeight:'bold', paddingBottom: 5}}>REPORTS DETAILS </Text>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Reported By:</Text> {users.map((user) => {if(post.userId === user.id) {return user.username;}})} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {post.dateTime} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Location</Text> {post.location} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
+                                <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5,  justifyContent: 'flex-start', alignItems: 'flex-start'}}>
                                     {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
-                                    <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
-                                </View>
+                                    <Image src={imageURL} style={{width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start'}} />
+                                
+                                </View>    
                             </SafeAreaView>
-                            <View style={{width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10}}>
-                                <Ionicons name='heart-outline' style={{ fontSize: 25 }} />
-                                <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                                <Ionicons name='share-outline' style={{fontSize: 25}} />
-                            </View>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -182,30 +249,47 @@ export default function ReportAut({navigation}) {
             </View>
         );
     }
-
     function HeaderContent() {
         return (
             <>
-                <Text style={{fontSize: 18, fontWeight: 700, color:'rgb(55,55,55)'}}>BANILAD, CEBU CITY</Text>
-                <View style={{flexDirection: 'row', gap: 7, top: 5}}>
+                <Text style={{fontSize: 18, fontWeight: 700, color:'rgb(55,55,55)', textAlign: 'center'}}>REPORT ANNALYTICS</Text> 
+                <View style={{flexDirection: 'row', gap: 5, top: 3}}>
                     <View style={{alignItems: 'center'}}>
-                        <Text style={{fontSize: 14, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>REPORTS TODAY</Text>
+                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>REPORTS TODAY</Text>
                         <View style={styles.headerCntr}>
-                            <Text style={{fontSize: 40, fontWeight: 700, color:'rgb(55,55,55)'}}>12</Text>
-                            <Text style={{fontSize: 14, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
+                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{reportsToday}</Text>
+                            <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
                         </View>
                     </View>
                     <View style={{alignItems: 'center'}}>
-                        <Text style={{fontSize: 14, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>TOTAL REPORT</Text>
+                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>TOTAL REPORT</Text>
                         <View style={styles.headerCntr}>
-                            <Text style={{fontSize: 40, fontWeight: 700, color:'rgb(55,55,55)'}}>38</Text>
-                            <Text style={{fontSize: 14, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
+                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{totalReports}</Text>
+                            <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
                         </View>
                     </View>
-                </View>
-            </>
+               </View>
+                <View style={{flexDirection: 'row', gap: 5, top: 3}}>
+                    <View style={{alignItems: 'center'}}>
+                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5, paddingTop: 5}}>UNCOLLECTED GARBAGE</Text>
+                        <View style={styles.headerCntr}>
+                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{uncollectedCount}</Text>
+                            <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
+                        </View>
+                    </View>
+                    <View style={{alignItems: 'center'}}>
+                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5, paddingTop: 5}}>COLLECTED GARBAGE</Text>
+                        <View style={styles.headerCntr}>
+                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{collectedCount}</Text>
+                            <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
+                        </View>
+                    </View>
+             
+              </View>
+          </>  
         );
     }
+
 
     return (
         <>
@@ -240,9 +324,53 @@ export default function ReportAut({navigation}) {
                         </View>
                     </View>
                     <View style={styles.header3}>
-                        {HeaderContent()}
+                    {HeaderContent()}
                     </View>
                     <SafeAreaView style={styles.body}>
+                        <View style={styles.chartContainer}>
+                    {/* Outer Circle */}
+                    {/* Progress Circle 1 */}
+                    <View style ={styles.outerCircle}>
+                            <Circle
+                                size={circleSize}
+                                indeterminate={false}
+                                progress={progress1 / 100}
+                                borderColor="transparent" // Change the color as needed
+                                color="green"
+                                unfilledColor="white"
+                                thickness={circleThickness}
+                            /><Text style={{ marginTop: -circleSize / 2 + circleThickness * 3, fontSize: 12, fontWeight: 'bold', color: 'rgb(55,55,55)' }}>
+                             {progress1}%</Text>
+                            
+                     </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
+                                <View style={styles.headerCntrCol}>
+                                    {/* Green Square */}
+                                </View>
+                                 <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgb(55,55,55)' , marginLeft: 6}}>Collected Garbage</Text>
+                         </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
+                                    <View style={styles.headerCntrCol2}>
+                                    {/* Yellow Square */}
+                                        </View>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgb(55,55,55)', marginLeft:  5}}>Uncollected Garbage</Text>
+                           </View>
+    
+                    <View style ={styles.innerCircle}>
+                                {/* Progress Circle 2 */}
+                            <Circle
+                                size={circleSize - circleThickness * 3}
+                                indeterminate={false}
+                                progress={progress2 / 100}
+                                borderColor="transparent" // Change the color as needed
+                                color="yellow"
+                                unfilledColor="#FAF9F6"
+                                thickness={circleThickness}
+                            />
+                           <Text style={{ marginTop: -circleSize / 2 + circleThickness * 3, fontSize: 12, fontWeight: 'bold', color: 'rgb(55,55,55)' }}>
+                             {progress2}%</Text>
+                        </View>
+              </View>
                         <View style={{alignItems: 'center'}}>
                             <Text style={{fontSize: 23, fontWeight: 700, color: 'rgba(113, 112, 108, 1)', marginBottom: 10}}>REPORTS</Text>
                         </View>
@@ -296,7 +424,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: 310,
         height: 210,
-        top: 75,
+        top: 70,
         backgroundColor: '#ffffff',
         borderRadius: 15,
         shadowColor: "#000",
@@ -309,7 +437,8 @@ const styles = StyleSheet.create({
         elevation: 6,
         zIndex: 50,
         alignItems: 'center',
-        paddingTop: 20,
+        paddingTop: 10,
+        
     },
     body: {
         position: 'relative',
@@ -320,8 +449,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerCntr: {
-        width: 137,
-        height: 90,
+        width: 110,
+        height: 57,
         backgroundColor: 'rgb(255,248,172)',
         overflow: 'hidden',
         shadowColor: "#000",
@@ -368,5 +497,97 @@ const styles = StyleSheet.create({
     placeholderPfp: {
         fontSize: 25,
         color: 'rgba(113, 112, 108, 1)',
+    },
+
+    chartContainer: {
+        width: 300,
+        alignItems: 'center',
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E6E6E6',
+        backgroundColor: '#F5F5DC',
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.27,
+        shadowRadius: 4.65,
+        elevation: 2,
+        justifyContent: 'center',
+        alignItems: 'center',   
+        
+      },
+      outerCircle: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        paddingBottom: 10,
+      },
+      innerCircle: {
+        position: 'absolute',
+        alignItems: 'center',
+        display: 'flex',
+        justifyContent: 'center',
+        paddingBottom: 45,
+      
+        
+      },
+      headerCntrChart :{
+
+        width: 50,
+        height: 50,
+        backgroundColor: 'rgb(255,248,172)',
+        borderRadius: 57 / 2,
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.27,
+        shadowRadius: 4.65,
+        elevation: 2,
+        justifyContent: 'center',
+        alignItems: 'center',    
+
+      },
+      headerCntrCol: {
+        width: 13,
+        height: 13,
+        marginBottom: 7,
+        marginRight: 10,
+        backgroundColor: 'green',
+       
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.27,
+        shadowRadius: 4.65,
+        elevation: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerCntrCol2: {
+        width: 13,
+        height: 13,
+        backgroundColor: 'yellow',
+        overflow: 'hidden',
+       
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.27,
+        shadowRadius: 4.65,
+        elevation: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 })

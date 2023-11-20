@@ -24,11 +24,27 @@ export default function ReportCol({ navigation }) {
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
 
+    const currentDate = getCurrentDate();
+
+    function getCurrentDate() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const currentDate = new Date().toLocaleDateString(undefined, options);
+      
+        return currentDate;
+      }
+
     useEffect(() => {
         if(!isFocused) {
             setOpenSideBar();
         }
     });
+
+    useEffect(() => {
+        if(!isFocused) {
+            setOpenSideBar();
+        }
+    });
+
 
     useEffect(() => {
         const getUsers = async () => {
@@ -132,11 +148,6 @@ export default function ReportCol({ navigation }) {
                                     <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
                                 </View>
                             </SafeAreaView>
-                            <View style={{width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10}}>
-                                <Ionicons name='heart-outline' style={{ fontSize: 25 }} />
-                                <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                                <Ionicons name='share-outline' style={{fontSize: 25}} />
-                            </View>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -180,10 +191,9 @@ export default function ReportCol({ navigation }) {
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>REPORTS</Text>
                     </View>
                     <Text style={{position: 'absolute', right: 20, top: 80}}>
-                        <Text style={{fontWeight: 600}}>Wednesday</Text>, April 19, 2023 <Ionicons name='caret-down-circle-outline' style={{fontSize: 20}} />
+                    <Text style={{ fontWeight: 600 }}> {currentDate}</Text>
                     </Text>
                     <View style={{ marginTop: 50 }}>
-                        <Text style={{fontSize: 20, fontWeight: 700, color: 'rgba(113, 112, 108, 1)', marginBottom: 5}}>Banilad, Cebu City <Ionicons name='caret-down-circle-outline' style={{fontSize: 20}} /></Text>
                         {BodyContent ()}
                     </View>
                 </SafeAreaView>

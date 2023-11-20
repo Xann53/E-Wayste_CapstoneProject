@@ -7,7 +7,7 @@ import NewsfeedAut from './tab/homePageA';
 import ReportAut from './tab/reportPageA';
 import Map from './tab/mapPage';
 import SchedLayout from './tab/schedRouteAut';
-import Message from './tab/messagePage';
+import MessageLayout from './tab/messageRoute';
 import NotificationsCol from './tab/notifPageC';
 import Profile from './tab/profilePage';
 
@@ -68,7 +68,7 @@ export default function AuthorityLayout() {
             <Tab.Screen name='report' component={ReportAut} options={{ headerShown: false }} />
             <Tab.Screen name='map' component={Map} options={{ headerShown: false }} />
             <Tab.Screen name='schedule' component={SchedLayout} options={{ headerShown: false }} />
-            <Tab.Screen name='message' component={Message} options={{ headerShown: false }} />
+            <Tab.Screen name='message' component={MessageLayout} options={{ headerShown: false }} />
             <Tab.Screen name='notification' component={NotificationsCol} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
             <Tab.Screen name='profile' component={Profile} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' }  }} />
         </Tab.Navigator>

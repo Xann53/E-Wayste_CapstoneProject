@@ -1,20 +1,32 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, TextInput, navigate, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Calendar } from 'react-native-calendars';
 import { SelectList } from 'react-native-dropdown-select-list';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { db } from '../../../firebase_config';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
+
 
 export default function AddSched({navigation}) {
+
+    const schedCollection = collection(db, "schedule");
+
     const [year, setYear] = useState();
     const [month, setMonth] = useState();
     const [day, setDay] = useState();
     const [hourStart, setHourStart] = useState();
     const [minStart, setMinStart] = useState();
-    const [hourEnd, setHourEnd] = useState();
-    const [minEnd, setMinEnd] = useState();
     const [ampmStart, setAmpmStart] = useState();
-    const [ampmEnd, setAmpmEnd] = useState();
     const [selectType, setSelectType] = useState();
+    const [description, setDescription] = useState("");
+    const [location, setLocation] = useState("");
+    const [title, setTitle] = useState("");
+    const [assignLocation, setAssignLocation] = useState("");
+    const [assignCollector, setAssignCollector]= useState("")
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [markedDates, setMarkedDates] = useState({});
 
     const Type = [
         { key: "Collection", value: "Collection" },
@@ -94,96 +106,111 @@ export default function AddSched({navigation}) {
         { key: "PM", value: "PM" },
     ];
 
+    const createSchedule = async () => {
+        let newHourStart, newTitle;
+        if (hourStart < 10) {
+          newHourStart = "0" + hourStart;
+        } else {
+          newHourStart = hourStart;
+        }
+        let start = newHourStart + ":" + minStart + " " + ampmStart;
+        // Default title if not provided
+        if (title !== "") {
+          newTitle = title;
+        } else {
+          newTitle = "N/A";
+        }
+        let id = await AsyncStorage.getItem('userId');
+        // Generate a unique scheduleID
+        const scheduleID = Math.random().toString(36).substring(2, 10);
+        // Validate necessary values
+        if (
+          (location !== "" || assignLocation !== "") && setAssignCollector !== "" && description !== "" && selectedDate
+        ) {
+          await addDoc(schedCollection, {
+            scheduleID: scheduleID, 
+            type: selectType,
+            description: description,
+            location: location,
+            startTime: start,
+            title: newTitle,
+            userID: id,
+            assignLocation: assignLocation,
+            assignCollector: assignCollector,
+            selectedDate: selectedDate,
+          });
+          alert("Schedule successfully added!");
+          setMarkedDates((prevMarkedDates) => ({
+            ...prevMarkedDates,
+            [selectedDate]: { selected: true, selectedColor: getTypeColor(selectType) },
+          }));
+            setSelectType(null);
+            setDescription("");
+            setLocation("");
+            setTitle("");
+            setAssignLocation("");
+            setAssignCollector("");
+            setSelectedDate(null);
+            setHourStart(null);
+            setMinStart(null);
+            setAmpmStart(null);
+            navigation.navigate('mainSched'); //CANT NAVIGATE
+        } else {
+          alert("Fill up necessary values");
+        }
+    };
+
+    const getTypeColor = (type) => {
+        switch (type) {
+          case 'Collection':
+            return 'rgb(242, 190, 45)' ;
+          case 'Assignment':
+            return 'green';
+          case 'Event':
+            return 'rgb(134, 231, 237)';
+        }
+    };
+
+    useEffect(() => {
+        const fetchSchedules = async () => {
+          const querySnapshot = await getDocs(collection(db, "schedule"));
+          const schedules = [];
+          querySnapshot.forEach((doc) => {
+            const { type, selectedDate } = doc.data();
+            schedules.push({ type, selectedDate });
+          });
+      
+          const updatedMarkedDates = {};
+          schedules.forEach(({ type, selectedDate }) => {
+            updatedMarkedDates[selectedDate] = { selected: true, selectedColor: getTypeColor(type) };
+          });
+      
+          setMarkedDates(updatedMarkedDates);
+        };
+      
+        fetchSchedules();
+      }, []);
+
     function SelectDateTime() {
+        const markedDates = {};
+        if (selectedDate) {
+            markedDates[selectedDate] = { selected: true, selectedColor: 'green' };
+        }
+
         return (
             <>
-                <View style={{width: '100%', paddingHorizontal: 25, flexDirection: 'row', gap: 18, marginTop: 25, justifyContent: 'flex-start', alignItems: 'center'}}>
-                    <Text style={{fontSize: 16}}>Select Date:</Text>
-                    <Text>{month}</Text>
-                    <Text>/</Text>
-                    <Text>{day}</Text>
-                    <Text>/</Text>
-                    <Text>{year}</Text>
-                </View>
-                <View style={{ flexDirection: "row", marginTop: 15, width: '100%', paddingLeft: 25 }}>
-                    <SelectList
-                        setSelected={(e) => { setYear(e); }}
-                        data={Year}
-                        placeholder="Year"
-                        boxStyles={{
-                            width: 110,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 110,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                    <SelectList
-                        setSelected={(e) => { setMonth(e); }}
-                        data={Month}
-                        placeholder="Month"
-                        boxStyles={{
-                            width: 130,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 130,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                    <SelectList
-                        setSelected={(e) => { setDay(e); }}
-                        data={Day}
-                        placeholder="Day"
-                        boxStyles={{
-                            width: 100,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 100,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
+                <Text style={{marginLeft: 30, fontSize: 16, marginTop: 20}}>Select Date</Text>
+                <View style={{width: "100%", justifyContent: "center" , alignItems:"center", marginTop: 10}}>
+                <Calendar
+                    style={{ width: 320, backgroundColor: 'white', borderRadius: 10, paddingBottom: 15, shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2,}, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5,}}
+                    markedDates={markedDates}
+                    onDayPress={(day) => setSelectedDate(day.dateString)} // Capture selected date
+                />
                 </View>
                 <View style={{width: '100%', paddingHorizontal: 25, flexDirection: 'row', gap: 18, marginTop: 25, justifyContent: 'flex-start', alignItems: 'center'}}>
                     <Text style={{fontSize: 16}}>Select Time:</Text>
                     <Text>{hourStart} : {minStart} {ampmStart}</Text>
-                    <Text>-</Text>
-                    <Text>{hourEnd} : {minEnd} {ampmEnd}</Text>
                 </View>
                 <View style={{ flexDirection: "row", marginTop: 15, width: '100%', paddingLeft: 25 }}>
                     <SelectList
@@ -193,7 +220,7 @@ export default function AddSched({navigation}) {
                         boxStyles={{
                             width: 60,
                             backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
+                            borderRadius: 10,
                             color: "rgba(45, 105, 35, 1)",
                             justifyContent: "center",
                             borderWidth: 0,
@@ -217,7 +244,8 @@ export default function AddSched({navigation}) {
                         boxStyles={{
                             width: 60,
                             backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
+                            borderRadius: 10,
+                            marginLeft: 10,
                             color: "rgba(45, 105, 35, 1)",
                             justifyContent: "center",
                             borderWidth: 0,
@@ -227,7 +255,8 @@ export default function AddSched({navigation}) {
                             backgroundColor: "rgb(231,247,233)",
                             top: -10,
                             marginBottom: -10,
-                            borderRadius: 0,
+                            borderRadius: 10,
+                            marginLeft: 10,
                             zIndex: -1,
                             borderWidth: 0,
                             alignSelf: 'center',
@@ -241,7 +270,8 @@ export default function AddSched({navigation}) {
                         boxStyles={{
                             width: 70,
                             backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
+                            borderRadius: 10,
+                            marginLeft: 10,
                             color: "rgba(45, 105, 35, 1)",
                             justifyContent: "center",
                             borderWidth: 0,
@@ -251,81 +281,8 @@ export default function AddSched({navigation}) {
                             backgroundColor: "rgb(231,247,233)",
                             top: -10,
                             marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                </View>
-                <View style={{ flexDirection: "row", marginTop: 10, width: '100%', paddingLeft: 25 }}>
-                    <SelectList
-                        setSelected={(e) => { setHourEnd(e); }}
-                        data={Hour}
-                        defaultOption={{ key: 1, value: '1' }}
-                        boxStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                    <SelectList
-                        setSelected={(e) => { setMinEnd(e); }}
-                        data={Min}
-                        defaultOption={{ key: '00', value: '00' }}
-                        boxStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                    <SelectList
-                        setSelected={(e) => { setAmpmEnd(e); }}
-                        data={AmpmTemp}
-                        defaultOption={{ key: 'AM', value: 'AM' }}
-                        boxStyles={{
-                            width: 70,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 0,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 70,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
+                            borderRadius: 10,
+                            marginLeft: 10,
                             zIndex: -1,
                             borderWidth: 0,
                             alignSelf: 'center',
@@ -342,6 +299,7 @@ export default function AddSched({navigation}) {
             <>
                 <View style={{ width: '100%', paddingHorizontal: 25 }}>
                     <TextInput
+                        value ={description}
                         style={{
                             height: 150,
                             width: '100%',
@@ -355,11 +313,13 @@ export default function AddSched({navigation}) {
                             textAlignVertical: 'top',
                         }}
                         placeholder='Add Description'
+                        onChangeText={(e)=>{setDescription(e)}}
                         multiline={true}
                     />
                 </View>
                 <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
                     <TextInput
+                        value ={location}
                         style={{
                             height: 40,
                             width: '100%',
@@ -371,6 +331,7 @@ export default function AddSched({navigation}) {
                             paddingLeft: 15,
                         }}
                         placeholder='Select Location'
+                        onChangeText={(e)=>{setLocation(e)}}
                     />
                 </View>
                 {SelectDateTime()}
@@ -383,6 +344,7 @@ export default function AddSched({navigation}) {
             <>
                 <View style={{ width: '100%', paddingHorizontal: 25 }}>
                     <TextInput
+                        value ={description}
                         style={{
                             height: 150,
                             width: '100%',
@@ -396,6 +358,7 @@ export default function AddSched({navigation}) {
                             textAlignVertical: 'top',
                         }}
                         placeholder='Add Description'
+                        onChangeText={(e)=>{setDescription(e)}}
                         multiline={true}
                     />
                 </View>
@@ -412,10 +375,14 @@ export default function AddSched({navigation}) {
                             paddingLeft: 15,
                         }}
                         placeholder='Select Collector to Assign'
+                        onChangeText={(e) => {
+                            setAssignCollector(e);
+                        }}
                     />
                 </View>
                 <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
                     <TextInput
+                        value ={assignLocation}
                         style={{
                             height: 40,
                             width: '100%',
@@ -427,6 +394,7 @@ export default function AddSched({navigation}) {
                             paddingLeft: 15,
                         }}
                         placeholder='Select Assignment Location'
+                        onChangeText={(e)=>{setAssignLocation(e)}}
                     />
                 </View>
                 {SelectDateTime()}
@@ -439,6 +407,7 @@ export default function AddSched({navigation}) {
             <>
                 <View style={{width: '100%', paddingHorizontal: 25}}>
                     <TextInput
+                        value ={title}
                         style={{
                             height: 40,
                             width: '100%',
@@ -450,10 +419,13 @@ export default function AddSched({navigation}) {
                             paddingLeft: 15,
                         }}
                         placeholder='Add Title'
+                        onChangeText={(e)=>{setTitle(e)}}
+
                     />
                 </View>
                 <View style={{ width: '100%', paddingHorizontal: 25, marginTop: 5 }}>
                     <TextInput
+                        value ={description}
                         style={{
                             height: 150,
                             width: '100%',
@@ -467,11 +439,13 @@ export default function AddSched({navigation}) {
                             textAlignVertical: 'top',
                         }}
                         placeholder='Add Description'
+                        onChangeText={(e)=>{setDescription(e)}}
                         multiline={true}
                     />
                 </View>
                 <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
                     <TextInput
+                        value={location}
                         style={{
                             height: 40,
                             width: '100%',
@@ -483,6 +457,7 @@ export default function AddSched({navigation}) {
                             paddingLeft: 15,
                         }}
                         placeholder='Select Location'
+                        onChangeText={(e)=>{setLocation(e)}}
                     />
                 </View>
                 {SelectDateTime()}
@@ -531,19 +506,19 @@ export default function AddSched({navigation}) {
                                 data={Type}
                                 placeholder="Select Type"
                                 boxStyles={{
-                                    width: 343,
+                                    width: 310,
                                     backgroundColor: "rgb(189,228,124)",
-                                    borderRadius: 0,
+                                    borderRadius: 10,
                                     color: "rgba(45, 105, 35, 1)",
                                     justifyContent: "center",
                                     borderWidth: 0,
                                 }}
                                 dropdownStyles={{
-                                    width: 343,
+                                    width: 310,
                                     backgroundColor: "rgb(231,247,233)",
                                     top: -10,
                                     marginBottom: -10,
-                                    borderRadius: 0,
+                                    borderRadius: 10,
                                     zIndex: -1,
                                     borderWidth: 0,
                                     alignSelf: 'center',
@@ -554,7 +529,7 @@ export default function AddSched({navigation}) {
                         {DisplayType()}
                         <View style={{width: '100%', marginTop: 30, marginBottom: 90, alignItems: 'center'}}>
                             <View style={styles.button}>
-                                <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5}>
+                                <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5} onPress={()=>{createSchedule();}}>
                                     <Text style={styles.buttonTxt}>Save</Text>
                                 </TouchableOpacity>
                             </View>

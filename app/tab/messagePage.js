@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from '@react-navigation/native';
 
 import SideBar from '../../components/SideNav';
 
@@ -122,12 +123,12 @@ export default function Message({navigation}) {
                 backgroundColor: 'rgb(13, 86, 1)',
                 overflow: 'hidden',
             }}>
-                <TouchableOpacity style={{width: '100%', height: '100%'}}>
-                    <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(20, 120, 2)'}}>
-                        <Ionicons name='pencil' style={{fontSize: 35, color: '#ffffff'}} />
-                    </View>
-                </TouchableOpacity>
-            </View>
+                    <TouchableOpacity style={{width: '100%', height: '100%'}}>
+                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(20, 120, 2)'}}>
+                            <Ionicons name='pencil' style={{fontSize: 35, color: '#ffffff'}} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
             {openSideBar}
         </>
     );
@@ -177,4 +178,8 @@ const styles = StyleSheet.create({
         fontSize: 25,
         color: 'rgba(113, 112, 108, 1)',
     },
+    containerSearch :{
+
+        
+    }
 })

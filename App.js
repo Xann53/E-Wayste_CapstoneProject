@@ -1,9 +1,10 @@
 import Layout1 from "./route1";
+//import MessageLayout from "./app/tab/messageTabs/messageAuth";
 
 export default function App() {
     return (
         <>
-            <Layout1 />
+        <Layout1/>
         </>
     );
 };

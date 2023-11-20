@@ -24,6 +24,22 @@ export default function Newsfeed({ navigation }) {
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
 
+    const currentDate = getCurrentDate();
+
+    const [isPressed, setIsPressed] = useState(false);
+
+    const handlePress = () => {
+      setIsPressed(!isPressed);
+    };
+
+    function getCurrentDate() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const currentDate = new Date().toLocaleDateString(undefined, options);
+      
+        return currentDate;
+      }
+
+
     useEffect(() => {
         if(!isFocused) {
             setOpenSideBar();
@@ -107,7 +123,7 @@ export default function Newsfeed({ navigation }) {
         })
 
         let temp = [];
-        uploadCollection.map((post) => {
+        uploadCollection.map((post,index) => {
             let imageURL;
             imageCol.map((url) => {
                 if(url.includes(post.imageLink)) {
@@ -116,7 +132,7 @@ export default function Newsfeed({ navigation }) {
             })
 
             temp.push(
-                <View style={[styles.contentButton, styles.contentGap]}>
+                <View style={[styles.contentButton, styles.contentGap]} key={post.id}>
                     <TouchableOpacity activeOpacity={0.5}>
                         <View style={styles.contentButtonFront}>
                             <View style={{width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15}}>
@@ -132,10 +148,19 @@ export default function Newsfeed({ navigation }) {
                                     <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
                                 </View>
                             </SafeAreaView>
-                            <View style={{width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10}}>
-                                <Ionicons name='heart-outline' style={{ fontSize: 25 }} />
+                             <View style={{width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10}}>
+                                <TouchableOpacity activeOpacity={0.5} onPress={handlePress}>
+                                <Ionicons
+                                    name={isPressed ? 'heart' : 'heart-outline'}
+                                    style={{ fontSize: 25, color: isPressed? 'green' : 'black' }}
+                                />
+                                </TouchableOpacity>
+                                <TouchableOpacity activeOpacity={0.5}>
                                 <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                                <Ionicons name='share-outline' style={{fontSize: 25}} />
+                                </TouchableOpacity>
+                                <TouchableOpacity activeOpacity={0.5}>
+                                <Ionicons name='share-outline' style={{ fontSize: 25 }} />
+                                </TouchableOpacity>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -194,12 +219,12 @@ export default function Newsfeed({ navigation }) {
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }>
                 <SafeAreaView style={styles.container}>
-                    <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
+                    <View style={{width: '100%', flexDirection: 'row', top: 11 , justifyContent: 'center', paddingTop: 14}}>
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
                     </View>
-                    <Text style={{position: 'absolute', right: 20, top: 80}}>
-                        <Text style={{fontWeight: 600}}>Wednesday</Text>, April 19, 2023 <Ionicons name='caret-down-circle-outline' style={{fontSize: 20}} />
-                    </Text>
+                    <Text style={{ position: 'absolute', right: 20, top: 90 }}>
+                  <Text style={{ fontWeight: 600 }}> {currentDate}</Text>
+                </Text>
                     <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50}}>
                         <View style={{ flexDirection: 'row', width: '100%' }}>
                             <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
@@ -220,8 +245,8 @@ export default function Newsfeed({ navigation }) {
                         <View style={{width: 330, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgb(16, 139, 0)', marginBottom: 20}}>
                             <TouchableOpacity activeOpacity={0.5}>
                                 <View style={{backgroundColor: '#ffffff', flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center'}}>
-                                    <View style={[styles.containerPfp, {width: 45, height: 45}]}>
-                                        <Ionicons name='person-outline' style={[styles.placeholderPfp, {fontSize: 35}]} />
+                                    <View style={[styles.containerPfp, {width: 40, height: 40}]}>
+                                        <Ionicons name='person-outline' style={[styles.placeholderPfp, {fontSize: 25}]} />
                                     </View>
                                     <Text style={{left: 15}}>
                                         What's on your mind?
