@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from 'expo-location';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, query } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -21,6 +21,7 @@ export default function Map({ navigation }) {
     const [openSideBar, setOpenSideBar] = useState();
     const mapRef = useRef(null);
     let searchLongitude, searchLatitude;
+    const [mapType, setMapType] = useState('uncollected');
 
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
@@ -38,6 +39,7 @@ export default function Map({ navigation }) {
 
     const [infoID, setInfoID] = useState();
     const [infoImage, setInfoImage] = useState();
+    let colStatus;
 
     let userId
     let description
@@ -115,7 +117,16 @@ export default function Map({ navigation }) {
     }, []);
 
     function loadMap() {
-        const reload = () => {
+        const changeMap = async () => {
+            if(mapType === 'uncollected') {
+                setMapType('collected');
+            } else if(mapType === 'collected') {
+                setMapType('uncollected');
+            }
+            reload2();
+        }
+
+        const reload = async () => {
             setState({ coordinates: [] });
             userUploads.map((pin) => {
                 let imageURL;
@@ -125,16 +136,64 @@ export default function Map({ navigation }) {
                     }
                 })
                 try {
-                    const lat = parseFloat(pin.latitude);
-                    const long = parseFloat(pin.longitude);
-                    setState((prevState) => ({
-                        ...prevState,
-                        coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
-                    }));
+                    if(mapType === 'uncollected' && pin.status === 'uncollected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    } else if(mapType === 'collected' && pin.status === 'collected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    }
                 } catch (e) {
                     console.log(e);
                 }
             })
+            setInfoID();
+        }
+
+        const reload2 = async () => {
+            let temp;
+            if(mapType === 'collected')
+                temp = 'uncollected';
+            else if(mapType === 'uncollected')
+                temp = 'collected';
+
+            setState({ coordinates: [] });
+            userUploads.map((pin) => {
+                let imageURL;
+                imageCol.map((url) => {
+                    if(url.includes(pin.associatedImage)) {
+                        imageURL = url;
+                    }
+                })
+                try {
+                    if(temp === 'uncollected' && pin.status === 'uncollected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    } else if(temp === 'collected' && pin.status === 'collected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    }
+                } catch (e) {
+                    console.log(e);
+                }
+            })
+            setInfoID();
         }
 
         const quickRoute = (desLatitude, desLongitude) => {
@@ -155,11 +214,36 @@ export default function Map({ navigation }) {
             })();
         }
 
+        const statusChange = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'collected'
+            };
+            await updateDoc(userUploadDoc, newFields);
+        }
+
+        const statusChange2 = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'uncollected'
+            };
+            await updateDoc(userUploadDoc, newFields);
+        }
+
         return (
             <>
                 <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
                 </TouchableOpacity>
+                {mapType === 'uncollected' ?
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 99, justifyContent: 'center', alignItems: 'center',}}>
+                        <Text style={{fontWeight: 800, color: '#F76811', fontSize: 18}}>UNCOLLECTED</Text>
+                    </TouchableOpacity>
+                    :
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 99, justifyContent: 'center', alignItems: 'center',}}>
+                        <Text style={{fontWeight: 800, color: '#24E559', fontSize: 18}}>COLLECTED</Text>
+                    </TouchableOpacity>
+                }
                 <MapView
                     ref={mapRef}
                     style={{width: '100%', height: '100%'}}
@@ -170,29 +254,59 @@ export default function Map({ navigation }) {
                         latitudeDelta: 0.0922,
                         longitudeDelta: 0.0421,
                     }}
+                    customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
                 >
-                    {state.coordinates.map(marker => (
-                        <Marker
-                            key={marker.name}
-                            coordinate={{
-                                latitude: parseFloat(marker.latitude),
-                                longitude: parseFloat(marker.longitude)
-                            }}
-                            title='My Location'
-                            onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
-                            onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
-                            style={{zIndex: 100}}
-                        >
-                            <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
-                            <Callout>
-                                <View style={{width: 80, height: 80}}>
-                                    <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
-                                        <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
-                                    </Text>
-                                </View>
-                            </Callout>
-                        </Marker>
-                    ))}
+                    {mapType === 'uncollected' ?
+                        <>
+                            {state.coordinates.map(marker => (
+                                <Marker
+                                    key={marker.name}
+                                    coordinate={{
+                                        latitude: parseFloat(marker.latitude),
+                                        longitude: parseFloat(marker.longitude)
+                                    }}
+                                    title='My Location'
+                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
+                                    style={{zIndex: 100}}
+                                >
+                                    <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
+                                    <Callout>
+                                        <View style={{width: 80, height: 80}}>
+                                            <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                                <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                            </Text>
+                                        </View>
+                                    </Callout>
+                                </Marker>
+                            ))}
+                        </>
+                        :
+                        <>
+                            {state.coordinates.map(marker => (
+                                <Marker
+                                    key={marker.name}
+                                    coordinate={{
+                                        latitude: parseFloat(marker.latitude),
+                                        longitude: parseFloat(marker.longitude)
+                                    }}
+                                    title='My Location'
+                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
+                                    style={{zIndex: 100}}
+                                >
+                                    <Ionicons name='location' style={{fontSize: 30, color: '#24E559'}} />
+                                    <Callout>
+                                        <View style={{width: 80, height: 80}}>
+                                            <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                                <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                            </Text>
+                                        </View>
+                                    </Callout>
+                                </Marker>
+                            ))}
+                        </>
+                    }
 
                     {currentLat !== null && currentLon !== null ? 
                         <Marker
@@ -213,13 +327,15 @@ export default function Map({ navigation }) {
                             origin={origin}
                             destination={destination}
                             apikey={GOOGLE_API_KEY }
+                            strokeWidth={4}
+                            strokeColor='#6644ff'
                         />
                         :
                         <></>
                     }
                 </MapView>
                 {infoID ?
-                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 130, width: '90%', padding: 5, bottom: 75, shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
                             <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10}}>
                                 <Image style={{width: '100%', height: '100%',  flex: 1, resizeMode: 'cover', borderRadius: 5}} source={{uri: infoImage}} />
@@ -232,13 +348,56 @@ export default function Map({ navigation }) {
                                             description=upload.description;
                                             location=upload.location;
                                             dateTime=upload.dateTime;
+
+                                            if(upload.status === 'uncollected')
+                                                colStatus = 'uncollected';
+                                            else if(upload.status === 'collected')
+                                                colStatus = 'collected';
                                         }
                                     })}
-                                    <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>{users.map((user) => {if(user.id.includes(userId))return user.username})}</Text>
-                                    <Text style={{fontSize: 10}}>{dateTime}</Text>
-                                    <Text style={{fontSize: 12, marginTop: 10}}><Ionicons name='location' /> {location}</Text>
+                                    <View style={{flex: 4}}>
+                                        <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>{users.map((user) => {if(user.id.includes(userId))return user.username})}</Text>
+                                        <Text style={{fontSize: 10}}>{dateTime}</Text>
+                                        <Text style={{fontSize: 12, marginTop: 10}}><Ionicons name='location' /> {location}</Text>
+                                    </View>
+                                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                                        {mapType === 'uncollected' ?
+                                            <>
+                                                {colStatus === 'uncollected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                    </View>
+                                                }
+                                            </>
+                                            :
+                                            <>
+                                                {colStatus === 'collected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange2(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                    </View>
+                                                }
+                                            </>
+                                        }
+                                    </View>
                                 </View>
                             </View>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setInfoID()}}>
+                                <View style={{position: 'absolute', height: 20, width: 20, backgroundColor: '#E5E5E5', right: 5, top: 5, borderRadius: 100}}>
+                                    <Ionicons name='close' style={{fontSize: 20, color: 'grey'}} />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     </View>
                     :
@@ -320,3 +479,200 @@ export default function Map({ navigation }) {
         </>
     );
 }
+
+const mapStyle = [
+    {
+        elementType: 'labels.icon',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        featureType: 'poi.business',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+];
+
+const mapStyle2 = [
+    {
+        elementType: 'labels.icon',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        featureType: 'poi.business',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#242f3e"
+            },
+        ],
+    },
+    {
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#746855"
+            },
+        ],
+    },
+    {
+        elementType: "labels.text.stroke",
+        stylers: [
+            { 
+                color: "#242f3e"
+            },
+        ],
+    },
+    {
+        featureType: "administrative.locality",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#d59563"
+            },
+        ],
+    },
+    {
+        featureType: "poi",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#d59563"
+            },
+        ],
+    },
+    {
+        featureType: "poi.park",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#263c3f" 
+            },
+        ],
+    },
+    {
+        featureType: "poi.park",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#6b9a76"
+            },
+        ],
+    },
+    {
+        featureType: "road",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#38414e"
+            },
+        ],
+    },
+    {
+        featureType: "road",
+        elementType: "geometry.stroke",
+        stylers: [
+            {
+                color: "#212a37"
+            },
+        ],
+    },
+    {
+        featureType: "road",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#9ca5b3"
+            },
+        ],
+    },
+    {
+        featureType: "road.highway",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#746855"
+            },
+        ],
+    },
+    {
+        featureType: "road.highway",
+        elementType: "geometry.stroke",
+        stylers: [
+            {
+                color: "#1f2835"
+            },
+        ],
+    },
+    {
+        featureType: "road.highway",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#f3d19c"
+            },
+        ],
+    },
+    {
+        featureType: "transit",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#2f3948"
+            },
+        ],
+    },
+    {
+        featureType: "transit.station",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#d59563"
+            },
+        ],
+    },
+    {
+        featureType: "water",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#17263c"
+            },
+        ],
+    },
+    {
+        featureType: "water",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#515c6d"
+            },
+        ],
+    },
+    {
+        featureType: "water",
+        elementType: "labels.text.stroke",
+        stylers: [
+            {
+                color: "#17263c"
+            },
+        ],
+    },
+]
