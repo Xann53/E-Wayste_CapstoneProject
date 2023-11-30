@@ -15,7 +15,7 @@ import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import SideBar from '../../components/SideNav';
-// Start Here
+
 export default function MapCol({ navigation }) {
     const isFocused = useIsFocused();
     const [openSideBar, setOpenSideBar] = useState();
@@ -28,7 +28,6 @@ export default function MapCol({ navigation }) {
     const [imageCol, setImageCol] = useState([]);
     const [collectorLocation, setCollectorLocation] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
-    const [track, setTrack] = useState({ coordinates: [] });
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
@@ -220,30 +219,6 @@ export default function MapCol({ navigation }) {
             trackCollectors();
         }
 
-        const trackCollectors = async() => {
-            setInterval(async() => {
-                setTrack({ coordinates: [] });
-                collectorLocation.map((pin) => {
-                    let collector;
-                    users.map((user) => {
-                        if(user.id.includes(pin.userId)) {
-                            collector = user.firstName + ' ' + user.lastName;
-                        }
-                    })
-                    try {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setTrack((prev) => ({
-                            ...prev,
-                            coordinates: [...prev.coordinates, { name: pin.id, user: pin.userId, collectorName: collector, latitude: lat, longitude: long }],
-                        }));
-                    } catch (e) {
-                        console.log(e);
-                    }
-                })
-            }, 5000)
-        }
-
         const createLocData = async() => {
             try {
                 const userID = await AsyncStorage.getItem('userId');
@@ -308,14 +283,6 @@ export default function MapCol({ navigation }) {
             const userUploadDoc = doc(db, "generalUsersReports", id);
             const newFields = {
                 status: 'collected'
-            };
-            await updateDoc(userUploadDoc, newFields);
-        }
-
-        const statusChange2 = async(id) => {
-            const userUploadDoc = doc(db, "generalUsersReports", id);
-            const newFields = {
-                status: 'uncollected'
             };
             await updateDoc(userUploadDoc, newFields);
         }
@@ -395,24 +362,6 @@ export default function MapCol({ navigation }) {
                         </>
                     }
 
-                    {track.coordinates.map(marker => (
-                        <Marker
-                            key={marker.name}
-                            coordinate={{
-                                latitude: parseFloat(marker.latitude),
-                                longitude: parseFloat(marker.longitude)
-                            }}
-                            style={{zIndex: 100}}
-                        >
-                            <Ionicons name='location' style={{fontSize: 30, color: 'green'}} />
-                            <Callout>
-                                <View style={{width: 150, alignItems: 'center'}}>
-                                    <Text>Collector: {marker.collectorName}</Text>
-                                </View>
-                            </Callout>
-                        </Marker>
-                    ))}
-
                     {currentLat !== null && currentLon !== null ? 
                         <Marker
                             key={"My Location"}
@@ -482,17 +431,9 @@ export default function MapCol({ navigation }) {
                                             </>
                                             :
                                             <>
-                                                {colStatus === 'collected' ?
-                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange2(infoID)}}>
-                                                        <View style={{flex: 1, backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
-                                                            <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                    :
-                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
-                                                        <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
-                                                    </View>
-                                                }
+                                                <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                    <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                </View>
                                             </>
                                         }
                                     </View>
@@ -577,13 +518,6 @@ export default function MapCol({ navigation }) {
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                     {loadMap()}
-                </View>
-                <View style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 10, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
-                    <TouchableOpacity activeOpacity={0.5}>
-                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
-                        </View>
-                    </TouchableOpacity>
                 </View>
             </View>
         </>

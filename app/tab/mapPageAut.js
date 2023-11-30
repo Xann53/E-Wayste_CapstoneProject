@@ -15,7 +15,7 @@ import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import SideBar from '../../components/SideNav';
-// Start Here
+
 export default function MapAut({ navigation }) {
     const isFocused = useIsFocused();
     const [openSideBar, setOpenSideBar] = useState();
@@ -33,13 +33,7 @@ export default function MapAut({ navigation }) {
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
-    const collectorLoc = collection(db, "collectorLocationTrack");
     const imageColRef = ref(storage, "postImages/");
-
-    const [currentLat, setCurrentLat] = useState(null);
-    const [currentLon, setCurrentLon] = useState(null);
-    const [origin, setOrigin] = useState({});
-    const [destination, setDestination] = useState({});
 
     const [infoID, setInfoID] = useState();
     const [infoImage, setInfoImage] = useState();
@@ -176,7 +170,6 @@ export default function MapAut({ navigation }) {
                 }
             })
             setInfoID();
-            createLocData();
             trackCollectors();
         }
 
@@ -216,7 +209,6 @@ export default function MapAut({ navigation }) {
                 }
             })
             setInfoID();
-            createLocData();
             trackCollectors();
         }
 
@@ -242,66 +234,6 @@ export default function MapAut({ navigation }) {
                     }
                 })
             }, 5000)
-        }
-
-        const createLocData = async() => {
-            try {
-                const userID = await AsyncStorage.getItem('userId');
-                let temp = false;
-                collectorLocation.map((colLocation) => {
-                    if(colLocation.userId === userID) {
-                        temp = true;
-                    }
-                })
-                console.log(temp);
-
-                if(!temp) {
-                    await addDoc(collectorLoc, {
-                        userId: userID,
-                        latitude: '',
-                        longitude: '',
-                    });
-                }
-            } catch(e) {
-                console.log(e);
-            }
-        }
-
-        const updateLocData = async(latitude, longitude) => {
-            const userID = await AsyncStorage.getItem('userId');
-            let tempId;
-            collectorLocation.map((colLocation) => {
-                if(colLocation.userId === userID) {
-                    tempId = colLocation.id;
-                }
-            })
-
-            const colDoc = doc(db, "collectorLocationTrack", tempId);
-            const newFields = {
-                latitude: latitude,
-                longitude: longitude
-            };
-            await updateDoc(colDoc, newFields);
-        }
-
-        const quickRoute = async(desLatitude, desLongitude) => {
-            (async() => {
-                let {status} = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') {
-                    setErrorMsg('Permission to access location was denied');
-                    return;
-                }
-                let currentLocation = await Location.getCurrentPositionAsync({});
-
-                setInterval(async() => { 
-                    setCurrentLat(currentLocation.coords.latitude);
-                    setCurrentLon(currentLocation.coords.longitude);
-                    updateLocData(currentLocation.coords.latitude, currentLocation.coords.longitude);
-                }, 5000);
-
-                setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
-                setDestination({latitude: desLatitude, longitude: desLongitude});
-            })();
         }
 
         const statusChange = async(id) => {
@@ -356,7 +288,6 @@ export default function MapAut({ navigation }) {
                                         longitude: parseFloat(marker.longitude)
                                     }}
                                     onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
-                                    onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
                                     style={{zIndex: 100}}
                                 >
                                     <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
@@ -402,7 +333,7 @@ export default function MapAut({ navigation }) {
                                 latitude: parseFloat(marker.latitude),
                                 longitude: parseFloat(marker.longitude)
                             }}
-                            style={{zIndex: 100}}
+                            style={{zIndex: 95}}
                         >
                             <Ionicons name='location' style={{fontSize: 30, color: 'green'}} />
                             <Callout>
@@ -412,32 +343,6 @@ export default function MapAut({ navigation }) {
                             </Callout>
                         </Marker>
                     ))}
-
-                    {currentLat !== null && currentLon !== null ? 
-                        <Marker
-                            key={"My Location"}
-                            coordinate={{
-                                latitude: parseFloat(currentLat),
-                                longitude: parseFloat(currentLon)
-                            }}
-                        >
-                            <Ionicons name='location' style={{fontSize: 35, color: '#D31111'}} />
-                            <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
-                        </Marker>
-                        :
-                        <></>
-                    }
-                    {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
-                        <MapViewDirections
-                            origin={origin}
-                            destination={destination}
-                            apikey={GOOGLE_API_KEY }
-                            strokeWidth={4}
-                            strokeColor='#6644ff'
-                        />
-                        :
-                        <></>
-                    }
                 </MapView>
                 {infoID ?
                     <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
@@ -577,13 +482,6 @@ export default function MapAut({ navigation }) {
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                     {loadMap()}
-                </View>
-                <View style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 10, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
-                    <TouchableOpacity activeOpacity={0.5}>
-                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
-                        </View>
-                    </TouchableOpacity>
                 </View>
             </View>
         </>
