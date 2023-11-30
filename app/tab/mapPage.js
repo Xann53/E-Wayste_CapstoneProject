@@ -15,7 +15,7 @@ import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import SideBar from '../../components/SideNav';
-
+// Start Here
 export default function Map({ navigation }) {
     const isFocused = useIsFocused();
     const [openSideBar, setOpenSideBar] = useState();
@@ -26,10 +26,14 @@ export default function Map({ navigation }) {
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
+    const [collectorLocation, setCollectorLocation] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
+    const [track, setTrack] = useState({ coordinates: [] });
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
+    const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
+    const collectorLoc = collection(db, "collectorLocationTrack");
     const imageColRef = ref(storage, "postImages/");
 
     const [currentLat, setCurrentLat] = useState(null);
@@ -114,10 +118,26 @@ export default function Map({ navigation }) {
                 })
             }
         )
+
+        collectorLocRef.onSnapshot(
+            querySnapshot => {
+                const uploads = []
+                querySnapshot.forEach((doc) => {
+                    const {userId, latitude, longitude} = doc.data();
+                    uploads.push({
+                        id: doc.id,
+                        userId,
+                        latitude,
+                        longitude
+                    })
+                })
+                setCollectorLocation(uploads)
+            }
+        )
     }, []);
 
     function loadMap() {
-        const changeMap = async () => {
+        const changeMap = async() => {
             if(mapType === 'uncollected') {
                 setMapType('collected');
             } else if(mapType === 'collected') {
@@ -126,7 +146,7 @@ export default function Map({ navigation }) {
             reload2();
         }
 
-        const reload = async () => {
+        const reload = async() => {
             setState({ coordinates: [] });
             userUploads.map((pin) => {
                 let imageURL;
@@ -156,9 +176,11 @@ export default function Map({ navigation }) {
                 }
             })
             setInfoID();
+            createLocData();
+            trackCollectors();
         }
 
-        const reload2 = async () => {
+        const reload2 = async() => {
             let temp;
             if(mapType === 'collected')
                 temp = 'uncollected';
@@ -194,23 +216,91 @@ export default function Map({ navigation }) {
                 }
             })
             setInfoID();
+            createLocData();
+            trackCollectors();
         }
 
-        const quickRoute = (desLatitude, desLongitude) => {
+        const trackCollectors = async() => {
+            setInterval(async() => {
+                setTrack({ coordinates: [] });
+                collectorLocation.map((pin) => {
+                    let collector;
+                    users.map((user) => {
+                        if(user.id.includes(pin.userId)) {
+                            collector = user.firstName + ' ' + user.lastName;
+                        }
+                    })
+                    try {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setTrack((prev) => ({
+                            ...prev,
+                            coordinates: [...prev.coordinates, { name: pin.id, user: pin.userId, collectorName: collector, latitude: lat, longitude: long }],
+                        }));
+                    } catch (e) {
+                        console.log(e);
+                    }
+                })
+            }, 5000)
+        }
+
+        const createLocData = async() => {
+            try {
+                const userID = await AsyncStorage.getItem('userId');
+                let temp = false;
+                collectorLocation.map((colLocation) => {
+                    if(colLocation.userId === userID) {
+                        temp = true;
+                    }
+                })
+                console.log(temp);
+
+                if(!temp) {
+                    await addDoc(collectorLoc, {
+                        userId: userID,
+                        latitude: '',
+                        longitude: '',
+                    });
+                }
+            } catch(e) {
+                console.log(e);
+            }
+        }
+
+        const updateLocData = async(latitude, longitude) => {
+            const userID = await AsyncStorage.getItem('userId');
+            let tempId;
+            collectorLocation.map((colLocation) => {
+                if(colLocation.userId === userID) {
+                    tempId = colLocation.id;
+                }
+            })
+
+            const colDoc = doc(db, "collectorLocationTrack", tempId);
+            const newFields = {
+                latitude: latitude,
+                longitude: longitude
+            };
+            await updateDoc(colDoc, newFields);
+        }
+
+        const quickRoute = async(desLatitude, desLongitude) => {
             (async() => {
                 let {status} = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted') {
                     setErrorMsg('Permission to access location was denied');
                     return;
                 }
-                let currentLocation = await Location.getCurrentPositionAsync({});   
-                setCurrentLat(currentLocation.coords.latitude);
-                setCurrentLon(currentLocation.coords.longitude);
-                
+                let currentLocation = await Location.getCurrentPositionAsync({});
+
+                setInterval(async() => { 
+                    setCurrentLat(currentLocation.coords.latitude);
+                    setCurrentLon(currentLocation.coords.longitude);
+                    updateLocData(currentLocation.coords.latitude, currentLocation.coords.longitude);
+                }, 5000);
+
                 setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
-                setDestination({latitude: desLatitude, longitude: desLongitude})
-                console.log(origin);
-                console.log(destination);
+                setDestination({latitude: desLatitude, longitude: desLongitude});
             })();
         }
 
@@ -236,11 +326,11 @@ export default function Map({ navigation }) {
                     <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
                 </TouchableOpacity>
                 {mapType === 'uncollected' ?
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 99, justifyContent: 'center', alignItems: 'center',}}>
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
                         <Text style={{fontWeight: 800, color: '#F76811', fontSize: 18}}>UNCOLLECTED</Text>
                     </TouchableOpacity>
                     :
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 99, justifyContent: 'center', alignItems: 'center',}}>
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
                         <Text style={{fontWeight: 800, color: '#24E559', fontSize: 18}}>COLLECTED</Text>
                     </TouchableOpacity>
                 }
@@ -265,7 +355,6 @@ export default function Map({ navigation }) {
                                         latitude: parseFloat(marker.latitude),
                                         longitude: parseFloat(marker.longitude)
                                     }}
-                                    title='My Location'
                                     onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
                                     onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
                                     style={{zIndex: 100}}
@@ -290,9 +379,7 @@ export default function Map({ navigation }) {
                                         latitude: parseFloat(marker.latitude),
                                         longitude: parseFloat(marker.longitude)
                                     }}
-                                    title='My Location'
                                     onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
-                                    onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
                                     style={{zIndex: 100}}
                                 >
                                     <Ionicons name='location' style={{fontSize: 30, color: '#24E559'}} />
@@ -307,6 +394,24 @@ export default function Map({ navigation }) {
                             ))}
                         </>
                     }
+
+                    {track.coordinates.map(marker => (
+                        <Marker
+                            key={marker.name}
+                            coordinate={{
+                                latitude: parseFloat(marker.latitude),
+                                longitude: parseFloat(marker.longitude)
+                            }}
+                            style={{zIndex: 100}}
+                        >
+                            <Ionicons name='location' style={{fontSize: 30, color: 'green'}} />
+                            <Callout>
+                                <View style={{width: 150, alignItems: 'center'}}>
+                                    <Text>Collector: {marker.collectorName}</Text>
+                                </View>
+                            </Callout>
+                        </Marker>
+                    ))}
 
                     {currentLat !== null && currentLon !== null ? 
                         <Marker
@@ -421,8 +526,6 @@ export default function Map({ navigation }) {
                         onPress={(data, details = null) => {
                             searchLatitude = details.geometry.location.lat;
                             searchLongitude = details.geometry.location.lng;
-                            console.log('Latitude:', searchLatitude);
-                            console.log('Longitude:', searchLongitude);
                             moveCameraTo(searchLatitude, searchLongitude);
                         }}
                         query={{
@@ -474,6 +577,13 @@ export default function Map({ navigation }) {
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                     {loadMap()}
+                </View>
+                <View style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 10, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
+                    <TouchableOpacity activeOpacity={0.5}>
+                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </View>
         </>
