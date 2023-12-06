@@ -73,6 +73,13 @@ export default function NewsfeedCol({ navigation }) {
         }, 1000);
     }, []);
 
+    function getCurrentDate() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const currentDate = new Date().toLocaleDateString(undefined, options);
+    
+        return currentDate;
+      }
+
     function SideNavigation(navigation) {
         return (
             <>
@@ -201,9 +208,8 @@ export default function NewsfeedCol({ navigation }) {
                     <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
                     </View>
-                    <Text style={{position: 'absolute', right: 20, top: 80}}>
-                        <Text style={{fontWeight: 600}}>Wednesday</Text>, April 19, 2023 <Ionicons name='caret-down-circle-outline' style={{fontSize: 20}} />
-                    </Text>
+                    <Text style={{ position: 'absolute', right: 20, top: 80 }}>
+                    <Text style={{ fontWeight: 600 }}>{getCurrentDate()}</Text></Text>
                     <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50}}>
                         <View style={{ flexDirection: 'row', width: '100%' }}>
                             <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>

@@ -49,7 +49,7 @@ export default function ScheduleAut({ navigation }) {
       const unsubscribe = onSnapshot(collection(db, 'schedule'), (snapshot) => { 
         const scheduleData = snapshot.docs.map((doc) => { 
           const data = doc.data(); 
-          data.id = doc.id; // Add the 'id' property with the document ID 
+          data.id = doc.id; 
           return data; 
         }); 
         setSchedule(scheduleData); 
@@ -310,7 +310,6 @@ export default function ScheduleAut({ navigation }) {
                     navigation.navigate('changeSched'); 
                   }} 
                 > 
-                  <Ionicons name="ellipsis-horizontal" style={{ fontSize: 20, color: 'black' }} /> 
                 </TouchableOpacity> 
                 </View> 
               </View> 

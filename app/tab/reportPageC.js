@@ -105,67 +105,88 @@ export default function ReportCol({ navigation }) {
 
     function BodyContent() {
         userUploads.map((uploads) => {
-            var valueToPush = { };
-            valueToPush["id"] = uploads.id;
-            valueToPush["imageLink"] = uploads.associatedImage;
-            valueToPush["dateTime"] = uploads.dateTime;
-            valueToPush["description"] = uploads.description;
-            valueToPush["location"] = uploads.location;
-            valueToPush["status"] = uploads.status;
-            valueToPush["userId"] = uploads.userId;
-            uploadCollection.push(valueToPush);
-            uploadCollection.sort((a, b) => {
-                let fa = a.dateTime, fb = b.dateTime;
-                if (fa < fb) {return -1;}
-                if (fa > fb) {return 1;}
-                return 0;
-            });
-        })
-
+          var valueToPush = {};
+          valueToPush["id"] = uploads.id;
+          valueToPush["imageLink"] = uploads.associatedImage;
+          valueToPush["dateTime"] = uploads.dateTime;
+          valueToPush["description"] = uploads.description;
+          valueToPush["location"] = uploads.location;
+          valueToPush["status"] = uploads.status;
+          valueToPush["userId"] = uploads.userId;
+          uploadCollection.push(valueToPush);
+          uploadCollection.sort((a, b) => {
+            let fa = a.dateTime,
+              fb = b.dateTime;
+            if (fa < fb) {
+              return -1;
+            }
+            if (fa > fb) {
+              return 1;
+            }
+            return 0;
+          });
+        });
         let temp = [];
         uploadCollection.map((post) => {
-            let imageURL;
-            imageCol.map((url) => {
-                if(url.includes(post.imageLink)) {
-                    imageURL = url;
-                }
-            })
+          let imageURL;
+          imageCol.map((url) => {
+            if (url.includes(post.imageLink)) {
+              imageURL = url;
+            }
+          });
 
-            temp.push(
-                <View style={[styles.contentButton, styles.contentGap]}>
-                    <TouchableOpacity activeOpacity={0.5}>
-                        <View style={styles.contentButtonFront}>
-                            <View style={{width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15}}>
-                                <View style={styles.containerPfp}>
-                                    <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                                </View>
-                                <Text style={{fontSize: 16, fontWeight: 500, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(post.userId === user.id) {return user.username;}})}</Text>
-                            </View>
-                            <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)'}}>
-                                <Text style={{fontSize: 13, marginBottom: 5,}}>{post.location}</Text>
-                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                                    {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
-                                    <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
-                                </View>
-                            </SafeAreaView>
-                        </View>
-                    </TouchableOpacity>
+          temp.push(
+            <View style={[styles.contentButton, styles.contentGap]}>
+              <TouchableOpacity activeOpacity={0.5}>
+                <View style={styles.contentButtonFront}>
+                  <View style={{width: "93%",flexDirection: "row",gap: 10,alignItems: "center",marginTop: 15,}}>
+                    <View style={styles.containerPfp}>
+                      <Ionicons name="person-outline" style={styles.placeholderPfp}/>
+                    </View>
+                    <Text style={{ fontSize: 16, fontWeight: 500,color: "rgba(20, 69, 7, 0.8)",}}>
+                      {users.map((user) => {
+                        if (post.userId === user.id) {
+                          return (
+                            <Text key={user.id}>
+                            <Text style={{ fontSize: 16, fontWeight:'bold' }}>
+                                {user.username}
+                            </Text>{"                         "}
+                            <Text style={{ fontSize: 12, color: 'rgba(105, 105, 105, 1)'}}>{post.dateTime}</Text>
+                            </Text>
+                          );
+                        }
+                      })}
+                    </Text>
+                  </View>
+                  <SafeAreaView style={{width: "100%",marginVertical: 10,paddingHorizontal: 22,paddingBottom: 5, borderBottomWidth: 1, borderColor: "rgba(190, 190, 190, 1)",}}>
+                    <Text style={{ fontSize: 13, marginBottom: 5 }}>
+                      {post.description}
+                    </Text>
+                    <View style={{width: "100%",height: 250, backgroundColor: "#D6D6D8",marginVertical: 5,justifyContent: "center",alignItems: "center", }} >
+                      {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
+                      <Image
+                        src={imageURL}
+                        style={{ width: "100%", height: "100%", flex: 1, resizeMode: "cover",}}/>
+                    </View>
+                  </SafeAreaView>
+                  <View style={{ width: "90%", flexDirection: "row",gap: 10,alignItems: "center", marginBottom: 10,}}
+                  >
+                    <Ionicons name="heart-outline" style={{ fontSize: 25 }} />
+                    <Ionicons name="chatbubble-outline" style={{ fontSize: 25 }}/>
+                    <Ionicons name="share-outline" style={{ fontSize: 25 }} />
+                  </View>
                 </View>
-            );
-        });
-        
-        <ul>
-            {temp.map(item =>
-                <li key="{item}">{item}</li>
-            )}
-        </ul>
-
-        return (
-            <View>
-                {temp}
+              </TouchableOpacity>
             </View>
-        );
-    }
+          );
+        });
+        <ul>
+          {temp.map((item) => (
+            <li key="{item}">{item}</li>
+          ))}
+        </ul>
+        return <View>{temp}</View>;
+      }
 
     return (
         <>
@@ -175,13 +196,6 @@ export default function ReportCol({ navigation }) {
             <TouchableOpacity style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
                 <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)' }} />
             </TouchableOpacity>
-            {/*<View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}>
-                <TouchableOpacity activeOpacity={0.5}>
-                    <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                        <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(81,175,91)', top: -3, right: -0.9 }} />
-                    </View>
-                </TouchableOpacity>
-            </View>*/}
             {openSideBar}
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
