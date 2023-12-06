@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
     buttonTxt1: {
         width: '100%',
         height: '100%',
+        padding: 10,
         backgroundColor: 'rgb(81,175,91)',
         textAlign: 'center',
         verticalAlign: 'middle',
@@ -231,6 +232,7 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: '#ffffff',
         textAlign: 'center',
+        padding: 10,
         verticalAlign: 'middle',
         color: 'rgb(81,175,91)',
         fontWeight: '900',

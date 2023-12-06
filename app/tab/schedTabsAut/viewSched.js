@@ -4,6 +4,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { db } from '../../../firebase_config';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import DatePicker from 'react-native-datepicker';
+import { Picker } from '@react-native-picker/picker';
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 export default function ViewSchedDetails({ navigation, route }) {
   const { scheduleId } = route.params;
@@ -11,6 +13,11 @@ export default function ViewSchedDetails({ navigation, route }) {
   const [isEditable, setIsEditable] = useState(false);
   const [updatedData, setUpdatedData] = useState({});
   const [focusedField, setFocusedField] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisible] = useState(false);
+  const [selectedTime, setSelectedTime] = useState(null);
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -49,17 +56,66 @@ export default function ViewSchedDetails({ navigation, route }) {
 
   const handleFieldFocus = (fieldName) => {
     setFocusedField(fieldName);
+    if (fieldName === 'type') {
+      setShowDropdown(true);
+    } else if (fieldName === 'startTime' && isEditable) {
+      showTimePicker();
+    } else if (fieldName === 'selectedDate' && isEditable) {
+      showDatePicker();
+    } else {
+      setShowDropdown(false);
+    }
   };
 
   const handleFieldBlur = () => {
     setFocusedField(null);
+    setShowDropdown(false);
   };
- 
+
+  const resetEdit = () => {
+    setIsEditable(false);
+    setUpdatedData(scheduleData);
+  };
+
+  const showTimePicker = () => {
+    setTimePickerVisible(true);
+  };
+
+  const hideTimePicker = () => {
+    setTimePickerVisible(false);
+  };
+
+  const handleTimeConfirm = (time) => {
+    const formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format time without milliseconds
+    setSelectedTime(formattedTime);
+    hideTimePicker();
+    setUpdatedData({ ...updatedData, startTime: formattedTime });
+  };
+
+  const showDatePicker = () => {
+    setDatePickerVisible(true);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisible(false);
+  };
+
+  const handleDateConfirm = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    setSelectedDate(formattedDate);
+    hideDatePicker();
+    setUpdatedData({ ...updatedData, selectedDate: formattedDate });
+  };
+  
+
   return (
     <>
       <View style={{ position: "absolute", height: "100%", width: "100%", justifyContent: "flex-start", alignItems: "center", zIndex: 10, backgroundColor: "rgba(0, 0, 0, 0.85)" }}>
         <View style={{ position: "absolute", width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", top: 30, paddingHorizontal: 20, zIndex: 10 }}>
-          <TouchableOpacity onPress={() => { navigation.navigate('mainSched'); }}>
+          <TouchableOpacity onPress={() => { resetEdit(); navigation.navigate('mainSched'); }}>
             <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179, 229, 94)" }} />
           </TouchableOpacity>
           {!isEditable ? (
@@ -85,14 +141,22 @@ export default function ViewSchedDetails({ navigation, route }) {
                 {scheduleData.type && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Type</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'type' && styles.focusedField]}
-                      value={updatedData.type}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('type')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, type: text })}
-                    />
+                    {isEditable ? (
+                      <View style={styles.pickerContainer}>
+                        <Picker
+                          selectedValue={updatedData.type}
+                          onValueChange={(value) => setUpdatedData({ ...updatedData, type: value })}
+                          style={styles.picker}
+                          enabled={isEditable}
+                        >
+                          <Picker.Item label="Collection" value="Collection" />
+                          <Picker.Item label="Event" value="Event" />
+                          <Picker.Item label="Assignment" value="Assignment" />
+                        </Picker>
+                      </View>
+                    ) : (
+                      <Text style={styles.fieldValue}>{updatedData.type}</Text>
+                    )}
                   </View>
                 )}
                 {scheduleData.title && (
@@ -138,29 +202,33 @@ export default function ViewSchedDetails({ navigation, route }) {
                 {scheduleData.selectedDate && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Date</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'selectedDate' && styles.focusedField]}
-                      value={updatedData.selectedDate}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('selectedDate')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, selectedDate: text })}
-                    />
+                    {isEditable ? (
+                      <TouchableOpacity
+                        style={[styles.fieldValue, focusedField === 'selectedDate' && styles.focusedField]}
+                        onPress={showDatePicker}
+                      >
+                        <Text>{(selectedDate || updatedData.selectedDate) && (selectedDate || updatedData.selectedDate)}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.fieldValue}>{selectedDate || updatedData.selectedDate}</Text>
+                    )}
                   </View>
                 )}
                 {scheduleData.startTime && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Time</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
-                      value={updatedData.startTime}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('startTime')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, startTime: text })}
-                    />
-                  </View>
-                )}
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldName}>Time</Text>
+                  {isEditable ? (
+                    <TouchableOpacity
+                    style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
+                    onPress={() => handleFieldFocus('startTime')}
+                  >
+                    <Text>{selectedTime || updatedData.startTime}</Text>
+                  </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.fieldValue}>{updatedData.startTime}</Text>
+                  )}
+                </View>
+              )}
                 {scheduleData.assignLocation && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Assigned Location</Text>
@@ -192,6 +260,22 @@ export default function ViewSchedDetails({ navigation, route }) {
           </ScrollView>
         </View>
       </View>
+      {isTimePickerVisible && (
+        <DateTimePickerModal
+          isVisible={isTimePickerVisible}
+          mode="time"
+          onConfirm={handleTimeConfirm}
+          onCancel={hideTimePicker}
+        />
+      )}
+    {isDatePickerVisible && (
+        <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleDateConfirm}
+        onCancel={hideDatePicker}
+      />
+      )}  
     </>
   );
 }
@@ -200,7 +284,7 @@ const styles = StyleSheet.create({
   fieldContainer: {
     paddingHorizontal: 25,
     marginTop: 10,
-    flexDirection: 'column', // Set flexDirection to 'column'
+    flexDirection: 'column',
   },
   fieldName: {
     fontWeight: 'bold',
@@ -214,14 +298,30 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgb(215,233,217)',
     color: 'rgba(45, 105, 35, 1)',
-    paddingLeft:10, paddingRight: 10, 
+    paddingLeft: 10,
+    paddingRight: 10,
     fontSize: 16,
-    marginTop: 5, 
+    marginTop: 5,
     width: 310,
     height: 35,
+    justifyContent: 'center',
   },
   focusedField: {
     borderColor: 'rgba(17, 152, 18, 1)',
     borderWidth: 1,
+  },
+  pickerContainer: {
+    backgroundColor: 'rgb(231,247,233)',
+    borderRadius: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgb(215,233,217)',
+    marginTop: 5,
+    width: 310,
+    height: 35,
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 35,
+    width: 310,
   },
 });

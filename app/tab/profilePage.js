@@ -165,128 +165,187 @@ export default function Profile({navigation}) {
 
     function EditProfile() {
         const updateUser = async () => {
-            const userDoc = doc(db, "users", id);
-            const newFields = {
-                username: editUsername,
-                firstName: editFirstName,
-                lastName: editLastName,
-                province: editProvince,
-                municipality: editMunicipality,
-                barangay: editBarangay,
-                email: editEmail,
-                contactNo: editContactNo
-            };
-            await updateDoc(userDoc, newFields);
+          // Check for empty fields
+          if (
+            !editUsername ||
+            !editFirstName ||
+            !editLastName ||
+            !editProvince ||
+            !editMunicipality ||
+            !editBarangay ||
+            !editEmail ||
+            !editContactNo
+          ) {
+            alert("Please fill up all fields.");
+            return;
+          }
+      
+          const userDoc = doc(db, "users", id);
+          const newFields = {
+            username: editUsername,
+            firstName: editFirstName,
+            lastName: editLastName,
+            province: editProvince,
+            municipality: editMunicipality,
+            barangay: editBarangay,
+            email: editEmail,
+            contactNo: editContactNo,
+          };
+          await updateDoc(userDoc, newFields);
+          alert("Profile Updated");
+      
+          // Reset the edit mode
+          setEdit(false);
         };
-
+      
         return (
-            <ScrollView contentContainerStyle={{flexGrow:1}}>
-                <SafeAreaView style={styles.container}>
-                    <Text style={styles.title}>EDIT PROFILE</Text>
-                    <View style={styles.containerPfp}>
-                        <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                    </View>
-                    <Text style={styles.usernamePfp}>{username}</Text>
-                    <View style={{flexDirection: 'row', gap: 10, marginTop: 10}}>
-                        <TouchableOpacity style={styles.editProfile2} onPress={() => {
-                            if (!edit) {
-                                setEdit(true);
-                            } else if (edit) {
-                                setEdit(false);
-                            }
-                        }}>
-                            <View style={{backgroundColor: 'white', padding: 7, paddingHorizontal: 23, borderRadius: 10, borderWidth: 1, borderColor: 'rgb(81,175,91)'}}>
-                                <Text style={{color:'rgb(81,175,91)', fontWeight: 700}}>Cancel</Text>
-                            </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.editProfile2} onPress={() => {
-                            updateUser();
-                            alert('Profile Updated');
-                            if (!edit) {
-                                setEdit(true);
-                            } else if (edit) {
-                                setEdit(false);
-                            }
-                        }}>
-                            <View style={{backgroundColor: 'rgb(81,175,91)', padding: 8, borderRadius: 10}}>
-                                <Text style={{color:'white', fontWeight: 700}}>Save Profile</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.containerFrm2}>
-                        <View style={styles.containerInfoDisplay}>
-                            <Text style={styles.containerInfoTxt}>Username</Text>
-                            <Text style={styles.containerInfoTxt}>First Name</Text>
-                            <Text style={styles.containerInfoTxt}>Last Name</Text>
-                            <Text style={styles.containerInfoTxt}>Province</Text>
-                            <Text style={styles.containerInfoTxt}>Municipality</Text>
-                            <Text style={styles.containerInfoTxt}>Barangay</Text>
-                            <Text style={styles.containerInfoTxt}>Email</Text>
-                            <Text style={styles.containerInfoTxt}>Phone Number</Text>
-                        </View>
-                        <View style={styles.containerInfoDisplay}>
-                            <TextInput
-                                value={editUsername}
-                                style={styles.input}
-                                placeholder="Username"
-                                editable={true}
-                                onChangeText={(e) => {setEditUsername(e)}}
-                            />
-                            <TextInput
-                                value={editFirstName}
-                                style={styles.input}
-                                placeholder="First Name"
-                                editable={true}
-                                onChangeText={(e) => {setEditFirstName(e)}}
-                            />
-                            <TextInput
-                                value={editLastName}
-                                style={styles.input}
-                                placeholder="Last Name"
-                                editable={true}
-                                onChangeText={(e) => {setEditLastName(e)}}
-                            />
-                            <TextInput
-                                value={editProvince}
-                                style={styles.input}
-                                placeholder="Province"
-                                editable={true}
-                                onChangeText={(e) => {setEditProvince(e)}}
-                            />
-                            <TextInput
-                                value={editMunicipality}
-                                style={styles.input}
-                                placeholder="Municipality"
-                                editable={true}
-                                onChangeText={(e) => {setEditMunicipality(e)}}
-                            />
-                            <TextInput
-                                value={editBarangay}
-                                style={styles.input}
-                                placeholder="Barangay"
-                                editable={true}
-                                onChangeText={(e) => {setEditBarangay(e)}}
-                            />
-                            <TextInput
-                                value={editEmail}
-                                style={styles.input}
-                                placeholder="Email"
-                                editable={true}
-                                onChangeText={(e) => {setEditEmail(e)}}
-                            />
-                            <TextInput
-                                value={editContactNo}
-                                style={styles.input}
-                                placeholder="Phone Number"
-                                editable={true}
-                                onChangeText={(e) => {setEditContactNo(e)}}
-                            />
-                        </View>
-                    </View>
-                </SafeAreaView>
-            </ScrollView>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+            <SafeAreaView style={styles.container}>
+              <Text style={styles.title}>EDIT PROFILE</Text>
+              <View style={styles.containerPfp}>
+                <Ionicons name="person-outline" style={styles.placeholderPfp} />
+              </View>
+              <Text style={styles.usernamePfp}>{username}</Text>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                <TouchableOpacity
+                  style={styles.editProfile2}
+                  onPress={() => {
+                    if (!edit) {
+                      setEdit(true);
+                    } else if (edit) {
+                      setEdit(false);
+                    }
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: "white",
+                      padding: 7,
+                      paddingHorizontal: 23,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: "rgb(81,175,91)",
+                    }}
+                  >
+                    <Text style={{ color: "rgb(81,175,91)", fontWeight: 700 }}>
+                      Cancel
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.editProfile2}
+                  onPress={() => {
+                    updateUser();
+                    if (!edit) {
+                      setEdit(true);
+                    } else if (edit) {
+                      setEdit(false);
+                    }
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: "rgb(81,175,91)",
+                      padding: 8,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Text style={{ color: "white", fontWeight: 700 }}>
+                      Save Profile
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.containerFrm2}>
+                <View style={styles.containerInfoDisplay}>
+                  <Text style={styles.containerInfoTxt}>Username</Text>
+                  <Text style={styles.containerInfoTxt}>First Name</Text>
+                  <Text style={styles.containerInfoTxt}>Last Name</Text>
+                  <Text style={styles.containerInfoTxt}>Province</Text>
+                  <Text style={styles.containerInfoTxt}>Municipality</Text>
+                  <Text style={styles.containerInfoTxt}>Barangay</Text>
+                  <Text style={styles.containerInfoTxt}>Email</Text>
+                  <Text style={styles.containerInfoTxt}>Phone Number</Text>
+                </View>
+                <View style={styles.containerInfoDisplay}>
+                  <TextInput
+                    value={editUsername}
+                    style={styles.input}
+                    placeholder="Username"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditUsername(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editFirstName}
+                    style={styles.input}
+                    placeholder="First Name"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditFirstName(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editLastName}
+                    style={styles.input}
+                    placeholder="Last Name"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditLastName(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editProvince}
+                    style={styles.input}
+                    placeholder="Province"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditProvince(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editMunicipality}
+                    style={styles.input}
+                    placeholder="Municipality"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditMunicipality(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editBarangay}
+                    style={styles.input}
+                    placeholder="Barangay"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditBarangay(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editEmail}
+                    style={styles.input}
+                    placeholder="Email"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditEmail(e);
+                    }}
+                  />
+                  <TextInput
+                    value={editContactNo}
+                    style={styles.input}
+                    placeholder="Phone Number"
+                    editable={true}
+                    onChangeText={(e) => {
+                      setEditContactNo(e);
+                    }}
+                  />
+                </View>
+              </View>
+            </SafeAreaView>
+          </ScrollView>
         );
-    }
+      }
 
     return (
         <>

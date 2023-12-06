@@ -10,6 +10,7 @@ import SchedLayout from './tab/schedRouteAut';
 import MessageLayout from './tab/messageRoute';
 import NotificationsCol from './tab/notifPageC';
 import Profile from './tab/profilePage';
+import NewMessage from './tab/messageTabs/createMessage';
 
 const Tab = createBottomTabNavigator();
 
