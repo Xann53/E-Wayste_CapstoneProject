@@ -385,7 +385,7 @@ export default function ReportAut({navigation}) {
                                     </TouchableOpacity>
                                 </View>
                                 <ScrollView horizontal={true}>
-                                    {ViewAllContent()}
+                                {ViewAllContent()}
                                 </ScrollView>
                             </View>
                             {BodyContent ()}
