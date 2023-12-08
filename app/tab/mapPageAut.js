@@ -236,6 +236,22 @@ export default function MapAut({ navigation }) {
             }, 5000)
         }
 
+        const statusChange = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'collected'
+            };
+            await updateDoc(userUploadDoc, newFields);
+        }
+
+        const statusChange2 = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'uncollected'
+            };
+            await updateDoc(userUploadDoc, newFields);
+        }
+
         return (
             <>
                 <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
@@ -357,15 +373,31 @@ export default function MapAut({ navigation }) {
                                     <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
                                         {mapType === 'uncollected' ?
                                             <>
-                                                <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center'}}>
-                                                    <Text style={{fontWeight: 700, color: 'white'}}>UNCOLLECTED</Text>
-                                                </View>
+                                                {colStatus === 'uncollected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                    </View>
+                                                }
                                             </>
                                             :
                                             <>
-                                                <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
-                                                    <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
-                                                </View>
+                                                {colStatus === 'collected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange2(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                    </View>
+                                                }
                                             </>
                                         }
                                     </View>
@@ -450,13 +482,6 @@ export default function MapAut({ navigation }) {
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                     {loadMap()}
-                </View>
-                <View style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 10, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('camera')}}>
-                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
-                        </View>
-                    </TouchableOpacity>
                 </View>
             </View>
         </>

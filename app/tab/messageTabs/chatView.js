@@ -23,6 +23,7 @@ export default function ViewMessage({ route, navigation }) {
         chatId,
         senderId: currentUser.uid,
         senderEmail: currentUser.email,
+        receiverEmail,
         text: message,
         timestamp: serverTimestamp(),
       });
@@ -216,7 +217,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
     height: 40,
     backgroundColor: 'white',
-
   },
   sendButton: {
     backgroundColor: '#4CAF50',
@@ -229,6 +229,5 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  },
-  
+  }, 
 });

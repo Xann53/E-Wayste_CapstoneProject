@@ -7,11 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../../firebase_config';
-
-
 import SideBar from '../../../components/SideNav';
-
-
 export default function NewMessage({ navigation }) {
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
@@ -26,26 +22,27 @@ export default function NewMessage({ navigation }) {
     }, [isFocused]);
   
     useEffect(() => {
-      // Fetch users from Firebase and filter based on user type (collector or lgu)
-      const fetchUsers = async () => {
-        const usersCollection = collection(getFirestore(), 'users');
-        const usersSnapshot = await getDocs(query(usersCollection));
-        const usersData = usersSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        // Fetch users from Firebase and filter based on user type (collector or lgu)
+        const fetchUsers = async () => {
+          const usersCollection = collection(db, 'users');
+          const usersSnapshot = await getDocs(query(usersCollection));
+          const usersData = usersSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+      
+          const currentUserUid = auth.currentUser?.uid;
+      
+          const filteredUsers = usersData
+            .filter((user) => user.accountType === 'Garbage Collector' || user.accountType === 'LGU / Waste Management Head')
+            .filter((user) => user.id !== currentUserUid);
+      
+          setUsers(filteredUsers);
+        };
+      
+        fetchUsers();
+      }, []);
 
-         const currentUserUid = auth.currentUser?.uid;
-  
-        const filteredUsers = usersData.filter((user) => {
-          return user.accountType === 'Garbage Collector' || user.accountType === 'LGU / Waste Management Head';
-        }).filter(user => user.id !== currentUserUid);
-    
-        setUsers(filteredUsers);
-      };
-    
-      fetchUsers();
-    }, []);
   
     const onRefresh = React.useCallback(() => {
       setRefreshing(true);
@@ -71,18 +68,20 @@ export default function NewMessage({ navigation }) {
     function BodyContent() {
       const currentUserUid = auth.currentUser?.uid;
       return (
-        <View style={{ width: '100%', top: 65, marginBottom: 60 }}>
+        <View style={{ width: '100%', top: 55, marginBottom: 60 }}>
+
           {users.map((user) => (
             user.id !== currentUserUid && (
             <TouchableOpacity key={user.id} activeOpacity={0.5} onPress={() => navigateToChat(user.id, user.username)}>
               <View style={[styles.contentButton]}>
                 <View style={styles.contentButtonFront}>
-                  <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginVertical: 15 }}>
+                  <View style={{ width: '95%', flexDirection: 'row', gap: 10, alignItems: 'flex-start',marginVertical: 12 }}>
+
                     <View style={styles.containerPfp}>
                       <Ionicons name='person-outline' style={styles.placeholderPfp} />
                     </View>
                     <View style={{ gap: 5, marginTop: 12 }}>
-                      <Text style={{ fontSize: 16, fontWeight: 500, color: 'rgba(113, 112, 108, 1)' }}>{user.username}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: 500, color: 'black' }}>{user.username}</Text>
                     </View>
                   </View>
                 </View>
@@ -105,26 +104,25 @@ export default function NewMessage({ navigation }) {
             {BodyContent()}
           </SafeAreaView>
         </ScrollView>
-  
         <View style={styles.containerHeader}>
           <View style={{ flexDirection: 'row' }}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 25 }}>
               <TouchableOpacity activeOpacity={0.5} onPress={() => { navigation.navigate('message'); }}>
                 <Ionicons name='arrow-back' style={{ fontSize: 35, color: '#BDE47C', top: 2 }} />
               </TouchableOpacity>
-              <Text style={{ fontSize: 18, fontWeight: 600, color: '#ffffff', marginLeft: 50, top: 1 }}>New Message</Text>
+              <Text style={{ fontSize: 18, fontWeight:'bold', color: 'green', marginLeft: 50, top: 1 }}>New Message</Text>
             </View>
           </View>
         </View>
         <View style={styles.containerSearch}>
           <TouchableOpacity activeOpacity={0.5}>
-            <Text style={{ fontSize: 20, color: '#ffffff', marginRight: 10 }}>To:</Text>
+            <Text style={{ fontSize: 16, color: '#ffffff', marginRight: 10 }}>To:</Text>
           </TouchableOpacity>
-          <TextInput style={styles.searchInput} placeholderTextColor="#ffffff" value={searchText} onChangeText={(text) => setSearchText(text)} />
+          <TextInput style={styles.searchInput} placeholderTextColor="#2596be" value={searchText} onChangeText={(text) => setSearchText(text)} />
         </View>
-        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgb(75,163,84)', zIndex: -99 }}>
+        <View style={{ position: 'absolute', width: '100%', height: '100%', zIndex: -99 }}>
           <Image
-            source={require('../../../assets/NatureVector.jpg')}
+            source={require('../../../assets/green.jpg')}
             style={{
               position: 'absolute',
               resizeMode: 'stretch',
@@ -154,7 +152,7 @@ export default function NewMessage({ navigation }) {
       position: 'absolute',
       width: '100%',
       height: 75,
-      backgroundColor: '#51AF5B',
+      backgroundColor: 'white',
       justifyContent: 'flex-end',
       paddingBottom: 5,
       paddingHorizontal: 10,
@@ -162,20 +160,19 @@ export default function NewMessage({ navigation }) {
     contentButton: {
       width: '100%',
       borderBottomWidth: 1,
-      borderColor: 'rgb(13, 86, 1)',
+      borderColor: 'gray',
       overflow: 'hidden',
-  
     },
     contentButtonFront: {
       width: '100%',
-      backgroundColor: 'rgba(255, 255, 255, 0.7)',
+      backgroundColor: '#E1FADC',
       justifyContent: 'center',
       alignItems: 'center',
       color: 'rgba(113, 112, 108, 1)',
     },
     containerPfp: {
-      width: 45,
-      height: 45,
+      width: 35,
+      height: 35,
       backgroundColor: 'rgba(255, 255, 255, 1)',
       borderRadius: 55,
       overflow: 'hidden',
@@ -183,13 +180,13 @@ export default function NewMessage({ navigation }) {
       alignItems: 'center',
     },
     placeholderPfp: {
-      fontSize: 25,
+      fontSize: 20,
       color: 'rgba(113, 112, 108, 1)',
     },
     containerSearch: {
       position: 'absolute',
       width: '100%',
-      height: 50,
+      height: 40,
       backgroundColor: 'green',
       flexDirection: 'row',
       alignItems: 'center',
@@ -204,4 +201,3 @@ export default function NewMessage({ navigation }) {
     }
   });
 
-// New Message 

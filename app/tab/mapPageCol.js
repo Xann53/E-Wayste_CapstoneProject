@@ -16,7 +16,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { GOOGLE_API_KEY } from '../../environments';
 import SideBar from '../../components/SideNav';
 
-export default function MapAut({ navigation }) {
+export default function MapCol({ navigation }) {
     const isFocused = useIsFocused();
     const [openSideBar, setOpenSideBar] = useState();
     const mapRef = useRef(null);
@@ -28,12 +28,17 @@ export default function MapAut({ navigation }) {
     const [imageCol, setImageCol] = useState([]);
     const [collectorLocation, setCollectorLocation] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
-    const [track, setTrack] = useState({ coordinates: [] });
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
+    const collectorLoc = collection(db, "collectorLocationTrack");
     const imageColRef = ref(storage, "postImages/");
+
+    const [currentLat, setCurrentLat] = useState(null);
+    const [currentLon, setCurrentLon] = useState(null);
+    const [origin, setOrigin] = useState({});
+    const [destination, setDestination] = useState({});
 
     const [infoID, setInfoID] = useState();
     const [infoImage, setInfoImage] = useState();
@@ -170,6 +175,7 @@ export default function MapAut({ navigation }) {
                 }
             })
             setInfoID();
+            createLocData();
             trackCollectors();
         }
 
@@ -209,31 +215,76 @@ export default function MapAut({ navigation }) {
                 }
             })
             setInfoID();
+            createLocData();
             trackCollectors();
         }
 
-        const trackCollectors = async() => {
-            setInterval(async() => {
-                setTrack({ coordinates: [] });
-                collectorLocation.map((pin) => {
-                    let collector;
-                    users.map((user) => {
-                        if(user.id.includes(pin.userId)) {
-                            collector = user.firstName + ' ' + user.lastName;
-                        }
-                    })
-                    try {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setTrack((prev) => ({
-                            ...prev,
-                            coordinates: [...prev.coordinates, { name: pin.id, user: pin.userId, collectorName: collector, latitude: lat, longitude: long }],
-                        }));
-                    } catch (e) {
-                        console.log(e);
+        const createLocData = async() => {
+            try {
+                const userID = await AsyncStorage.getItem('userId');
+                let temp = false;
+                collectorLocation.map((colLocation) => {
+                    if(colLocation.userId === userID) {
+                        temp = true;
                     }
                 })
-            }, 5000)
+                console.log(temp);
+
+                if(!temp) {
+                    await addDoc(collectorLoc, {
+                        userId: userID,
+                        latitude: '',
+                        longitude: '',
+                    });
+                }
+            } catch(e) {
+                console.log(e);
+            }
+        }
+
+        const updateLocData = async(latitude, longitude) => {
+            const userID = await AsyncStorage.getItem('userId');
+            let tempId;
+            collectorLocation.map((colLocation) => {
+                if(colLocation.userId === userID) {
+                    tempId = colLocation.id;
+                }
+            })
+
+            const colDoc = doc(db, "collectorLocationTrack", tempId);
+            const newFields = {
+                latitude: latitude,
+                longitude: longitude
+            };
+            await updateDoc(colDoc, newFields);
+        }
+
+        const quickRoute = async(desLatitude, desLongitude) => {
+            (async() => {
+                let {status} = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    setErrorMsg('Permission to access location was denied');
+                    return;
+                }
+                let currentLocation = await Location.getCurrentPositionAsync({});
+
+                setInterval(async() => { 
+                    setCurrentLat(currentLocation.coords.latitude);
+                    setCurrentLon(currentLocation.coords.longitude);
+                    updateLocData(currentLocation.coords.latitude, currentLocation.coords.longitude);
+                }, 5000);
+
+                setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
+                setDestination({latitude: desLatitude, longitude: desLongitude});
+            })();
+        }
+
+        const statusChange = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'collected'
+            };
+            await updateDoc(userUploadDoc, newFields);
         }
 
         return (
@@ -272,6 +323,7 @@ export default function MapAut({ navigation }) {
                                         longitude: parseFloat(marker.longitude)
                                     }}
                                     onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
                                     style={{zIndex: 100}}
                                 >
                                     <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
@@ -310,23 +362,31 @@ export default function MapAut({ navigation }) {
                         </>
                     }
 
-                    {track.coordinates.map(marker => (
+                    {currentLat !== null && currentLon !== null ? 
                         <Marker
-                            key={marker.name}
+                            key={"My Location"}
                             coordinate={{
-                                latitude: parseFloat(marker.latitude),
-                                longitude: parseFloat(marker.longitude)
+                                latitude: parseFloat(currentLat),
+                                longitude: parseFloat(currentLon)
                             }}
-                            style={{zIndex: 95}}
                         >
-                            <Ionicons name='location' style={{fontSize: 30, color: 'green'}} />
-                            <Callout>
-                                <View style={{width: 150, alignItems: 'center'}}>
-                                    <Text>Collector: {marker.collectorName}</Text>
-                                </View>
-                            </Callout>
+                            <Ionicons name='location' style={{fontSize: 35, color: '#D31111'}} />
+                            <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
                         </Marker>
-                    ))}
+                        :
+                        <></>
+                    }
+                    {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
+                        <MapViewDirections
+                            origin={origin}
+                            destination={destination}
+                            apikey={GOOGLE_API_KEY }
+                            strokeWidth={4}
+                            strokeColor='#6644ff'
+                        />
+                        :
+                        <></>
+                    }
                 </MapView>
                 {infoID ?
                     <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
@@ -357,9 +417,17 @@ export default function MapAut({ navigation }) {
                                     <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
                                         {mapType === 'uncollected' ?
                                             <>
-                                                <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center'}}>
-                                                    <Text style={{fontWeight: 700, color: 'white'}}>UNCOLLECTED</Text>
-                                                </View>
+                                                {colStatus === 'uncollected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                    </View>
+                                                }
                                             </>
                                             :
                                             <>
@@ -450,13 +518,6 @@ export default function MapAut({ navigation }) {
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                     {loadMap()}
-                </View>
-                <View style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 10, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('camera')}}>
-                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
-                        </View>
-                    </TouchableOpacity>
                 </View>
             </View>
         </>

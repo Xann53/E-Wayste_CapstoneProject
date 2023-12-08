@@ -5,11 +5,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import NewsfeedAut from './tab/homePageA';
 import ReportAut from './tab/reportPageA';
-import Map from './tab/mapPage';
+import MapAut from './tab/mapPageAut';
 import SchedLayout from './tab/schedRouteAut';
 import MessageLayout from './tab/messageRoute';
 import NotificationsCol from './tab/notifPageC';
 import Profile from './tab/profilePage';
+import NewMessage from './tab/messageTabs/createMessage';
 
 const Tab = createBottomTabNavigator();
 
@@ -66,7 +67,7 @@ export default function AuthorityLayout() {
         >
             <Tab.Screen name='home' component={NewsfeedAut} options={{headerShown: false}} />
             <Tab.Screen name='report' component={ReportAut} options={{ headerShown: false }} />
-            <Tab.Screen name='map' component={Map} options={{ headerShown: false }} />
+            <Tab.Screen name='map' component={MapAut} options={{ headerShown: false }} />
             <Tab.Screen name='schedule' component={SchedLayout} options={{ headerShown: false }} />
             <Tab.Screen name='message' component={MessageLayout} options={{ headerShown: false }} />
             <Tab.Screen name='notification' component={NotificationsCol} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
