@@ -4,10 +4,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import PushNotification from 'react-native-push-notification';
 
 import SideBar from '../../components/SideNav';
 
-export default function NotificationsCol({ navigation }) {
+export default function Notifications({ navigation }) {
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
 
@@ -24,6 +25,34 @@ export default function NotificationsCol({ navigation }) {
             setRefreshing(false);
         }, 1000);
     }, []);
+
+    useEffect(() => {
+        // Initialize PushNotification
+        PushNotification.configure({
+          onNotification: function (notification) {
+            // Handle notification when it is received
+            console.log('NOTIFICATION:', notification);
+          },
+          permissions: {
+            alert: true,
+            badge: true,
+            sound: true,
+          },
+          popInitialNotification: true,
+          requestPermissions: true,
+        });
+      }, []);
+
+      const showNotification = (title, message) => {
+        PushNotification.localNotification({
+          title: title,
+          message: message,
+        });
+      };
+      // Function to handle when a notification should be triggered
+     const handleNotification = () => {
+    showNotification('Notification Title', 'Notification Message');
+  };
 
     function SideNavigation(navigation) {
         return (
@@ -48,9 +77,12 @@ export default function NotificationsCol({ navigation }) {
                             <Ionicons name='checkmark' style={{fontSize: 70, color: 'rgb(81,175,91)'}} />
                         </View>
                         <View style={{marginLeft: 10, marginTop: 10}}>
+                           
+                         <TouchableOpacity onPress={handleNotification}>
                             <Text style={{fontSize: 16, fontWeight: 700}}>Collected!</Text>
                             <Text style={{fontSize: 12, fontWeight: 700, marginTop: 5}}>Your garbage report is already collected</Text>
                             <Text style={{fontSize: 11}}>10:24 am</Text>
+                          </TouchableOpacity>
                         </View>
                     </View>
                     <View style={{ width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
@@ -128,9 +160,6 @@ export default function NotificationsCol({ navigation }) {
             <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
                 <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
             </TouchableOpacity>
-            <TouchableOpacity style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }}  onPress={() => {navigation.navigate('home')}}>
-                <Ionicons name='home' style={{ fontSize: 35, color: 'rgb(81,175,91)' }} />
-            </TouchableOpacity>
             {openSideBar}
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -168,7 +197,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         justifyContent: 'flex-start',
         alignItems: 'center',
-        paddingBottom: 10,
+        paddingBottom: 60,
         paddingTop: 20,
     },
 });

@@ -1,15 +1,16 @@
 import React from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image , Share} from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, query ,where} from 'firebase/firestore';
+import { collection, addDoc, getDocs, query ,where, orderBy} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 import SideBar from '../../components/SideNav';
+import { TEST_ID } from 'react-native-gifted-chat';
 
 export default function NewsfeedAut({navigation}) {
     const isFocused = useIsFocused();
@@ -25,32 +26,45 @@ export default function NewsfeedAut({navigation}) {
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
 
+
+    const commentsCollection = collection(db, 'Comments');
+
     const [reportsToday, setReportsToday] = useState(0);
     const [totalReports, setTotalReports] = useState(0);
 
     useEffect(() => {
-        const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
-    
-        const fetchReports = async () => {
-          try {
-            // Query for reports today
-            const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '==', currentDate));
-            const todaySnapshot = await getDocs(todayQuery);
-            const reportsTodayCount = todaySnapshot.size;
-            setReportsToday(reportsTodayCount);
-    
-            // Query for all reports
-            const allReportsQuery = query(collection(db, 'generalUsersReports'));
-            const allReportsSnapshot = await getDocs(allReportsQuery);
-            const totalReportsCount = allReportsSnapshot.size;
-            setTotalReports(totalReportsCount);
-          } catch (error) {
-            console.log('Error fetching reports:', error);
-          }
-        };
-    
-        fetchReports();
-    }, []);
+      const fetchReports = async () => {
+        try {
+          const currentDate = new Date();
+          const formattedCurrentDate = `${currentDate.getFullYear()}/${currentDate.getMonth() + 1}/${currentDate.getDate()} ${currentDate.getHours()}:${currentDate.getMinutes()}:${currentDate.getSeconds()} ${currentDate.getHours() >= 12 ? 'pm' : 'am'}`;
+          
+          console.log('Formatted Current Date:', formattedCurrentDate);
+
+          // Query for reports today
+          const todayQuery = query(
+            collection(db, 'generalUsersReports'),
+            where('dateTime', '==', formattedCurrentDate)
+          );
+
+          const todaySnapshot = await getDocs(todayQuery);
+          const reportsTodayCount = todaySnapshot.size;
+          setReportsToday(reportsTodayCount);
+
+          console.log(`Reports fetched for today: ${reportsTodayCount}`);
+
+          // Query for all reports
+          const allReportsQuery = query(collection(db, 'generalUsersReports'));
+          const allReportsSnapshot = await getDocs(allReportsQuery);
+          const totalReportsCount = allReportsSnapshot.size;
+          setTotalReports(totalReportsCount);
+          console.log(`Total reports fetched: ${totalReportsCount}`);
+
+        } catch (error) {
+          console.log('Error fetching reports:', error);
+        }
+      };
+      fetchReports();
+    }, [db]);
 
 
     useEffect(() => {
@@ -101,6 +115,112 @@ export default function NewsfeedAut({navigation}) {
             setRefreshing(false);
         }, 1000);
     }, []);
+
+    // Post Interaction 
+    
+  const [likedPosts, setLikedPosts] = useState([]);
+  const isPostLiked = (postId) => likedPosts.includes(postId);
+
+  const handleLikePress = (postId) => {
+    setLikedPosts((prevLikedPosts) => {
+      const updatedLikedPosts = new Set(prevLikedPosts);
+
+      if (updatedLikedPosts.has(postId)) {
+        updatedLikedPosts.delete(postId);
+      } else {
+        updatedLikedPosts.add(postId);
+      }
+
+      return Array.from(updatedLikedPosts);
+    });
+  };
+  // comment 
+
+  const [isCommentOverlayVisible, setCommentOverlayVisible] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState([]);
+  const [postComments, setPostComments] = useState({});
+  
+  const handleCommentPress = (postId) => {
+    // Toggle the visibility of the comment overlay
+    setCommentOverlayVisible(!isCommentOverlayVisible);
+    // Handle other logic related to the comment press if needed
+  };
+  const handlePostComment = async (postId, commentText) => {
+    try {
+      // Add the comment to the "comments" collection
+      const commentsRef = collection(db, 'Comments');
+      await addDoc(commentsRef, {
+        postId,
+        userId: auth.currentUser.uid,
+        text: commentText,
+        timestamp: new Date(),
+        username: user.username,
+      });
+  
+      // Clear the comment text after posting
+      setCommentText('');
+  
+      // Update the postComments state
+      setPostComments((prevComments) => {
+        const updatedComments = {
+          ...prevComments,
+          [postId]: [...(prevComments[postId] || []), commentText],
+        };
+        return updatedComments;
+      });
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    }
+  };
+  const fetchComments = async (postId) => {
+    try {
+      const commentsQuery = query(
+        collection(db, 'comments'),
+        orderBy('timestamp', 'asc'),
+        where('postId', '==', postId)
+      );
+  
+      const snapshot = await getDocs(commentsQuery);
+  
+      const comments = snapshot.docs.map((doc) => doc.data().text);
+      setPostComments((prevComments) => ({
+        ...prevComments,
+        [postId]: comments,
+      }));
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  useEffect(() => {
+    console.log('userUploads:', userUploads);
+    // Fetch comments for each post
+    userUploads.forEach((uploads) => {
+      fetchComments(uploads.id);
+    });
+  }, [db, userUploads]);
+  
+  //Share
+
+  const handleSharePress = async (postId, description, imageURL) => {
+    try {
+      const result = await Share.share({
+        title: 'Check out this post!',
+        message: `${description}\n\nImage: ${imageURL}`, // Include any additional details you want to share
+      });
+  
+      if (result.action === Share.sharedAction) {
+        console.log('Post shared successfully');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Sharing dismissed');
+      }
+    } catch (error) {
+      console.error('Error sharing post:', error.message);
+    }
+  };
+  
+  
 
     function SideNavigation(navigation) {
         return (
@@ -217,6 +337,7 @@ export default function NewsfeedAut({navigation}) {
                       />
                     </View>
                   </SafeAreaView>
+                  
                   <View style={{
                       width: '90%',
                       flexDirection: 'row',
@@ -225,18 +346,49 @@ export default function NewsfeedAut({navigation}) {
                       marginBottom: 10,
                     }}
                   >
-                    <Ionicons name="heart-outline" style={{ fontSize: 25 }} />
-                    <Ionicons name="chatbubble-outline" style={{ fontSize: 25 }} />
-                    <Ionicons name="share-outline" style={{ fontSize: 25 }} />
+                    <Ionicons
+                      name={isPostLiked(post.id) ? 'heart' : 'heart-outline'}
+                      style={{ fontSize: 25, color: isPostLiked(post.id) ? 'red' : 'black' }}
+                      onPress={() => handleLikePress(post.id)}
+                    />
+                  <Ionicons
+                      name="chatbubble-outline"
+                      style={{ fontSize: 25 }}
+                      onPress={() => {
+                        handleCommentPress(post.id);
+                        setCommentOverlayVisible((prev) => ({
+                          ...prev,
+                          [post.id]: !prev[post.id],
+                        }));
+                      }}
+                    />
+                    <Ionicons
+              name="share-outline"
+              style={{ fontSize: 25 }}
+              onPress={() => handleSharePress(post.id, post.description, imageURL)}
+            />
                   </View>
                 </View>
-              </TouchableOpacity>
-            </View>
-          );
-        });
+              </TouchableOpacity>   
+              <View>
+              {isCommentOverlayVisible[post.id] && (
+                <CommentOverlay
+                comments={postComments[post.id] || []}
+                  commentText={commentText}
+                  setCommentText={setCommentText}
+                  handlePostComment={() => handlePostComment(post.id, commentText)}
+                  
+                />
+              )}
+              </View>
+           </View>
+          
+        );
+     });
       
         return <View style={{ gap: 10 }}>{temp}</View>;
       }
+      
 
       function HeaderContent() {
         return (
@@ -343,7 +495,35 @@ export default function NewsfeedAut({navigation}) {
             {openSideBar}
         </>
     );
-}
+    function CommentOverlay({ comments, commentText, setCommentText, handlePostComment }) {
+      return (
+        <View style={styles.commentOverlayContainer}>
+          <View style={styles.commentContainer}>
+            {comments.map((comment, index) => (
+              <View key={index} style={styles.existingComment}>
+                <Text>{comment}</Text>
+              </View>
+            ))}
+          </View>
+    
+          {/* Input text for adding a new comment */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Add a comment..."
+              value={commentText}
+              onChangeText={(text) => setCommentText(text)}
+              style={styles.input}
+            />
+            <TouchableOpacity onPress={handlePostComment}>
+              <View style={styles.postButton}>
+                <Text style={styles.postButtonText}>Post</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+  }
 
 const styles = StyleSheet.create({
     container: {
@@ -497,4 +677,49 @@ const styles = StyleSheet.create({
         gap: 10,
         marginBottom: 10, marginTop: -10
       },
+      // comments
+      commentOverlayContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        borderTopWidth: 1,
+        borderColor: 'rgba(190, 190, 190, 1)',
+        borderRadius: 10,
+      },
+      commentContainer: {
+        maxHeight: 150,
+        overflowY: 'auto',
+        padding: 10,
+      },
+      existingComment: {
+        marginBottom: 5,
+      },
+      inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 10,        
+      },
+      input: {
+        flex: 1,
+        height: 40,
+        borderWidth: 1,
+        borderColor: 'gray',
+        borderRadius: 5,
+        marginRight: 10,
+        paddingLeft: 10,
+      },
+      postButton: {
+        backgroundColor: 'rgb(81,175,91)',
+        padding: 10,
+        borderRadius: 5,
+      },
+      postButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+      },
+      
 });
+

@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db, auth } from '../../../firebase_config';
 import * as ImagePicker from 'expo-image-picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function ViewMessage({ route, navigation }) {
   const [message, setMessage] = useState('');
@@ -105,7 +98,35 @@ export default function ViewMessage({ route, navigation }) {
   }, [chatId, receiverEmail]);
 
   return (
+    
     <View style={styles.container}>
+      
+      <View style={styles.containerHeader}>
+        <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 25 }}>
+            <TouchableOpacity activeOpacity={0.5} onPress={() => { navigation.navigate('message') }}>
+            <Ionicons name='arrow-back' style={{ fontSize: 35, color: '#BDE47C', top: 2 }} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1, marginRight: 18 }}>Chats</Text>
+            <Text style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', top: 1 }}> yes</Text>
+        </View>
+        </View>
+    </View>
+      {/* Background Image */}
+      <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgb(75,163,84)', zIndex: -99 }}>
+        <Image
+          source={require('../../../assets/NatureVector.jpg')}
+          style={{
+            position: 'absolute',
+            resizeMode: 'stretch',
+            width: '100%',
+            height: '100%',
+            opacity: 0.3,
+            bottom: 0,
+          }}
+        />
+      </View>
+
       <FlatList
         data={chatData}
         keyExtractor={(item) => item.id.toString()}
@@ -113,6 +134,11 @@ export default function ViewMessage({ route, navigation }) {
         inverted={true}
       />
       <View style={styles.inputContainer}>
+      <View style={styles.composerContainer}>
+      <TouchableOpacity onPress={() => handleCameraPress()}>
+        <Ionicons name="camera-outline" size={24} color="green" />
+      </TouchableOpacity>
+    </View>
         <TextInput
           style={styles.textInput}
           placeholder="Type your message..."
@@ -130,18 +156,27 @@ export default function ViewMessage({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    backgroundColor: 'green',
-    padding: 10,
-    marginBottom: 100,
+    marginBottom: 50,
+    paddingBottom: 10,
+    width: '100%',
+    height: '100%',
   },
+  containerHeader: {
+    backgroundColor: '#3F3D3C',
+    padding: 10,
+},
   messageContainer: {
     borderRadius: 8,
     padding: 10,
     marginVertical: 5,
-    maxWidth: '80%',
+    flex:1,
+   
   },
+  composerContainer: {
+    marginRight: 5,
+    alignItems: 'center',
+    flexDirection: 'row',
+},
   userMessageContainer: {
     alignSelf: 'flex-end',
     backgroundColor: '#4CAF50', // Green color for user messages
@@ -169,19 +204,19 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    padding: 7,
+    backgroundColor: '#3F3D3C',
   },
   textInput: {
     flex: 1,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#87FF74',
     paddingHorizontal: 10,
     marginRight: 10,
     height: 40,
+    backgroundColor: 'white',
   },
   sendButton: {
     backgroundColor: '#4CAF50',
@@ -192,7 +227,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sendButtonText: {
-    color: 'green',
+    color: 'white',
     fontWeight: 'bold',
-  },
+  }, 
 });

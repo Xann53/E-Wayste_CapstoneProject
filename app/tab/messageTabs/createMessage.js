@@ -8,7 +8,6 @@ import { useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../../firebase_config';
 import SideBar from '../../../components/SideNav';
-
 export default function NewMessage({ navigation }) {
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
@@ -43,7 +42,7 @@ export default function NewMessage({ navigation }) {
       
         fetchUsers();
       }, []);
-      
+
   
     const onRefresh = React.useCallback(() => {
       setRefreshing(true);
@@ -70,12 +69,14 @@ export default function NewMessage({ navigation }) {
       const currentUserUid = auth.currentUser?.uid;
       return (
         <View style={{ width: '100%', top: 55, marginBottom: 60 }}>
+
           {users.map((user) => (
             user.id !== currentUserUid && (
             <TouchableOpacity key={user.id} activeOpacity={0.5} onPress={() => navigateToChat(user.id, user.username)}>
               <View style={[styles.contentButton]}>
                 <View style={styles.contentButtonFront}>
                   <View style={{ width: '95%', flexDirection: 'row', gap: 10, alignItems: 'flex-start',marginVertical: 12 }}>
+
                     <View style={styles.containerPfp}>
                       <Ionicons name='person-outline' style={styles.placeholderPfp} />
                     </View>
@@ -127,6 +128,7 @@ export default function NewMessage({ navigation }) {
               resizeMode: 'stretch',
               width: '100%',
               height: '100%',
+              opacity: 0.3,
               bottom: 0,
             }}
           />
@@ -160,7 +162,6 @@ export default function NewMessage({ navigation }) {
       borderBottomWidth: 1,
       borderColor: 'gray',
       overflow: 'hidden',
-  
     },
     contentButtonFront: {
       width: '100%',
@@ -199,3 +200,4 @@ export default function NewMessage({ navigation }) {
       color: '#ffffff',
     }
   });
+
