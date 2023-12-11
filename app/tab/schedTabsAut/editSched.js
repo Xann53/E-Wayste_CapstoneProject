@@ -12,9 +12,6 @@ export default function ChangeSched({navigation}) {
 
     const schedCollection = collection(db, "schedule");
 
-    const [year, setYear] = useState();
-    const [month, setMonth] = useState();
-    const [day, setDay] = useState();
     const [hourStart, setHourStart] = useState();
     const [minStart, setMinStart] = useState();
     const [ampmStart, setAmpmStart] = useState();
@@ -33,55 +30,6 @@ export default function ChangeSched({navigation}) {
         { key: "Assignment", value: "Assignment" },
         { key: "Event", value: "Event" },
     ];
-
-    const Month = [
-        { key: "January", value: "January" },
-        { key: "February", value: "February" },
-        { key: "March", value: "March" },
-        { key: "April", value: "April" },
-        { key: "May", value: "May" },
-        { key: "June", value: "June" },
-        { key: "July", value: "July" },
-        { key: "August", value: "August" },
-        { key: "September", value: "September" },
-        { key: "October", value: "October" },
-        { key: "November", value: "November" },
-        { key: "December", value: "December" },
-    ];
-
-    const Year = [];
-    let ctr = 0;
-    for (let i = 2000; i <= 2090; i++) {
-        Year[ctr] = { key: i, value: i };
-        ctr++;
-    }
-
-    const Day = [];
-    let ctr4 = 0;
-    if (month === 'January' || month === 'March' || month === 'May' || month === 'July' || month === 'August' || month === 'October' || month === 'December') {
-        for (let i = 1; i <= 31; i++) {
-            Day[ctr4] = { key: i, value: i };
-            ctr4++;
-        }
-    }
-    if (month === 'April' || month === 'June' || month === 'September' || month === 'November') {
-        for (let i = 1; i <= 30; i++) {
-            Day[ctr4] = { key: i, value: i };
-            ctr4++;
-        }
-    }
-    if (month === 'February' && (Number(year) % 4 === 0)) {
-        for (let i = 1; i <= 29; i++) {
-            Day[ctr4] = { key: i, value: i };
-            ctr4++;
-        }
-    }
-    if (month === 'February' && (Number(year) % 4 != 0)) {
-        for (let i = 1; i <= 28; i++) {
-            Day[ctr4] = { key: i, value: i };
-            ctr4++;
-        }
-    }
 
     const Hour = [];
     let ctr2 = 0;
@@ -496,13 +444,13 @@ export default function ChangeSched({navigation}) {
                 <View style={{ width: "100%", height: "100%", backgroundColor: "#ffffff" }}>
                     <ScrollView style={{ width: "100%" }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90, }}>
                         <Text style={{marginBottom: 5, fontSize: 25, fontWeight: 900, color: 'rgba(113, 112, 108, 1)', width: '100%', paddingLeft: 25}}>CREATE TASK</Text>
-                        <View style={{marginLeft: 25, marginBottom: 10}}>
+                        <View style={{width: '100%', paddingHorizontal: 25, marginBottom: 10}}>
                             <SelectList
                                 setSelected={(e) => { setSelectType(e); }}
                                 data={Type}
                                 placeholder="Select Type"
                                 boxStyles={{
-                                    width: 310,
+                                    width: '100%',
                                     backgroundColor: "rgb(189,228,124)",
                                     borderRadius: 10,
                                     color: "rgba(45, 105, 35, 1)",
@@ -510,7 +458,7 @@ export default function ChangeSched({navigation}) {
                                     borderWidth: 0,
                                 }}
                                 dropdownStyles={{
-                                    width: 310,
+                                    width: '100%',
                                     backgroundColor: "rgb(231,247,233)",
                                     top: -10,
                                     marginBottom: -10,
