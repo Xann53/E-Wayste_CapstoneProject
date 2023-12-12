@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { parse } from 'date-fns';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query ,where, orderBy} from 'firebase/firestore';
@@ -33,38 +34,38 @@ export default function NewsfeedAut({navigation}) {
     const [totalReports, setTotalReports] = useState(0);
 
     useEffect(() => {
+      const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
+  
       const fetchReports = async () => {
-        try {
-          const currentDate = new Date();
-          const formattedCurrentDate = `${currentDate.getFullYear()}/${currentDate.getMonth() + 1}/${currentDate.getDate()} ${currentDate.getHours()}:${currentDate.getMinutes()}:${currentDate.getSeconds()} ${currentDate.getHours() >= 12 ? 'pm' : 'am'}`;
-          
-          console.log('Formatted Current Date:', formattedCurrentDate);
-
-          // Query for reports today
-          const todayQuery = query(
-            collection(db, 'generalUsersReports'),
-            where('dateTime', '==', formattedCurrentDate)
-          );
-
-          const todaySnapshot = await getDocs(todayQuery);
-          const reportsTodayCount = todaySnapshot.size;
-          setReportsToday(reportsTodayCount);
-
-          console.log(`Reports fetched for today: ${reportsTodayCount}`);
-
-          // Query for all reports
-          const allReportsQuery = query(collection(db, 'generalUsersReports'));
-          const allReportsSnapshot = await getDocs(allReportsQuery);
-          const totalReportsCount = allReportsSnapshot.size;
-          setTotalReports(totalReportsCount);
-          console.log(`Total reports fetched: ${totalReportsCount}`);
-
-        } catch (error) {
-          console.log('Error fetching reports:', error);
-        }
+          try {
+              // Query for reports today
+              const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
+              const todaySnapshot = await getDocs(todayQuery);
+              const todayReports = [];
+  
+              todaySnapshot.forEach(doc => {
+                  const report = doc.data();
+                  const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+  
+                  if (reportDate.toISOString().split('T')[0] === currentDate) {
+                      todayReports.push(report);
+                  }
+              });
+  
+              setReportsToday(todayReports.length);
+  
+              // Query for all reports
+              const allReportsQuery = query(collection(db, 'generalUsersReports'));
+              const allReportsSnapshot = await getDocs(allReportsQuery);
+              const totalReportsCount = allReportsSnapshot.size;
+              setTotalReports(totalReportsCount);
+          } catch (error) {
+              console.log('Error fetching reports:', error);
+          }
       };
+  
       fetchReports();
-    }, [db]);
+  }, []);
 
 
     useEffect(() => {
@@ -447,7 +448,7 @@ export default function NewsfeedAut({navigation}) {
                             <Text style={{fontSize: 23, fontWeight: 700, color: 'rgba(3, 73, 4, 1)', marginBottom: 5}}>NEWSFEED</Text>
                         </View>
                         <View style={{width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgb(16, 139, 0)', marginBottom: 20}}>
-                            <TouchableOpacity activeOpacity={0.5}>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('pagecamera')}}>
                                 <View style={{backgroundColor: '#ffffff', flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center'}}>
                                     <View style={[styles.containerPfp, {width: 30, height: 30}]}>
                                         <Ionicons name='person-outline' style={[styles.placeholderPfp, {fontSize: 20}]} />

@@ -16,7 +16,9 @@ export default function Login({navigation}) {
   const reportRef = firebase.firestore().collection("users");
   const [missingUsername, setMissingUsername] = useState(false);
   const [missingPassword, setMissingPassword] = useState(false);
+  
 
+  
   useEffect(() => {
     reportRef.onSnapshot(
       querySnapshot => {
@@ -43,25 +45,6 @@ export default function Login({navigation}) {
   }, [])
 
   function SignIn() {
-
-    const missing = [];
-      if (usernameEmail.trim() === "") {
-        setMissingUsername(true);
-      } else {
-        setMissingUsername(false);
-      }
-
-      if (password.trim() === "") {
-        setMissingPassword(true);
-      } else {
-        setMissingPassword(false);
-      }
-
-      if (usernameEmail.trim() === "" || password.trim() === "") {
-        alert("Please fill up all required fields.");
-        return;
-      }
-
     const loginUser = async () => {
       let email;
       let usernameUsed = false;
@@ -75,16 +58,18 @@ export default function Login({navigation}) {
       let barangay;
       let contactNo;
       let plateNo;
-
+  
       users.map((user) => {
-        if (user.username.trim() === usernameEmail.trim()) {
+        // Check if user and username are defined before calling trim
+        if (user && user.username && user.username.trim() === usernameEmail.trim()) {
           usernameUsed = true;
         }
-      })
-
-      if(usernameUsed) {
+      });
+  
+      if (usernameUsed) {
         users.map((user) => {
-          if (user.username.trim() === usernameEmail.trim()) {
+          // Check if user and username are defined before calling trim
+          if (user && user.username && user.username.trim() === usernameEmail.trim()) {
             email = user.email;
             accountId = user.id;
             accountType = user.accountType;
@@ -95,12 +80,26 @@ export default function Login({navigation}) {
             municipality = user.municipality;
             barangay = user.barangay;
             contactNo = user.contactNo;
-            if(user.plateNo !== undefined)
-              plateNo = user.plateNo;
-            else
-              plateNo = 'N/A';
+            plateNo = user.plateNo !== undefined ? user.plateNo : 'N/A';
           }
-        })
+        });
+      } else if (!usernameUsed) {
+        email = usernameEmail.trim();
+        users.map((user) => {
+          // Check if user and email are defined before calling trim
+          if (user && user.email && user.email === email) {
+            accountId = user.id;
+            accountType = user.accountType;
+            firstName = user.firstName;
+            lastName = user.lastName;
+            username = user.username;
+            province = user.province;
+            municipality = user.municipality;
+            barangay = user.barangay;
+            contactNo = user.contactNo;
+            plateNo = user.plateNo !== undefined ? user.plateNo : 'N/A';
+          }
+        });
       } else if(!usernameUsed) {
         email = usernameEmail.trim();
         users.map((user) => {

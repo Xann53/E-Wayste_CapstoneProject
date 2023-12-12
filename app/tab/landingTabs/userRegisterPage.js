@@ -38,30 +38,36 @@ export default function Registration1({ navigation }) {
     
     const registerUser = async (accountType, firstName, lastName, username, email, password) => {
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
-            createUser(accountType, firstName, lastName, username, email);
-        } catch(error) {
-            alert(error.message);
+          if (!email || !password || !province || !municipality || !barangay || !contactNo) {
+            // Check if any required fields are undefined or empty
+            alert("Please fill in all the required fields.");
+            return;
+          }
+      
+          await createUserWithEmailAndPassword(auth, email, password);
+          createUser(accountType, firstName, lastName, username, email);
+        } catch (error) {
+          alert(error.message);
         }
-    };
+      };
     
-    const createUser = async (accountType, firstName, lastName, username, email) => {
+      const createUser = async (accountType, firstName, lastName, username, email) => {
         const account = await addDoc(usersCollection, {
-            accountType: accountType,
-            firstName: firstName,
-            lastName: lastName,
-            username: username,
-            email: email,
-            province: province,
-            municipality: municipality,
-            barangay: barangay,
-            contactNo: contactNo
+          accountType: accountType,
+          firstName: firstName,
+          lastName: lastName,
+          username: username,
+          email: email,
+          province: province,
+          municipality: municipality,
+          barangay: barangay,
+          contactNo: contactNo
         });
         await AsyncStorage.clear();
         await signOut(auth);
         clearForm();
         Redirect();
-    };
+      }; 
 
     function clearForm() {
         setProvince("");

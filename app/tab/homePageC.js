@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { parse } from 'date-fns';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query } from 'firebase/firestore';
@@ -72,13 +73,6 @@ export default function NewsfeedCol({ navigation }) {
             setRefreshing(false);
         }, 1000);
     }, []);
-
-    function getCurrentDate() {
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const currentDate = new Date().toLocaleDateString(undefined, options);
-    
-        return currentDate;
-      }
 
     function SideNavigation(navigation) {
         return (
@@ -164,31 +158,34 @@ export default function NewsfeedCol({ navigation }) {
     }
 
     function ViewAllContent() {
-        let temp1 = [];
-        imageCol.map((url) => {
-            temp1.push(
-                <TouchableOpacity activeOpacity={0.5}>
-                    <View style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
-                        {/* <Ionicons name='images-outline' style={{fontSize: 40, color: 'white'}} /> */}
-                        <Image src={url} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
-                    </View>
-                </TouchableOpacity>
-            );
+        const currentDate = new Date().toISOString().split('T')[0];      
+    
+        // Filter images based on reports uploaded today
+        const imagesToday = imageCol.filter(url => {
+            const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
+    
+            if (associatedReport) {
+                const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+                return reportDate.toISOString().split('T')[0] === currentDate;
+            }
+    
+            return false;
         });
-        
-        <ul>
-            {temp1.map(item =>
-                <li key="{item}">{item}</li>
-            )}
-        </ul>
-
+        const imageList = imagesToday.map((url, index) => (
+            <TouchableOpacity key={index} activeOpacity={0.5}>
+                <View style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
+                    <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10 }} />
+                </View>
+            </TouchableOpacity>
+        ));
+    
         return (
-            <View style={{flexDirection: 'row', marginHorizontal: 10, gap: 10}}>
-                {temp1}
+            <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
+                {/* Display the list of images */}
+                {imageList}
             </View>
         );
     }
-
     return (
         <>
             <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
@@ -208,12 +205,13 @@ export default function NewsfeedCol({ navigation }) {
                     <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
                     </View>
-                    <Text style={{ position: 'absolute', right: 20, top: 80 }}>
-                    <Text style={{ fontWeight: 600 }}>{getCurrentDate()}</Text></Text>
+                    <Text style={{position: 'absolute', right: 20, top: 80}}>
+                        <Text style={{fontWeight: 600}}>Wednesday</Text>, April 19, 2023 <Ionicons name='caret-down-circle-outline' style={{fontSize: 20}} />
+                    </Text>
                     <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50}}>
                         <View style={{ flexDirection: 'row', width: '100%' }}>
                             <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
-                            <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }}>
+                            <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }} onPress={() => navigation.navigate('report')}>
                                 <Text style={{textDecorationLine: 'underline'}}>
                                     View all
                                 </Text>

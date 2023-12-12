@@ -31,37 +31,38 @@ export default function SignUp({ navigation }) {
     const storeData = async () => {
         let proceed = true;
         users.map((user) => {
-          if (user.username.toLowerCase() === userName.toLocaleLowerCase()) {
-            proceed = false;
-          }
+            if (user.username && user.username.toLowerCase() === userName.toLowerCase()) {
+                proceed = false;
+            }
         });
+    
         if (
-          proceed &&
-          (firstName.length > 0 &&
-            lastName.length > 0 &&
-            userName.length > 0 &&
-            email.length > 0 &&
-            password.length > 0)
+            proceed &&
+            (firstName.length > 0 &&
+                lastName.length > 0 &&
+                userName.length > 0 &&
+                email.length > 0 &&
+                password.length > 0)
         ) {
-          try {
-            await AsyncStorage.setItem("accountType", accountType);
-            await AsyncStorage.setItem("accountFName", firstName);
-            await AsyncStorage.setItem("accountLName", lastName);
-            await AsyncStorage.setItem("accountUName", userName);
-            await AsyncStorage.setItem("accountEmail", email);
-            await AsyncStorage.setItem("accountPass", password);
-            await AsyncStorage.flushGetRequests();
-            // Do not clear the form here
-            Redirect();
-          } catch (error) {
-            alert(error.message);
-          }
+            try {
+                await AsyncStorage.setItem("accountType", accountType);
+                await AsyncStorage.setItem("accountFName", firstName);
+                await AsyncStorage.setItem("accountLName", lastName);
+                await AsyncStorage.setItem("accountUName", userName);
+                await AsyncStorage.setItem("accountEmail", email);
+                await AsyncStorage.setItem("accountPass", password);
+                await AsyncStorage.flushGetRequests();
+                Redirect();
+            } catch (error) {
+                alert(error.message);
+            }
         } else if (!proceed) {
-          alert("Username is already in use.");
+            alert("Username is already in use.");
         } else {
-          alert("Empty or Incomplete form! Unable to save data.");
+            alert("Empty or incomplete form! Unable to save data.");
         }
-      };
+    };
+    
     
       function clearForm() {
         setFirstName("");
