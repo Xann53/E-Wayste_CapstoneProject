@@ -14,8 +14,6 @@ export default function Login({navigation}) {
   const [users, setUsers] = useState([]);
   const usersCollection = collection(db, "users");
   const reportRef = firebase.firestore().collection("users");
-  const [missingUsername, setMissingUsername] = useState(false);
-  const [missingPassword, setMissingPassword] = useState(false);
 
   useEffect(() => {
     reportRef.onSnapshot(
@@ -44,23 +42,10 @@ export default function Login({navigation}) {
 
   function SignIn() {
 
-    const missing = [];
-      if (usernameEmail.trim() === "") {
-        setMissingUsername(true);
-      } else {
-        setMissingUsername(false);
-      }
-
-      if (password.trim() === "") {
-        setMissingPassword(true);
-      } else {
-        setMissingPassword(false);
-      }
-
-      if (usernameEmail.trim() === "" || password.trim() === "") {
-        alert("Please fill up all required fields.");
-        return;
-      }
+    if (usernameEmail.trim() === "" || password.trim() === "") {
+      alert("Please fill up all required fields.");
+      return;
+    }
 
     const loginUser = async () => {
       let email;
@@ -77,14 +62,14 @@ export default function Login({navigation}) {
       let plateNo;
 
       users.map((user) => {
-        if (user.username.trim() === usernameEmail.trim()) {
+        if (user.username === usernameEmail.trim()) {
           usernameUsed = true;
         }
       })
 
       if(usernameUsed) {
         users.map((user) => {
-          if (user.username.trim() === usernameEmail.trim()) {
+          if (user.username === usernameEmail.trim()) {
             email = user.email;
             accountId = user.id;
             accountType = user.accountType;

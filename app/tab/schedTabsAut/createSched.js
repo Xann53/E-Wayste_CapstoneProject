@@ -4,10 +4,15 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Calendar } from 'react-native-calendars';
 import { SelectList } from 'react-native-dropdown-select-list';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from 'expo-location';
 
 import { db } from '../../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 
+import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { GOOGLE_API_KEY } from '../../../environments';
 
 export default function AddSched({navigation}) {
 
@@ -24,6 +29,12 @@ export default function AddSched({navigation}) {
     const [assignCollector, setAssignCollector]= useState("")
     const [selectedDate, setSelectedDate] = useState(null);
     const [markedDates, setMarkedDates] = useState({});
+    
+    const [selectColRoute, setSelectColRoute] = useState(false);
+    const [newColRoute, setNewColRoute] = useState(false);
+    let routeLongitude, routeLatitude, routeLocName;
+    const [route, setRoute] = useState({ coordinates: [] });
+    const [routeCtr, setRouteCtr] = useState(0);
 
     const Type = [
         { key: "Collection", value: "Collection" },
@@ -73,7 +84,7 @@ export default function AddSched({navigation}) {
         const scheduleID = Math.random().toString(36).substring(2, 10);
         // Validate necessary values
         if (
-          (location !== "" || assignLocation !== "") && setAssignCollector !== "" && description !== "" && selectedDate
+          (location !== "" || assignLocation !== "" || route.coordinates !== "") && setAssignCollector !== "" && description !== "" && selectedDate
         ) {
           await addDoc(schedCollection, {
             scheduleID: scheduleID, 
@@ -86,6 +97,7 @@ export default function AddSched({navigation}) {
             assignLocation: assignLocation,
             assignCollector: assignCollector,
             selectedDate: selectedDate,
+            collectionRoute: route
           });
           alert("Schedule successfully added!");
           setMarkedDates((prevMarkedDates) => ({
@@ -102,6 +114,8 @@ export default function AddSched({navigation}) {
             setHourStart(null);
             setMinStart(null);
             setAmpmStart(null);
+            setRouteCtr(0);
+            setRoute({ coordinates: [] })
             navigation.navigate('mainSched'); //CANT NAVIGATE
         } else {
           alert("Fill up necessary values");
@@ -242,6 +256,147 @@ export default function AddSched({navigation}) {
         );
     }
 
+    function CollectionRoute() {
+        const editRoute = async (name, newLat, newLon) => {
+            try {
+                const address = await Location.reverseGeocodeAsync({
+                    latitude: parseFloat(newLat),
+                    longitude: parseFloat(newLon)
+                });
+                let finalAddress = '';
+                if(address[0].streetNumber !== null)
+                    finalAddress = finalAddress + address[0].streetNumber + ', ';
+                if(address[0].street !== null)
+                    finalAddress = finalAddress + address[0].street + ', ';
+                if(address[0].name !== null)
+                    finalAddress = finalAddress + address[0].name + ', ';
+                if(address[0].district !== null)
+                    finalAddress = finalAddress + address[0].district + ', ';
+                if(address[0].city !== null)
+                    finalAddress = finalAddress + address[0].city + ', ';
+                if(address[0].subregion !== null)
+                    finalAddress = finalAddress + address[0].subregion + ', ';
+                if(address[0].region !== null)
+                    finalAddress = finalAddress + address[0].region + ' region, ';
+                if(address[0].country !== null)
+                    finalAddress = finalAddress + address[0].country;
+                // setLocation(finalAddress);
+                setRoute({ 
+                    coordinates: route.coordinates.map((coordinate) => 
+                        coordinate.name === name ? {
+                            ...coordinate,
+                            locationName: finalAddress,
+                            latitude: newLat,
+                            longitude: newLon
+                        } : coordinate
+                    )
+                });
+            } catch(e) {console.log(e)}
+        }
+
+        function ShowRoute() {
+            let temp = [];
+            route.coordinates.map((coord) => {
+                temp.push(
+                    <View style={{backgroundColor: '#F7F1E7', padding: 10, borderRadius: 5, display: 'flex', flex: 1, flexDirection: 'row'}}>
+                        <View style={{flex: 10, justifyContent: 'center'}}>
+                            <Text ellipsizeMode='tail' numberOfLines={1} style={{color: '#7E430F', margin: 0, padding: 0, paddingRight: 10, fontWeight: 600}}>{coord.locationName}</Text>
+                            <View style={{flexDirection: 'row', marginTop: 5}}>
+                                <View style={{flex: 1}}>
+                                    <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 12, paddingRight: 15, fontWeight: 600}}>Lat: <Text style={{fontWeight: 'normal'}}>{coord.latitude}</Text></Text>
+                                </View>
+                                <View style={{flex: 1}}>
+                                    <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 12, paddingRight: 15, fontWeight: 600}}>Lon: <Text style={{fontWeight: 'normal'}}>{coord.longitude}</Text></Text>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {
+                                setRoute({
+                                    coordinates: route.coordinates.filter((coordinate) => coordinate.name !== coord.name),
+                                });
+                            }}>
+                                <Ionicons name='trash' style={{fontSize: 25, color: '#E19036'}} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                );
+            });
+
+            <ul>
+                {temp.map(item =>
+                    <li key="{item}">{item}</li>
+                )}
+            </ul>
+
+            return (
+                <View style={{width: '100%', gap: 5, paddingHorizontal: 5}}>
+                    {temp}
+                </View>
+            );
+        }
+
+        return (
+            <>
+                {selectColRoute ?
+                    <View style={{width: '100%', paddingHorizontal: 25, marginTop: 10, alignItems: 'center'}}>
+                        <TouchableOpacity style={{width: '90%', marginBottom: 10, backgroundColor: 'white', shadowColor: 'black', shadowOpacity: 0.7, shadowRadius: 2, elevation: 2, borderRadius: 15}} activeOpacity={0.5} onPress={() => {setSelectColRoute(false)}}>
+                            <View style={{width: '100%', height: 20, backgroundColor: '#F3F3F3', borderRadius: 15, borderWidth: 0.5, borderColor: '#C5C5C5', justifyContent: 'center', alignItems: 'center'}}>
+                                <Text style={{fontSize: 12}}>Collapse Routing Menu</Text>
+                            </View>
+                        </TouchableOpacity>
+                        <View style={{width: '100%', alignItems: 'flex-end', gap: 5}}>
+                            <View style={{width: '100%', height: 300, overflow: 'hidden', borderRadius: 10, borderWidth: 0.5}}>
+                                <MapView
+                                    style={{width: '100%', height: '120%'}}
+                                    provider={PROVIDER_GOOGLE}
+                                    initialRegion={{
+                                        latitude: 10.3156992,
+                                        longitude: 123.88543660000005,
+                                        latitudeDelta: 0.0922,
+                                        longitudeDelta: 0.0421,
+                                    }}
+                                    customMapStyle={mapStyle}
+                                >
+                                    {route.coordinates.map(marker => (
+                                        <Marker
+                                            key={marker.name}
+                                            coordinate={{
+                                                latitude: parseFloat(marker.latitude),
+                                                longitude: parseFloat(marker.longitude)
+                                            }}
+                                            style={{zIndex: 95}}
+                                            draggable
+                                            onDragEnd={(e) => {
+                                                editRoute(marker.name, e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude);
+                                            }}
+                                        >
+                                            <Ionicons name='flag' style={{fontSize: 25, color: '#D41818'}} />    
+                                        </Marker>
+                                    ))}
+                                </MapView>
+                            </View>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setNewColRoute(true)}}>
+                                <View style={{width: 35, height: 35, backgroundColor: 'orange', borderRadius: 5, justifyContent: 'center', alignItems: 'center', overflow: 'hidden'}}>
+                                    <Text style={{fontSize: 40, fontWeight: 500, color: 'white', marginTop: -11}}>+</Text>
+                                </View>
+                            </TouchableOpacity>
+                            {ShowRoute()}
+                        </View>
+                    </View>
+                    :
+                    <View style={{width: '100%', paddingHorizontal: 25, marginTop: 10, alignItems: 'center'}}>
+                        <TouchableOpacity style={{width: '90%', backgroundColor: 'white', shadowColor: 'black', shadowOpacity: 0.7, shadowRadius: 2, elevation: 2, borderRadius: 15}} activeOpacity={0.5} onPress={() => {setSelectColRoute(true)}}>
+                            <View style={{width: '100%', height: 20, backgroundColor: '#F3F3F3', borderRadius: 15, borderWidth: 0.5, borderColor: '#C5C5C5', justifyContent: 'center', alignItems: 'center'}}>
+                                <Text style={{fontSize: 12}}>Expand Routing Menu</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                }
+            </>
+        );
+    }
+
     function Collection() {
         return (
             <>
@@ -265,23 +420,7 @@ export default function AddSched({navigation}) {
                         multiline={true}
                     />
                 </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        value ={location}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Location'
-                        onChangeText={(e)=>{setLocation(e)}}
-                    />
-                </View>
+                {CollectionRoute()}
                 {SelectDateTime()}
             </>
         );
@@ -440,13 +579,13 @@ export default function AddSched({navigation}) {
     return (
         <>
             <View style={{ position: "absolute", height: "100%", width: "100%", justifyContent: "flex-start", alignItems: "center", zIndex: 10, backgroundColor: "rgba(0, 0, 0, 0.85)", }}>
-                <View style={{ position: "absolute", width: "100%", alignItems: "flex-start", top: 30, left: 20, zIndex: 10, }}>
-                    <TouchableOpacity onPress={() => { navigation.navigate('mainSched'); }}>
-                        <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179,229,94)" }} />
-                    </TouchableOpacity>
-                </View>
                 <View style={{ width: "100%", height: "100%", backgroundColor: "#ffffff" }}>
                     <ScrollView style={{ width: "100%" }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90, }}>
+                        <View style={{ position: "absolute", width: "100%", alignItems: "flex-start", top: 30, left: 20, zIndex: 10, }}>
+                            <TouchableOpacity onPress={() => { navigation.navigate('mainSched'); }}>
+                                <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179,229,94)" }} />
+                            </TouchableOpacity>
+                        </View>
                         <Text style={{marginBottom: 5, fontSize: 25, fontWeight: 900, color: 'rgba(113, 112, 108, 1)', width: '100%', paddingLeft: 25}}>CREATE TASK</Text>
                         <View style={{width: '100%', paddingHorizontal: 25, marginBottom: 10}}>
                             <SelectList
@@ -464,9 +603,9 @@ export default function AddSched({navigation}) {
                                 dropdownStyles={{
                                     width: '100%',
                                     backgroundColor: "rgb(231,247,233)",
-                                    top: -10,
+                                    top: -18,
                                     marginBottom: -10,
-                                    borderRadius: 10,
+                                    borderRadius: 5,
                                     zIndex: -1,
                                     borderWidth: 0,
                                     alignSelf: 'center',
@@ -485,6 +624,83 @@ export default function AddSched({navigation}) {
                     </ScrollView>
                 </View>
             </View>
+            {newColRoute ?
+                <View style={{position: 'absolute', zIndex: 99, height: '100%', width: '100%', padding: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'}}>
+                    <View style={{width: '100%', height: 120, backgroundColor: 'white', padding: 20, borderRadius: 10, justifyContent: 'flex-end'}}>
+                        <View style={{width: '113%', position: 'absolute', paddingHorizontal: 20, paddingTop: 20, top: 0, zIndex: 100}}>
+                            <GooglePlacesAutocomplete
+                                placeholder='Search'
+                                fetchDetails
+                                enablePoweredByContainer={false}
+                                onPress={(data, details = null) => {
+                                    routeLatitude = details.geometry.location.lat;
+                                    routeLongitude = details.geometry.location.lng;
+                                    routeLocName = data.description;
+                                }}
+                                query={{
+                                    key: GOOGLE_API_KEY,
+                                    language: 'en',
+                                }}
+                                styles={{
+                                    textInput: {
+                                        height: 38,
+                                        fontSize: 14,
+                                        marginTop: 3,
+                                        shadowColor: 'black',
+                                        shadowOffset:{width: 2, height: 2},
+                                        shadowOpacity: 0.4,
+                                        shadowRadius: 4,
+                                        elevation: 4,
+                                    },
+                                    listView: {
+                                        backgroundColor:'#c8c7cc',
+                                    },
+                                    row: {
+                                        backgroundColor: '#FFFFFF',
+                                        padding: 9,
+                                        height: 38,
+                                        marginVertical: 0.01,
+                                    },
+                                    description: {
+                                        fontSize: 12
+                                    },
+                                }}
+                            />
+                        </View>
+                        <View style={{width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: 10}}>
+                            <TouchableOpacity 
+                                activeOpacity={0.5}
+                                onPress={() => {
+                                    (async() => {
+                                        let {status} = await Location.requestForegroundPermissionsAsync();
+                                        if (status !== 'granted') {
+                                            setErrorMsg('Permission to access location was denied');
+                                            return;
+                                        }
+                                    })();
+                                    setNewColRoute(false);
+                                    setRoute((prev) => ({
+                                        ...prev,
+                                        coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
+                                    }));
+                                    setRouteCtr(routeCtr + 1);
+                                }}
+                            >
+                                <View style={{backgroundColor: 'green', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
+                                    <Text>Add</Text>
+                                </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setNewColRoute(false)}}>
+                                <View style={{backgroundColor: 'red', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
+                                    <Text>Close</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+                :
+                <></>
+            }
         </>
     );
 }
@@ -516,3 +732,22 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 })
+
+const mapStyle = [
+    {
+        elementType: 'labels.icon',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        featureType: 'poi.business',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+];
