@@ -25,16 +25,17 @@ export default function AddSched({navigation}) {
     const [description, setDescription] = useState("");
     const [location, setLocation] = useState("");
     const [title, setTitle] = useState("");
-    const [assignLocation, setAssignLocation] = useState("");
-    const [assignCollector, setAssignCollector]= useState("")
+    const [assignCollector, setAssignCollector]= useState("");
     const [selectedDate, setSelectedDate] = useState(null);
     const [markedDates, setMarkedDates] = useState({});
     
     const [selectColRoute, setSelectColRoute] = useState(false);
-    const [newColRoute, setNewColRoute] = useState(false);
+    const [addNewLocation, setAddNewLocation] = useState(false);
     let routeLongitude, routeLatitude, routeLocName;
     const [route, setRoute] = useState({ coordinates: [] });
     const [routeCtr, setRouteCtr] = useState(0);
+    const [latitude, setLatitude] = useState();
+    const [longitude, setLongitude] = useState();
 
     const Type = [
         { key: "Collection", value: "Collection" },
@@ -65,89 +66,129 @@ export default function AddSched({navigation}) {
         { key: "PM", value: "PM" },
     ];
 
+    const clearData = async () => {
+        setSelectType(null);
+        setDescription("");
+        setLocation("");
+        setTitle("");
+        setAssignCollector("");
+        setSelectedDate(null);
+        setHourStart(null);
+        setMinStart(null);
+        setAmpmStart(null);
+        setRouteCtr(0);
+        setRoute({ coordinates: [] });
+        setLatitude();
+        setLongitude();
+    }
+
     const createSchedule = async () => {
         let newHourStart, newTitle;
         if (hourStart < 10) {
-          newHourStart = "0" + hourStart;
+            newHourStart = "0" + hourStart;
         } else {
-          newHourStart = hourStart;
+            newHourStart = hourStart;
         }
+
         let start = newHourStart + ":" + minStart + " " + ampmStart;
         // Default title if not provided
         if (title !== "") {
-          newTitle = title;
+            newTitle = title;
         } else {
-          newTitle = "N/A";
+            newTitle = "N/A";
         }
+
         let id = await AsyncStorage.getItem('userId');
         // Generate a unique scheduleID
         const scheduleID = Math.random().toString(36).substring(2, 10);
         // Validate necessary values
-        if (
-          (location !== "" || assignLocation !== "" || route.coordinates !== "") && setAssignCollector !== "" && description !== "" && selectedDate
-        ) {
-          await addDoc(schedCollection, {
-            scheduleID: scheduleID, 
-            type: selectType,
-            description: description,
-            location: location,
-            startTime: start,
-            title: newTitle,
-            userID: id,
-            assignLocation: assignLocation,
-            assignCollector: assignCollector,
-            selectedDate: selectedDate,
-            collectionRoute: route
-          });
-          alert("Schedule successfully added!");
-          setMarkedDates((prevMarkedDates) => ({
-            ...prevMarkedDates,
-            [selectedDate]: { selected: true, selectedColor: getTypeColor(selectType) },
-          }));
-            setSelectType(null);
-            setDescription("");
-            setLocation("");
-            setTitle("");
-            setAssignLocation("");
-            setAssignCollector("");
-            setSelectedDate(null);
-            setHourStart(null);
-            setMinStart(null);
-            setAmpmStart(null);
-            setRouteCtr(0);
-            setRoute({ coordinates: [] })
-            navigation.navigate('mainSched'); //CANT NAVIGATE
+        if (((location !== "" && latitude !== "" && longitude !== "") || route.coordinates.length !== 0) && setAssignCollector !== "" && description !== "" && selectedDate) {
+            if(selectType === 'Collection') {
+                await addDoc(schedCollection, {
+                    scheduleID: scheduleID, 
+                    type: selectType,
+                    description: description,
+                    location: '',
+                    startTime: start,
+                    title: '',
+                    userID: id,
+                    assignCollector: '',
+                    selectedDate: selectedDate,
+                    collectionRoute: route,
+                    latitude: '',
+                    longitude: ''
+                });
+            } else if(selectType === 'Assignment') {
+                await addDoc(schedCollection, {
+                    scheduleID: scheduleID, 
+                    type: selectType,
+                    description: description,
+                    location: location,
+                    startTime: start,
+                    title: '',
+                    userID: id,
+                    assignCollector: assignCollector,
+                    selectedDate: selectedDate,
+                    collectionRoute: { coordinates: [] },
+                    latitude: latitude,
+                    longitude: longitude
+                });
+            } else if(selectType === 'Event') {
+                await addDoc(schedCollection, {
+                    scheduleID: scheduleID, 
+                    type: selectType,
+                    description: description,
+                    location: location,
+                    startTime: start,
+                    title: newTitle,
+                    userID: id,
+                    assignCollector: '',
+                    selectedDate: selectedDate,
+                    collectionRoute: { coordinates: [] },
+                    latitude: latitude,
+                    longitude: longitude
+                });
+            }
+
+            alert("Schedule successfully added!");
+            setMarkedDates((prevMarkedDates) => ({
+                ...prevMarkedDates,
+                [selectedDate]: { selected: true, selectedColor: getTypeColor(selectType) },
+            }));
+
+            clearData();
+            navigation.navigate('mainSched');
         } else {
-          alert("Fill up necessary values");
+            alert("Fill up necessary values");
         }
     };
 
     const getTypeColor = (type) => {
         switch (type) {
-          case 'Collection':
-            return 'rgb(242, 190, 45)' ;
-          case 'Assignment':
-            return 'green';
-          case 'Event':
-            return 'rgb(134, 231, 237)';
+            case 'Collection':
+                return 'rgb(242, 190, 45)' ;
+            case 'Assignment':
+                return 'green';
+            case 'Event':
+                return 'rgb(134, 231, 237)';
         }
     };
 
     useEffect(() => {
         const fetchSchedules = async () => {
-          const querySnapshot = await getDocs(collection(db, "schedule"));
-          const schedules = [];
-          querySnapshot.forEach((doc) => {
-            const { type, selectedDate } = doc.data();
-            schedules.push({ type, selectedDate });
-          });
+            const querySnapshot = await getDocs(collection(db, "schedule"));
+            const schedules = [];
+            querySnapshot.forEach((doc) => {
+                const { type, selectedDate } = doc.data();
+                schedules.push({ type, selectedDate });
+            });
       
-          const updatedMarkedDates = {};
-          schedules.forEach(({ type, selectedDate }) => {
-            updatedMarkedDates[selectedDate] = { selected: true, selectedColor: getTypeColor(type) };
-          });
+            const updatedMarkedDates = {};
+            schedules.forEach(({ type, selectedDate }) => {
+                updatedMarkedDates[selectedDate] = { selected: true, selectedColor: getTypeColor(type) };
+            });
       
-          setMarkedDates(updatedMarkedDates);
+            setMarkedDates(updatedMarkedDates);
         };
       
         fetchSchedules();
@@ -376,7 +417,7 @@ export default function AddSched({navigation}) {
                                     ))}
                                 </MapView>
                             </View>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setNewColRoute(true)}}>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(true)}}>
                                 <View style={{width: 35, height: 35, backgroundColor: 'orange', borderRadius: 5, justifyContent: 'center', alignItems: 'center', overflow: 'hidden'}}>
                                     <Text style={{fontSize: 40, fontWeight: 500, color: 'white', marginTop: -11}}>+</Text>
                                 </View>
@@ -468,21 +509,23 @@ export default function AddSched({navigation}) {
                     />
                 </View>
                 <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        value ={assignLocation}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Assignment Location'
-                        onChangeText={(e)=>{setAssignLocation(e)}}
-                    />
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(true)}}>
+                        <TextInput
+                            value ={location}
+                            style={{
+                                height: 40,
+                                width: '100%',
+                                backgroundColor: 'rgb(231,247,233)',
+                                borderRadius: 5,
+                                borderWidth: 0.5,
+                                borderColor: "rgb(215,233,217)",
+                                color: "rgba(45, 105, 35, 1)",
+                                paddingLeft: 15,
+                            }}
+                            placeholder='Select Assignment Location'
+                            editable = {false}
+                        />
+                    </TouchableOpacity>
                 </View>
                 {SelectDateTime()}
             </>
@@ -531,21 +574,23 @@ export default function AddSched({navigation}) {
                     />
                 </View>
                 <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        value={location}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Location'
-                        onChangeText={(e)=>{setLocation(e)}}
-                    />
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(true)}}>
+                        <TextInput
+                            value={location}
+                            style={{
+                                height: 40,
+                                width: '100%',
+                                backgroundColor: 'rgb(231,247,233)',
+                                borderRadius: 5,
+                                borderWidth: 0.5,
+                                borderColor: "rgb(215,233,217)",
+                                color: "rgba(45, 105, 35, 1)",
+                                paddingLeft: 15,
+                            }}
+                            placeholder='Select Location'
+                            editable = {false}
+                        />
+                    </TouchableOpacity>
                 </View>
                 {SelectDateTime()}
             </>
@@ -582,7 +627,7 @@ export default function AddSched({navigation}) {
                 <View style={{ width: "100%", height: "100%", backgroundColor: "#ffffff" }}>
                     <ScrollView style={{ width: "100%" }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90, }}>
                         <View style={{ position: "absolute", width: "100%", alignItems: "flex-start", top: 30, left: 20, zIndex: 10, }}>
-                            <TouchableOpacity onPress={() => { navigation.navigate('mainSched'); }}>
+                            <TouchableOpacity onPress={() => { clearData(); navigation.navigate('mainSched'); }}>
                                 <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179,229,94)" }} />
                             </TouchableOpacity>
                         </View>
@@ -624,7 +669,7 @@ export default function AddSched({navigation}) {
                     </ScrollView>
                 </View>
             </View>
-            {newColRoute ?
+            {addNewLocation ?
                 <View style={{position: 'absolute', zIndex: 99, height: '100%', width: '100%', padding: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'}}>
                     <View style={{width: '100%', height: 120, backgroundColor: 'white', padding: 20, borderRadius: 10, justifyContent: 'flex-end'}}>
                         <View style={{width: '113%', position: 'absolute', paddingHorizontal: 20, paddingTop: 20, top: 0, zIndex: 100}}>
@@ -671,26 +716,36 @@ export default function AddSched({navigation}) {
                             <TouchableOpacity 
                                 activeOpacity={0.5}
                                 onPress={() => {
-                                    (async() => {
-                                        let {status} = await Location.requestForegroundPermissionsAsync();
-                                        if (status !== 'granted') {
-                                            setErrorMsg('Permission to access location was denied');
-                                            return;
-                                        }
-                                    })();
-                                    setNewColRoute(false);
-                                    setRoute((prev) => ({
-                                        ...prev,
-                                        coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
-                                    }));
-                                    setRouteCtr(routeCtr + 1);
+                                    if(selectType === 'Collection') {
+                                        (async() => {
+                                            let {status} = await Location.requestForegroundPermissionsAsync();
+                                            if (status !== 'granted') {
+                                                setErrorMsg('Permission to access location was denied');
+                                                return;
+                                            }
+                                        })();
+                                        setRoute((prev) => ({
+                                            ...prev,
+                                            coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
+                                        }));
+                                        setRouteCtr(routeCtr + 1);
+                                    } else if(selectType === 'Assignment') {
+                                        setLocation(routeLocName);
+                                        setLatitude(routeLatitude);
+                                        setLongitude(routeLongitude);
+                                    } else if(selectType === 'Event') {
+                                        setLocation(routeLocName);
+                                        setLatitude(routeLatitude);
+                                        setLongitude(routeLongitude);
+                                    }
+                                    setAddNewLocation(false);
                                 }}
                             >
                                 <View style={{backgroundColor: 'green', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
                                     <Text>Add</Text>
                                 </View>
                             </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setNewColRoute(false)}}>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(false)}}>
                                 <View style={{backgroundColor: 'red', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
                                     <Text>Close</Text>
                                 </View>
