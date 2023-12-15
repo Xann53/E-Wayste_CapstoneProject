@@ -27,12 +27,16 @@ export default function MapAut({ navigation }) {
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
     const [collectorLocation, setCollectorLocation] = useState([]);
+    const [schedRoute, setSchedRoute] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
     const [track, setTrack] = useState({ coordinates: [] });
+    const [routeFlag, setRouteFlag] = useState([]);
+    const [displayFlag, setDisplayFlag] = useState(false);
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
+    const scheduleRef = firebase.firestore().collection("schedule");
     const imageColRef = ref(storage, "postImages/");
 
     const [infoID, setInfoID] = useState();
@@ -126,6 +130,23 @@ export default function MapAut({ navigation }) {
                     })
                 })
                 setCollectorLocation(uploads)
+            }
+        )
+
+        scheduleRef.onSnapshot(
+            querySnapshot => {
+                const uploads = []
+                querySnapshot.forEach((doc) => {
+                    const {collectionRoute, type, selectedDate, startTime} = doc.data();
+                    uploads.push({
+                        id: doc.id,
+                        collectionRoute,
+                        type,
+                        selectedDate,
+                        startTime
+                    })
+                })
+                setSchedRoute(uploads)
             }
         )
     }, []);
@@ -236,10 +257,64 @@ export default function MapAut({ navigation }) {
             }, 5000)
         }
 
+        const showRoute = async() => {
+            setRouteFlag([]);
+            schedRoute.map((temp) => {
+                if(temp.collectionRoute.coordinates.length > 0) {
+                    const randomColor = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+                    const color = '#' + randomColor;
+                    setRouteFlag((prev) => [
+                        ...prev,
+                        {
+                            id: temp.id,
+                            coordinates: temp.collectionRoute.coordinates,
+                            color: color
+                        }
+                    ]);
+                }
+            })
+        }
+
+        function ShowFlag() {
+            let temp = [];
+            routeFlag.map((marker) => {
+                for (let i = 0; i < marker.coordinates.length; i++) {
+                    const randomName = (Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')) + '';
+                    temp.push(
+                        <Marker
+                            key={randomName}
+                            coordinate={{
+                                latitude: parseFloat(marker.coordinates[i].latitude),
+                                longitude: parseFloat(marker.coordinates[i].longitude)
+                            }}
+                            style={{zIndex: 95}}
+                        >
+                            <Ionicons name='flag' style={{fontSize: 25, color: marker.color}} />    
+                        </Marker>
+                    );
+                } 
+            });
+
+            <ul>
+                {temp.map(item =>
+                    <li key="{item}">{item}</li>
+                )}
+            </ul>
+
+            return(
+                <>
+                    {temp}
+                </>
+            );
+        }
+
         return (
             <>
                 <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {setDisplayFlag(!displayFlag ? true : false); showRoute();}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 65, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                    <Ionicons name='flag' style={{ fontSize: 25, top: 0, left: 1, color: 'white' }} />
                 </TouchableOpacity>
                 {mapType === 'uncollected' ?
                     <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
@@ -327,6 +402,14 @@ export default function MapAut({ navigation }) {
                             </Callout>
                         </Marker>
                     ))}
+
+                    {displayFlag ?
+                        <>
+                            {ShowFlag()}
+                        </>
+                        :
+                        <></>
+                    }
                 </MapView>
                 {infoID ?
                     <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
