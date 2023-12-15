@@ -176,7 +176,6 @@
                 })
                 setInfoID();
                 createLocData();
-                trackCollectors();
             }
 
             const reload2 = async() => {
@@ -216,7 +215,6 @@
                 })
                 setInfoID();
                 createLocData();
-                trackCollectors();
             }
 
             const createLocData = async() => {

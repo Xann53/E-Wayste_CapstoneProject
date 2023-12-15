@@ -394,7 +394,6 @@ export default function NewsfeedAut({navigation}) {
       function HeaderContent() {
         return (
             <>
-                <Text style={{fontSize: 18, fontWeight: 700, color:'rgb(55,55,55)'}}>BANILAD, CEBU CITY</Text>
                 <View style={{flexDirection: 'row', gap: 7, top: 5}}>
                     <View style={{alignItems: 'center'}}>
                         <Text style={{fontSize: 14, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>REPORTS TODAY</Text>
@@ -456,13 +455,6 @@ export default function NewsfeedAut({navigation}) {
                                     <Text style={{left: 15}}>
                                         What's on your mind?
                                     </Text>
-                                    <View style={{position: 'absolute', right:15, width: 70, height: 35, backgroundColor: 'rgb(45, 105, 35)', borderRadius: 20, overflow: 'hidden'}}>
-                                        <TouchableOpacity activeOpacity={0.5}>
-                                            <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(81,175,91)'}}>
-                                                <Text style={{fontWeight: 700, color: '#ffffff'}}>POST</Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    </View>
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -565,7 +557,7 @@ const styles = StyleSheet.create({
         elevation: 6,
         zIndex: 50,
         alignItems: 'center',
-        paddingTop: 20,
+        paddingTop: 50,
     },
     body: {
         position: 'relative',

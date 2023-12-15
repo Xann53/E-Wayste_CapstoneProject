@@ -6,12 +6,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import { parse } from 'date-fns';
-import * as ImagePicker from 'expo-image-picker'; 
-
+import * as ImagePicker from 'expo-image-picker';
+import uuid from 'react-native-uuid';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
-import { ref, listAll, getDownloadURL } from 'firebase/storage';
+import { ref, listAll, getDownloadURL, uploadBytes } from 'firebase/storage';
 
 import SideBar from '../../components/SideNav';
 
@@ -21,7 +21,9 @@ export default function Newsfeed({ navigation }) {
     const [openSideBar, setOpenSideBar] = React.useState();
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
+    const [userFeedUploads, setUserFeedUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
+    const [imageFeedCol, setImageFeedCol] = useState([]);
     const [isModalVisible, setModalVisible] = useState(false);
     const [postText, setPostText] = useState('');
     const [postTitle, setPostTitle] = useState('');
@@ -37,7 +39,9 @@ export default function Newsfeed({ navigation }) {
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
+    const reportFeedRef = firebase.firestore().collection("posts");
     const imageColRef = ref(storage, "postImages/");
+    const imageFeedColRef = ref(storage, "FeedpostImages/");
     
     const toggleModal = () => {
         setModalVisible(!isModalVisible);
@@ -52,7 +56,6 @@ export default function Newsfeed({ navigation }) {
           });
       
           if (result.action === Share.sharedAction) {
-            console.log('Post shared successfully');
           } else if (result.action === Share.dismissedAction) {
             console.log('Sharing dismissed');
           }
@@ -107,10 +110,12 @@ export default function Newsfeed({ navigation }) {
     
     const handlePost = async () => {
         // Check if both postTitle and postText are not empty
-        if (postTitle.trim() === '' || postText.trim() === '') {
-            alert('Please enter a post title and content.');
+        if ( postText.trim() === '') {
+            alert('Please enter a content.');
             return;
         }
+    
+        let userId;
     
         try {
             let imageUrl = '';
@@ -119,23 +124,48 @@ export default function Newsfeed({ navigation }) {
             if (selectedImage) {
                 // Use the selected image URI directly
                 imageUrl = selectedImage;
+    
+                // Continue with the image upload logic
+                userId = await fetchUserId();
+    
+                if (!userId) {
+                    alert('Error fetching user ID.');
+                    return;
+                }
+    
+                const imageName = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+                const finalImageName = uuid.v1() + imageName;
+                const imageDestination = 'FeedpostImages/' + finalImageName;
+    
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const imageRef = ref(storage, imageDestination);
+                await uploadBytes(imageRef, blob);
+                alert('Image Uploaded');
+            } else {
+                // Continue with the post creation logic without imageUrl
+                userId = await fetchUserId();
+    
+                if (!userId) {
+                    alert('Error fetching user ID.');
+                    return;
+                }
             }
     
-            // Continue with the post creation logic, including imageUrl
-            const userId = await fetchUserId();
-    
-            if (!userId) {
-                alert('Error fetching user ID.');
-                return;
-            }
-    
-            const postRef = await addDoc(collection(db, 'posts'), {
-                postTitle,
+            // Define the data object for the Firestore document
+            const postData = {
                 postContent: postText,
                 userId,
-                imageUrl,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            });
+            };
+    
+            // Add imageUrl to the data object only if it exists
+            if (imageUrl) {
+                postData.imageUrl = imageUrl;
+            }
+    
+            // Continue with the post creation logic, including imageUrl or without it
+            const postRef = await addDoc(collection(db, 'posts'), postData);
     
             // Store userId in 'users' collection
             const userRef = doc(db, 'users', userId);
@@ -151,8 +181,7 @@ export default function Newsfeed({ navigation }) {
         } catch (error) {
             console.error('Error adding post: ', error);
         }
-    }
-
+    };    
      
     function getCurrentDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -189,46 +218,71 @@ export default function Newsfeed({ navigation }) {
         fetchLikedPosts();
       }, []); 
 
-    useEffect(() => {
-        const getUsers = async () => {
-            try {
-              const data = await getDocs(usersCollection);
-              const fetchedUsers = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-              setUsers(fetchedUsers);
-            } catch (error) {
-              console.error('Error fetching users: ', error);
-            }
-          };
-          getUsers()
+        useEffect(() => {
+            const getUsers = async () => {
+                try {
+                const data = await getDocs(usersCollection);
+                const fetchedUsers = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+                setUsers(fetchedUsers);
+                } catch (error) {
+                console.error('Error fetching users: ', error);
+                }
+            };
+            getUsers()
 
-        reportRef.onSnapshot(
-            querySnapshot => {
-                const uploads = []
-                querySnapshot.forEach((doc) => {
-                    const {associatedImage, dateTime, description, location, status, userId} = doc.data();
-                    uploads.push({
-                        id: doc.id,
-                        associatedImage,
-                        dateTime,
-                        description,
-                        location,
-                        status,
-                        userId
-                    })
-                })
-                setUserUploads(uploads)
-                
-                listAll(imageColRef).then((response) => {
-                    setImageCol([]);
-                    response.items.forEach((item) => {
-                        getDownloadURL(item).then((url) => {
-                            setImageCol((prev) => [...prev, url])
+            reportRef.onSnapshot(
+                querySnapshot => {
+                    const uploads = []
+                    querySnapshot.forEach((doc) => {
+                        const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                        uploads.push({
+                            id: doc.id,
+                            associatedImage,
+                            dateTime,
+                            description,
+                            location,
+                            status,
+                            userId
                         })
                     })
-                })
-            }
-        )
-    }, [])
+                    setUserUploads(uploads)
+                    
+                    listAll(imageColRef).then((response) => {
+                        setImageCol([]);
+                        response.items.forEach((item) => {
+                            getDownloadURL(item).then((url) => {
+                                setImageCol((prev) => [...prev, url])
+                            })
+                        })
+                    })
+                }
+            )
+            reportFeedRef.onSnapshot(
+                querySnapshot => {
+                    const feedUploads = []
+                    querySnapshot.forEach((doc) => {
+                        const {imageUrl, postContent, timestamp, userId} = doc.data();
+                        feedUploads.push({
+                            id: doc.id,
+                            imageUrl, 
+                            postContent, 
+                            timestamp,
+                            userId
+                        })
+                    })
+                    setUserFeedUploads(feedUploads) 
+                    
+                    listAll(imageFeedColRef).then((response) => {
+                        setImageFeedCol([]); 
+                        response.items.forEach((item) => {
+                            getDownloadURL(item).then((url) => {
+                            setImageFeedCol((prev) => [...prev, url]) 
+                            })
+                        })
+                    })
+                }
+            )
+        }, [])
     
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
@@ -247,7 +301,7 @@ export default function Newsfeed({ navigation }) {
                 quality: 1,
             });
     
-            if (!result.cancelled) {
+            if (!result.canceled) {
                 // Set the selected image URI to state
                 setSelectedImage(result.uri);
             }
@@ -383,78 +437,101 @@ export default function Newsfeed({ navigation }) {
             });
         });
     
-        uploadCollection.map((post, index) => {
-            let imageURL;
-            imageCol.map((url) => {
-                if (url.includes(post.imageLink)) {
-                    imageURL = url;
+            userFeedUploads.map((FeedUploads) => {
+                var valueFeedToPush = {};
+                valueFeedToPush["id"] = FeedUploads.id;
+                valueFeedToPush["imageUrl"] = FeedUploads.imageUrl;
+                valueFeedToPush["postContent"] = FeedUploads.postContent;
+                valueFeedToPush["description"] = FeedUploads.description;
+                valueFeedToPush["timestamp"] = FeedUploads.timestamp;
+                valueFeedToPush["userId"] = FeedUploads.userId;
+                uploadCollection.push(valueFeedToPush);
+                uploadCollection.sort((a, b) => {
+                    let fa = a.timestamp,
+                        fb = b.timestamp;
+                    if (fa < fb) {
+                        return -1;
+                    }
+                    if (fa > fb) {
+                        return 1;
+                    }
+                    return 0;
+                });
+            });
+            
+                const getUserInfo = (userId) => {
+                    const user = users.find((user) => user.id === userId);
+                    return user ? `${user.firstName} ${user.lastName}` : `User (${userId})`;
+                };
+            
+
+        
+            uploadCollection.map((post,postFeed, index) => {
+                let imageURL;
+                if (post.imageLink) {
+                  imageURL = imageCol.find((url) => url.includes(post.imageLink));
+                } else if (post.imageUrl) {
+                  imageURL = imageFeedCol.find((url) => url.includes(post.imageUrl));
                 }
-            });
-    
-            temp.push(
-                <View style={[styles.contentButton, styles.contentGap]} key={post.id}>
-                  <TouchableOpacity activeOpacity={0.5}>
-                    <View style={styles.contentButtonFront}>
-                      <View style={{ width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15 }}>
-                        <View style={styles.containerPfp}>
-                          <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                
+                temp.push(
+                    <View key={`${post.id}-${postFeed.id}`} style={[styles.contentButton, styles.contentGap]}>
+                      <TouchableOpacity activeOpacity={0.5}>
+                        <View style={styles.contentButtonFront}>
+                          {/* User information */}
+                          <View style={{ width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15 }}>
+                            <View style={styles.containerPfp}>
+                              <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                             </View>
+                             <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}> {getUserInfo(post.userId)} </Text>
+                             
+                          </View>
+                        <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                             <Text style={{ fontSize: 13, marginBottom: 5 }}> {post.description || post.postContent} </Text>
+                            {imageURL ? (
+                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                                        <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
+                                    </View>
+                                ) : null}
+                                </SafeAreaView>
+                                <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                                <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id )}>
+                                    <Ionicons name={likedPosts.includes(post.id ) ? 'heart' : 'heart-outline'}
+                                    style={{ fontSize: 25, color: likedPosts.includes(post.id ) ? 'red' : 'black' }} />
+                                </TouchableOpacity>
+                                 <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id )}>
+                                    <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
+                                 </TouchableOpacity>
+                                <TouchableOpacity activeOpacity={0.5}>
+                                <Ionicons
+                                    name="share-outline"
+                                    style={{ fontSize: 25 }}
+                                    onPress={() => handleSharePress(post.id || postFeed.id, post.description || postFeed.postContent, imageURL)}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
-                            {users.map((user) => {
-                                if (post.userId === user.id) {
-                                return `${user.firstName} ${user.lastName}`;
-                                }
-                                return null; // or handle the case when user is not found
-                            })}
-                            </Text>
-                      </View>
-                      <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                        <Text style={{ fontSize: 13, marginBottom: 5, }}>{post.description}</Text>
-                        <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                          <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
-                        </View>
-                      </SafeAreaView>
-                      <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                        <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id)}>
-                          <Ionicons
-                            name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
-                            style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id)}>
-                          <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                        </TouchableOpacity>
-                        <TouchableOpacity activeOpacity={0.5}>
-                        <Ionicons
-                            name="share-outline"
-                            style={{ fontSize: 25 }}
-                            onPress={() => handleSharePress(post.id, post.description, imageURL)}
-                            />
-                        </TouchableOpacity>
-                      </View>
+                      </TouchableOpacity>
+                      {/* Comment overlay */}
+                      {isCommentOverlayVisible[post.id] && (
+                        <CommentOverlay
+                          comments={postComments[post.id] || []}
+                          commentText={commentText}
+                          setCommentText={setCommentText}
+                          handlePostComment={() => handlePostComment(post.id, commentText)}
+                        />
+                      )}
                     </View>
-                  </TouchableOpacity>
-          
-                  {/* Comment overlay */}
-                {isCommentOverlayVisible[post.id] && (
-                    <CommentOverlay
-                    comments={postComments[post.id] || []}
-                    commentText={commentText}
-                    setCommentText={setCommentText}
-                    handlePostComment={() => handlePostComment(post.id, commentText)}
-                    />
-                  )}
-                </View>
-              );
-            });
-          
+                  );
+                });
             return (
                 <View>
-                    {temp}
+                     {temp.length > 0 ? temp : <Text>No data to display</Text>}
                 </View>
-        );      
-    }
-
+                );      
+            }
+         
+        
     function ViewAllContent() {
         const currentDate = new Date().toISOString().split('T')[0];      
     
@@ -572,12 +649,6 @@ export default function Newsfeed({ navigation }) {
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
-                        <TextInput
-                            placeholder="Post Title"
-                            value={postTitle}
-                            onChangeText={(text) => setPostTitle(text)}
-                            style={styles.modalTitleInput}
-                        />
                         <TextInput
                             placeholder="Write your post content here..."
                             multiline

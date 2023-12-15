@@ -365,7 +365,6 @@ export default function ScheduleAut({ navigation }) {
   function HeaderContent() { 
     return ( 
       <> 
-        <Text style={{ fontSize: 18, fontWeight: 700, color: 'rgb(55,55,55)' }}>BANILAD, CEBU CITY</Text> 
         <View style={{ flexDirection: 'row', gap: 7, top: 5 }}> 
           <View style={{ alignItems: 'center' }}> 
             <Text style={{ fontSize: 14, fontWeight: 500, color: 'rgb(55,55,55)', marginBottom: 5 }}>REPORTS TODAY</Text> 
@@ -495,7 +494,7 @@ const styles = StyleSheet.create({
     elevation: 6, 
     zIndex: 50, 
     alignItems: 'center', 
-    paddingTop: 20, 
+    paddingTop: 50, 
   }, 
   body: { 
     position: 'relative', 

@@ -74,6 +74,8 @@ export default function NewsfeedCol({ navigation }) {
         }, 1000);
     }, []);
 
+    
+
     function SideNavigation(navigation) {
         return (
             <>

@@ -1,518 +1,686 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, navigate, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
+import * as React from 'react';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Calendar } from 'react-native-calendars';
-import { SelectList } from 'react-native-dropdown-select-list';
+import { useIsFocused } from '@react-navigation/native';
+import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from 'expo-location';
 
-import { db } from '../../../firebase_config';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { db, auth, storage, firebase } from '../../../firebase_config';
+import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
+import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
+import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapViewDirections from 'react-native-maps-directions';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { GOOGLE_API_KEY } from '../../../environments';
+import SideBar from '../../../components/SideNav';
 
-export default function AddSched({navigation}) {
+export default function MapAut({ navigation }) {
+    const isFocused = useIsFocused();
+    const [openSideBar, setOpenSideBar] = useState();
+    const mapRef = useRef(null);
+    let searchLongitude, searchLatitude;
+    const [mapType, setMapType] = useState('uncollected');
 
-    const schedCollection = collection(db, "schedule");
+    const [users, setUsers] = useState([]);
+    const [userUploads, setUserUploads] = useState([]);
+    const [imageCol, setImageCol] = useState([]);
+    const [collectorLocation, setCollectorLocation] = useState([]);
+    const [state, setState] = useState({ coordinates: [] });
+    const [track, setTrack] = useState({ coordinates: [] });
 
-    const [hourStart, setHourStart] = useState();
-    const [minStart, setMinStart] = useState();
-    const [ampmStart, setAmpmStart] = useState();
-    const [selectType, setSelectType] = useState();
-    const [description, setDescription] = useState("");
-    const [location, setLocation] = useState("");
-    const [title, setTitle] = useState("");
-    const [assignLocation, setAssignLocation] = useState("");
-    const [assignCollector, setAssignCollector]= useState("")
-    const [selectedDate, setSelectedDate] = useState(null);
-    const [markedDates, setMarkedDates] = useState({});
+    const usersCollection = collection(db, "users");
+    const reportRef = firebase.firestore().collection("generalUsersReports");
+    const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
+    const imageColRef = ref(storage, "postImages/");
 
-    const Type = [
-        { key: "Collection", value: "Collection" },
-        { key: "Assignment", value: "Assignment" },
-        { key: "Event", value: "Event" },
-    ];
+    const [infoID, setInfoID] = useState();
+    const [infoImage, setInfoImage] = useState();
+    let colStatus;
 
-    const Hour = [];
-    let ctr2 = 0;
-    for (let i = 1; i <= 12; i++) {
-        Hour[ctr2] = { key: i, value: i };
-        ctr2++;
-    }
-
-    const Min = [];
-    let ctr3 = 0;
-    for (let i = 0; i <= 9; i++) {
-        Min[ctr3] = { key: ('0' + i), value: ('0' + i) };
-        ctr3++;
-    }
-    for (let i = 10; i <= 59; i++) {
-        Min[ctr3] = { key: i, value: i };
-        ctr3++;
-    }
-
-    const AmpmTemp = [
-        { key: "AM", value: "AM" },
-        { key: "PM", value: "PM" },
-    ];
-
-    const createSchedule = async () => {
-        let newHourStart, newTitle;
-        if (hourStart < 10) {
-          newHourStart = "0" + hourStart;
-        } else {
-          newHourStart = hourStart;
-        }
-        let start = newHourStart + ":" + minStart + " " + ampmStart;
-        // Default title if not provided
-        if (title !== "") {
-          newTitle = title;
-        } else {
-          newTitle = "N/A";
-        }
-        let id = await AsyncStorage.getItem('userId');
-        // Generate a unique scheduleID
-        const scheduleID = Math.random().toString(36).substring(2, 10);
-        // Validate necessary values
-        if (
-          (location !== "" || assignLocation !== "") && setAssignCollector !== "" && description !== "" && selectedDate
-        ) {
-          await addDoc(schedCollection, {
-            scheduleID: scheduleID, 
-            type: selectType,
-            description: description,
-            location: location,
-            startTime: start,
-            title: newTitle,
-            userID: id,
-            assignLocation: assignLocation,
-            assignCollector: assignCollector,
-            selectedDate: selectedDate,
-          });
-          alert("Schedule successfully added!");
-          setMarkedDates((prevMarkedDates) => ({
-            ...prevMarkedDates,
-            [selectedDate]: { selected: true, selectedColor: getTypeColor(selectType) },
-          }));
-            setSelectType(null);
-            setDescription("");
-            setLocation("");
-            setTitle("");
-            setAssignLocation("");
-            setAssignCollector("");
-            setSelectedDate(null);
-            setHourStart(null);
-            setMinStart(null);
-            setAmpmStart(null);
-            navigation.navigate('mainSched'); //CANT NAVIGATE
-        } else {
-          alert("Fill up necessary values");
-        }
-    };
-
-    const getTypeColor = (type) => {
-        switch (type) {
-          case 'Collection':
-            return 'rgb(242, 190, 45)' ;
-          case 'Assignment':
-            return 'green';
-          case 'Event':
-            return 'rgb(134, 231, 237)';
-        }
-    };
-
+    let userId
+    let description
+    let location
+    let dateTime
+    // =============================================================================================================================================================================================
     useEffect(() => {
-        const fetchSchedules = async () => {
-          const querySnapshot = await getDocs(collection(db, "schedule"));
-          const schedules = [];
-          querySnapshot.forEach((doc) => {
-            const { type, selectedDate } = doc.data();
-            schedules.push({ type, selectedDate });
-          });
-      
-          const updatedMarkedDates = {};
-          schedules.forEach(({ type, selectedDate }) => {
-            updatedMarkedDates[selectedDate] = { selected: true, selectedColor: getTypeColor(type) };
-          });
-      
-          setMarkedDates(updatedMarkedDates);
+        if(!isFocused) {
+            setOpenSideBar();
+        }
+    });
+
+    function SideNavigation(navigation) {
+        return (
+            <>
+                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
+                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
+                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+                    </TouchableOpacity>
+                    {SideBar(navigation)}
+                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
+                </View>
+            </>
+        );
+    }
+
+    const moveCameraTo = (latitude, longitude) => {
+        const region = {
+            latitude,
+            longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.02,
         };
       
-        fetchSchedules();
-      }, []);
+        mapRef.current.animateToRegion(region, 1000);
+    }
+    // =============================================================================================================================================================================================
 
-    function SelectDateTime() {
-        const markedDates = {};
-        if (selectedDate) {
-            markedDates[selectedDate] = { selected: true, selectedColor: 'green' };
+    useEffect(() => {
+        const getUsers = async () => {
+            const data = await getDocs(usersCollection);
+            setUsers(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+        };
+        getUsers();
+
+        reportRef.onSnapshot(
+            querySnapshot => {
+                const uploads = []
+                querySnapshot.forEach((doc) => {
+                    const {associatedImage, dateTime, description, location, status, userId, longitude, latitude} = doc.data();
+                    uploads.push({
+                        id: doc.id,
+                        associatedImage,
+                        dateTime,
+                        description,
+                        location,
+                        status,
+                        userId,
+                        longitude,
+                        latitude
+                    })
+                })
+                setUserUploads(uploads)
+
+                listAll(imageColRef).then((response) => {
+                    setImageCol([]);
+                    response.items.forEach((item) => {
+                        getDownloadURL(item).then((url) => {
+                            setImageCol((prev) => [...prev, url])
+                        })
+                    })
+                })
+            }
+        )
+
+        collectorLocRef.onSnapshot(
+            querySnapshot => {
+                const uploads = []
+                querySnapshot.forEach((doc) => {
+                    const {userId, latitude, longitude} = doc.data();
+                    uploads.push({
+                        id: doc.id,
+                        userId,
+                        latitude,
+                        longitude
+                    })
+                })
+                setCollectorLocation(uploads)
+            }
+        )
+    }, []);
+
+    function loadMap() {
+        const changeMap = async() => {
+            if(mapType === 'uncollected') {
+                setMapType('collected');
+            } else if(mapType === 'collected') {
+                setMapType('uncollected');
+            }
+            reload2();
+        }
+
+        const reload = async() => {
+            setState({ coordinates: [] });
+            userUploads.map((pin) => {
+                let imageURL;
+                imageCol.map((url) => {
+                    if(url.includes(pin.associatedImage)) {
+                        imageURL = url;
+                    }
+                })
+                try {
+                    if(mapType === 'uncollected' && pin.status === 'uncollected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    } else if(mapType === 'collected' && pin.status === 'collected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    }
+                } catch (e) {
+                    console.log(e);
+                }
+            })
+            setInfoID();
+            trackCollectors();
+        }
+
+        const reload2 = async() => {
+            let temp;
+            if(mapType === 'collected')
+                temp = 'uncollected';
+            else if(mapType === 'uncollected')
+                temp = 'collected';
+
+            setState({ coordinates: [] });
+            userUploads.map((pin) => {
+                let imageURL;
+                imageCol.map((url) => {
+                    if(url.includes(pin.associatedImage)) {
+                        imageURL = url;
+                    }
+                })
+                try {
+                    if(temp === 'uncollected' && pin.status === 'uncollected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    } else if(temp === 'collected' && pin.status === 'collected') {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setState((prevState) => ({
+                            ...prevState,
+                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+                        }));
+                    }
+                } catch (e) {
+                    console.log(e);
+                }
+            })
+            setInfoID();
+            trackCollectors();
+        }
+
+        const trackCollectors = async() => {
+            setInterval(async() => {
+                setTrack({ coordinates: [] });
+                collectorLocation.map((pin) => {
+                    let collector;
+                    users.map((user) => {
+                        if(user.id.includes(pin.userId)) {
+                            collector = user.firstName + ' ' + user.lastName;
+                        }
+                    })
+                    try {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setTrack((prev) => ({
+                            ...prev,
+                            coordinates: [...prev.coordinates, { name: pin.id, user: pin.userId, collectorName: collector, latitude: lat, longitude: long }],
+                        }));
+                    } catch (e) {
+                        console.log(e);
+                    }
+                })
+            }, 5000)
+        }
+
+        const statusChange = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'collected'
+            };
+            await updateDoc(userUploadDoc, newFields);
+        }
+
+        const statusChange2 = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'uncollected'
+            };
+            await updateDoc(userUploadDoc, newFields);
         }
 
         return (
             <>
-                <Text style={{marginLeft: 30, fontSize: 16, marginTop: 20}}>Select Date</Text>
-                <View style={{width: "100%", justifyContent: "center" , alignItems:"center", marginTop: 10}}>
-                <Calendar
-                    style={{ width: 320, backgroundColor: 'white', borderRadius: 10, paddingBottom: 15, shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2,}, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5,}}
-                    markedDates={markedDates}
-                    onDayPress={(day) => setSelectedDate(day.dateString)} // Capture selected date
-                />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, flexDirection: 'row', gap: 18, marginTop: 25, justifyContent: 'flex-start', alignItems: 'center'}}>
-                    <Text style={{fontSize: 16}}>Select Time:</Text>
-                    <Text>{hourStart} : {minStart} {ampmStart}</Text>
-                </View>
-                <View style={{ flexDirection: "row", marginTop: 15, width: '100%', paddingLeft: 25 }}>
-                    <SelectList
-                        setSelected={(e) => { setHourStart(e); }}
-                        data={Hour}
-                        defaultOption={{ key: 1, value: '1' }}
-                        boxStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 10,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 0,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                    <SelectList
-                        setSelected={(e) => { setMinStart(e); }}
-                        data={Min}
-                        defaultOption={{ key: '00', value: '00' }}
-                        boxStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 10,
-                            marginLeft: 10,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 60,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 10,
-                            marginLeft: 10,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                    <SelectList
-                        setSelected={(e) => { setAmpmStart(e); }}
-                        data={AmpmTemp}
-                        defaultOption={{ key: 'AM', value: 'AM' }}
-                        boxStyles={{
-                            width: 70,
-                            backgroundColor: "rgb(189,228,124)",
-                            borderRadius: 10,
-                            marginLeft: 10,
-                            color: "rgba(45, 105, 35, 1)",
-                            justifyContent: "center",
-                            borderWidth: 0,
-                        }}
-                        dropdownStyles={{
-                            width: 70,
-                            backgroundColor: "rgb(231,247,233)",
-                            top: -10,
-                            marginBottom: -10,
-                            borderRadius: 10,
-                            marginLeft: 10,
-                            zIndex: -1,
-                            borderWidth: 0,
-                            alignSelf: 'center',
-                        }}
-                        search={false}
-                    />
-                </View>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                    <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
+                </TouchableOpacity>
+                {mapType === 'uncollected' ?
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
+                        <Text style={{fontWeight: 800, color: '#F76811', fontSize: 18}}>UNCOLLECTED</Text>
+                    </TouchableOpacity>
+                    :
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
+                        <Text style={{fontWeight: 800, color: '#24E559', fontSize: 18}}>COLLECTED</Text>
+                    </TouchableOpacity>
+                }
+                <MapView
+                    ref={mapRef}
+                    style={{width: '100%', height: '100%'}}
+                    provider={PROVIDER_GOOGLE}
+                    initialRegion={{
+                        latitude: 10.3156992,
+                        longitude: 123.88543660000005,
+                        latitudeDelta: 0.0922,
+                        longitudeDelta: 0.0421,
+                    }}
+                    customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
+                >
+                    {mapType === 'uncollected' ?
+                        <>
+                            {state.coordinates.map(marker => (
+                                <Marker
+                                    key={marker.name}
+                                    coordinate={{
+                                        latitude: parseFloat(marker.latitude),
+                                        longitude: parseFloat(marker.longitude)
+                                    }}
+                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    style={{zIndex: 100}}
+                                >
+                                    <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
+                                    <Callout>
+                                        <View style={{width: 80, height: 80}}>
+                                            <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                                <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                            </Text>
+                                        </View>
+                                    </Callout>
+                                </Marker>
+                            ))}
+                        </>
+                        :
+                        <>
+                            {state.coordinates.map(marker => (
+                                <Marker
+                                    key={marker.name}
+                                    coordinate={{
+                                        latitude: parseFloat(marker.latitude),
+                                        longitude: parseFloat(marker.longitude)
+                                    }}
+                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    style={{zIndex: 100}}
+                                >
+                                    <Ionicons name='location' style={{fontSize: 30, color: '#24E559'}} />
+                                    <Callout>
+                                        <View style={{width: 80, height: 80}}>
+                                            <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                                <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                            </Text>
+                                        </View>
+                                    </Callout>
+                                </Marker>
+                            ))}
+                        </>
+                    }
+
+                    {track.coordinates.map(marker => (
+                        <Marker
+                            key={marker.name}
+                            coordinate={{
+                                latitude: parseFloat(marker.latitude),
+                                longitude: parseFloat(marker.longitude)
+                            }}
+                            style={{zIndex: 95}}
+                        >
+                            <Ionicons name='location' style={{fontSize: 30, color: 'green'}} />
+                            <Callout>
+                                <View style={{width: 150, alignItems: 'center'}}>
+                                    <Text>Collector: {marker.collectorName}</Text>
+                                </View>
+                            </Callout>
+                        </Marker>
+                    ))}
+                </MapView>
+                {infoID ?
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                        <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
+                            <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10}}>
+                                <Image style={{width: '100%', height: '100%',  flex: 1, resizeMode: 'cover', borderRadius: 5}} source={{uri: infoImage}} />
+                            </View>
+                            <View style={{flex: 2}}>
+                                <View style={{flex: 1, padding: 5, overflow: 'hidden'}}>
+                                    {userUploads.map((upload) => {
+                                        if(upload.id.includes(infoID)) {
+                                            userId=upload.userId;
+                                            description=upload.description;
+                                            location=upload.location;
+                                            dateTime=upload.dateTime;
+
+                                            if(upload.status === 'uncollected')
+                                                colStatus = 'uncollected';
+                                            else if(upload.status === 'collected')
+                                                colStatus = 'collected';
+                                        }
+                                    })}
+                                    <View style={{flex: 4}}>
+                                        <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>{users.map((user) => {if(user.id.includes(userId))return user.username})}</Text>
+                                        <Text style={{fontSize: 10}}>{dateTime}</Text>
+                                        <Text style={{fontSize: 12, marginTop: 10}}><Ionicons name='location' /> {location}</Text>
+                                    </View>
+                                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                                        {mapType === 'uncollected' ?
+                                            <>
+                                                {colStatus === 'uncollected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                    </View>
+                                                }
+                                            </>
+                                            :
+                                            <>
+                                                {colStatus === 'collected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange2(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                    </View>
+                                                }
+                                            </>
+                                        }
+                                    </View>
+                                </View>
+                            </View>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setInfoID()}}>
+                                <View style={{position: 'absolute', height: 20, width: 20, backgroundColor: '#E5E5E5', right: 5, top: 5, borderRadius: 100}}>
+                                    <Ionicons name='close' style={{fontSize: 20, color: 'grey'}} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    :
+                    <></>
+                }
             </>
         );
-    }
-
-    function Collection() {
-        return (
-            <>
-                <View style={{ width: '100%', paddingHorizontal: 25 }}>
-                    <TextInput
-                        value ={description}
-                        style={{
-                            height: 150,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            padding: 15,
-                            paddingRight: 8,
-                            textAlignVertical: 'top',
-                        }}
-                        placeholder='Add Description'
-                        onChangeText={(e)=>{setDescription(e)}}
-                        multiline={true}
-                    />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        value ={location}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Location'
-                        onChangeText={(e)=>{setLocation(e)}}
-                    />
-                </View>
-                {SelectDateTime()}
-            </>
-        );
-    }
-
-    function Assignment() {
-        return (
-            <>
-                <View style={{ width: '100%', paddingHorizontal: 25 }}>
-                    <TextInput
-                        value ={description}
-                        style={{
-                            height: 150,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            padding: 15,
-                            paddingRight: 8,
-                            textAlignVertical: 'top',
-                        }}
-                        placeholder='Add Description'
-                        onChangeText={(e)=>{setDescription(e)}}
-                        multiline={true}
-                    />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Collector to Assign'
-                        onChangeText={(e) => {
-                            setAssignCollector(e);
-                        }}
-                    />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        value ={assignLocation}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Assignment Location'
-                        onChangeText={(e)=>{setAssignLocation(e)}}
-                    />
-                </View>
-                {SelectDateTime()}
-            </>
-        );
-    }
-
-    function Event() {
-        return (
-            <>
-                <View style={{width: '100%', paddingHorizontal: 25}}>
-                    <TextInput
-                        value ={title}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Add Title'
-                        onChangeText={(e)=>{setTitle(e)}}
-
-                    />
-                </View>
-                <View style={{ width: '100%', paddingHorizontal: 25, marginTop: 5 }}>
-                    <TextInput
-                        value ={description}
-                        style={{
-                            height: 150,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            padding: 15,
-                            paddingRight: 8,
-                            textAlignVertical: 'top',
-                        }}
-                        placeholder='Add Description'
-                        onChangeText={(e)=>{setDescription(e)}}
-                        multiline={true}
-                    />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        value={location}
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Location'
-                        onChangeText={(e)=>{setLocation(e)}}
-                    />
-                </View>
-                {SelectDateTime()}
-            </>
-        );
-    }
-
-    function DisplayType() {
-        if (selectType === 'Collection') {
-            return (
-                <>
-                    {Collection()}
-                </>
-            );
-        }
-        if (selectType === 'Assignment') {
-            return (
-                <>
-                    {Assignment()}
-                </>
-            );
-        }
-        if (selectType === 'Event') {
-            return (
-                <>
-                    {Event()}
-                </>
-            );
-        }
     }
 
     return (
         <>
-            <View style={{ position: "absolute", height: "100%", width: "100%", justifyContent: "flex-start", alignItems: "center", zIndex: 10, backgroundColor: "rgba(0, 0, 0, 0.85)", }}>
-                <View style={{ position: "absolute", width: "100%", alignItems: "flex-start", top: 30, left: 20, zIndex: 10, }}>
-                    <TouchableOpacity onPress={() => { navigation.navigate('mainSched'); }}>
-                        <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179,229,94)" }} />
-                    </TouchableOpacity>
+            <View style={{position: 'absolute', zIndex: 99, width: '100%', paddingTop: 30, flexDirection: 'row', paddingHorizontal: 20}}>
+                <TouchableOpacity style={{ zIndex: 99, marginRight: '2%', height: 42, justifyContent: 'center', alignItems: 'center', borderRadius: 100 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
+                    <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(70,149,78)' }} />
+                </TouchableOpacity>
+                <View style={{ flex: 2, zIndex: 99 }}>
+                    <GooglePlacesAutocomplete
+                        placeholder='Search'
+                        fetchDetails
+                        enablePoweredByContainer={false}
+                        onPress={(data, details = null) => {
+                            searchLatitude = details.geometry.location.lat;
+                            searchLongitude = details.geometry.location.lng;
+                            moveCameraTo(searchLatitude, searchLongitude);
+                        }}
+                        query={{
+                            key: GOOGLE_API_KEY,
+                            language: 'en',
+                        }}
+                        styles={{
+                            textInput: {
+                                height: 38,
+                                fontSize: 14,
+                                marginTop: 3,
+                                shadowColor: 'black',
+                                shadowOffset:{width: 2, height: 2},
+                                shadowOpacity: 0.4,
+                                shadowRadius: 4,
+                                elevation: 4,
+                            },
+                            listView: {
+                                backgroundColor:'#c8c7cc',
+                            },
+                            row: {
+                                backgroundColor: '#FFFFFF',
+                                padding: 9,
+                                height: 38,
+                                marginVertical: 0.01,
+                            },
+                            description: {
+                                fontSize: 12
+                            },
+                        }}
+                    />
                 </View>
-                <View style={{ width: "100%", height: "100%", backgroundColor: "#ffffff" }}>
-                    <ScrollView style={{ width: "100%" }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90, }}>
-                        <Text style={{marginBottom: 5, fontSize: 25, fontWeight: 900, color: 'rgba(113, 112, 108, 1)', width: '100%', paddingLeft: 25}}>CREATE TASK</Text>
-                        <View style={{width: '100%', paddingHorizontal: 25, marginBottom: 10}}>
-                            <SelectList
-                                setSelected={(e) => { setSelectType(e); }}
-                                data={Type}
-                                placeholder="Select Type"
-                                boxStyles={{
-                                    width: '100%',
-                                    backgroundColor: "rgb(189,228,124)",
-                                    borderRadius: 10,
-                                    color: "rgba(45, 105, 35, 1)",
-                                    justifyContent: "center",
-                                    borderWidth: 0,
-                                }}
-                                dropdownStyles={{
-                                    width: '100%',
-                                    backgroundColor: "rgb(231,247,233)",
-                                    top: -10,
-                                    marginBottom: -10,
-                                    borderRadius: 10,
-                                    zIndex: -1,
-                                    borderWidth: 0,
-                                    alignSelf: 'center',
-                                }}
-                                search={false}
-                            />
-                        </View>
-                        {DisplayType()}
-                        <View style={{width: '100%', marginTop: 30, marginBottom: 90, alignItems: 'center'}}>
-                            <View style={styles.button}>
-                                <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5} onPress={()=>{createSchedule();}}>
-                                    <Text style={styles.buttonTxt}>Save</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </ScrollView>
+            </View>
+            {openSideBar}
+            <View>
+                <View 
+                    style={{
+                        height: 80,
+                        backgroundColor: 'rgba(126, 185, 73, 1)',
+                        borderBottomLeftRadius: 10,
+                        borderBottomRightRadius: 10,
+                        zIndex: 90,
+                        shadowColor: 'black',
+                        shadowOffset:{width: 3, height: 3},
+                        shadowOpacity: 0.5,
+                        shadowRadius: 4,
+                        elevation: 4,
+                    }}
+                />
+                <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
+                    {loadMap()}
                 </View>
             </View>
         </>
     );
 }
 
-const styles = StyleSheet.create({
-    button: {
-        width: 157,
-        height: 45,
-        backgroundColor: 'rgb(0,123,0)',
-        borderRadius: 100,
-        overflow: 'hidden',
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 3,
-        },
-        shadowOpacity: 0.27,
-        shadowRadius: 4.65,
-        elevation: 3,
+const mapStyle = [
+    {
+        elementType: 'labels.icon',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
     },
-    buttonTxt: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgb(81,175,91)',
-        textAlign: 'center',
-        verticalAlign: 'middle',
-        color: '#ffffff',
-        fontWeight: '900',
-        fontSize: 16,
+    {
+        featureType: 'poi.business',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
     },
-})
+];
+
+const mapStyle2 = [
+    {
+        elementType: 'labels.icon',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        featureType: 'poi.business',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#242f3e"
+            },
+        ],
+    },
+    {
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#746855"
+            },
+        ],
+    },
+    {
+        elementType: "labels.text.stroke",
+        stylers: [
+            { 
+                color: "#242f3e"
+            },
+        ],
+    },
+    {
+        featureType: "administrative.locality",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#d59563"
+            },
+        ],
+    },
+    {
+        featureType: "poi",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#d59563"
+            },
+        ],
+    },
+    {
+        featureType: "poi.park",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#263c3f" 
+            },
+        ],
+    },
+    {
+        featureType: "poi.park",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#6b9a76"
+            },
+        ],
+    },
+    {
+        featureType: "road",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#38414e"
+            },
+        ],
+    },
+    {
+        featureType: "road",
+        elementType: "geometry.stroke",
+        stylers: [
+            {
+                color: "#212a37"
+            },
+        ],
+    },
+    {
+        featureType: "road",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#9ca5b3"
+            },
+        ],
+    },
+    {
+        featureType: "road.highway",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#746855"
+            },
+        ],
+    },
+    {
+        featureType: "road.highway",
+        elementType: "geometry.stroke",
+        stylers: [
+            {
+                color: "#1f2835"
+            },
+        ],
+    },
+    {
+        featureType: "road.highway",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#f3d19c"
+            },
+        ],
+    },
+    {
+        featureType: "transit",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#2f3948"
+            },
+        ],
+    },
+    {
+        featureType: "transit.station",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#d59563"
+            },
+        ],
+    },
+    {
+        featureType: "water",
+        elementType: "geometry",
+        stylers: [
+            {
+                color: "#17263c"
+            },
+        ],
+    },
+    {
+        featureType: "water",
+        elementType: "labels.text.fill",
+        stylers: [
+            {
+                color: "#515c6d"
+            },
+        ],
+    },
+    {
+        featureType: "water",
+        elementType: "labels.text.stroke",
+        stylers: [
+            {
+                color: "#17263c"
+            },
+        ],
+    },
+]
