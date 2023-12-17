@@ -5,6 +5,7 @@ import { Calendar } from 'react-native-calendars';
 import { SelectList } from 'react-native-dropdown-select-list';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from 'expo-location';
+import moment from 'moment/moment';
 
 import { db } from '../../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
@@ -98,6 +99,8 @@ export default function AddSched({navigation}) {
             newTitle = "N/A";
         }
 
+        const fullDateTime = moment().utcOffset('+05:30').format('YYYY/MM/DD hh:mm:ss a');
+
         let id = await AsyncStorage.getItem('userId');
         // Generate a unique scheduleID
         const scheduleID = Math.random().toString(36).substring(2, 10);
@@ -116,7 +119,8 @@ export default function AddSched({navigation}) {
                     selectedDate: selectedDate,
                     collectionRoute: route,
                     latitude: '',
-                    longitude: ''
+                    longitude: '',
+                    dateTimeUploaded: fullDateTime
                 });
             } else if(selectType === 'Assignment') {
                 await addDoc(schedCollection, {
@@ -131,7 +135,8 @@ export default function AddSched({navigation}) {
                     selectedDate: selectedDate,
                     collectionRoute: { coordinates: [] },
                     latitude: latitude,
-                    longitude: longitude
+                    longitude: longitude,
+                    dateTimeUploaded: fullDateTime
                 });
             } else if(selectType === 'Event') {
                 await addDoc(schedCollection, {
@@ -146,7 +151,8 @@ export default function AddSched({navigation}) {
                     selectedDate: selectedDate,
                     collectionRoute: { coordinates: [] },
                     latitude: latitude,
-                    longitude: longitude
+                    longitude: longitude,
+                    dateTimeUploaded: fullDateTime
                 });
             }
 
@@ -716,27 +722,29 @@ export default function AddSched({navigation}) {
                             <TouchableOpacity 
                                 activeOpacity={0.5}
                                 onPress={() => {
-                                    if(selectType === 'Collection') {
-                                        (async() => {
-                                            let {status} = await Location.requestForegroundPermissionsAsync();
-                                            if (status !== 'granted') {
-                                                setErrorMsg('Permission to access location was denied');
-                                                return;
-                                            }
-                                        })();
-                                        setRoute((prev) => ({
-                                            ...prev,
-                                            coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
-                                        }));
-                                        setRouteCtr(routeCtr + 1);
-                                    } else if(selectType === 'Assignment') {
-                                        setLocation(routeLocName);
-                                        setLatitude(routeLatitude);
-                                        setLongitude(routeLongitude);
-                                    } else if(selectType === 'Event') {
-                                        setLocation(routeLocName);
-                                        setLatitude(routeLatitude);
-                                        setLongitude(routeLongitude);
+                                    if(routeLocName !== undefined && routeLatitude !== undefined && routeLongitude !== undefined) {
+                                        if(selectType === 'Collection') {
+                                            (async() => {
+                                                let {status} = await Location.requestForegroundPermissionsAsync();
+                                                if (status !== 'granted') {
+                                                    setErrorMsg('Permission to access location was denied');
+                                                    return;
+                                                }
+                                            })();
+                                            setRoute((prev) => ({
+                                                ...prev,
+                                                coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
+                                            }));
+                                            setRouteCtr(routeCtr + 1);
+                                        } else if(selectType === 'Assignment') {
+                                            setLocation(routeLocName);
+                                            setLatitude(routeLatitude);
+                                            setLongitude(routeLongitude);
+                                        } else if(selectType === 'Event') {
+                                            setLocation(routeLocName);
+                                            setLatitude(routeLatitude);
+                                            setLongitude(routeLongitude);
+                                        }
                                     }
                                     setAddNewLocation(false);
                                 }}

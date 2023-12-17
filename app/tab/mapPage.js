@@ -394,7 +394,7 @@ export default function MapAut({ navigation }) {
                             }}
                             style={{zIndex: 95}}
                         >
-                            <Ionicons name='location' style={{fontSize: 30, color: 'green'}} />
+                            <Image source={require('../../assets/garbage-truck.png')} style={{width: 45, height: 40}} />
                             <Callout>
                                 <View style={{width: 150, alignItems: 'center'}}>
                                     <Text>Collector: {marker.collectorName}</Text>

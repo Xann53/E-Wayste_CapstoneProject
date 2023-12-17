@@ -196,14 +196,14 @@ export default function Schedule({navigation}) {
     ); 
   } 
     return (  
-      <> 
-      <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}> 
-          <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} /> 
-      </TouchableOpacity> 
+      <>  
       {openSideBar} 
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={ 
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> 
-      }> 
+      }>
+        <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}> 
+            <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} /> 
+        </TouchableOpacity>
           <SafeAreaView style={styles.container}> 
               <View style={{width: '100%', flexDirection: 'row', top: 20, justifyContent: 'center', paddingTop: 14}}> 
                   <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>SCHEDULE</Text> 

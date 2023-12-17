@@ -169,9 +169,6 @@ export default function Report({ navigation }) {
 
     return (
         <>
-            <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
-                <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-            </TouchableOpacity>
             <View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}>
                 <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('camera')}}>
                     <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
@@ -183,6 +180,9 @@ export default function Report({ navigation }) {
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }>
+                <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
+                    <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+                </TouchableOpacity>
                 <SafeAreaView style={styles.container}>
                     <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>REPORTS</Text>

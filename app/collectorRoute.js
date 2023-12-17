@@ -8,7 +8,7 @@ import ReportCol from './tab/reportPageC';
 import MapCol from './tab/mapPageCol';
 import SchedColLayout from './tab/schedRouteCol';
 import MessageLayout from './tab/messageRoute';
-import NotificationsCol from './tab/notifPageC';
+import NotificationsCol from './tab/notifPage';
 import Profile from './tab/profilePage';
 
 const Tab = createBottomTabNavigator();
