@@ -1,38 +1,203 @@
 import React from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image , Share} from "react-native";
+import CommentOverlay from '../../components/commentOverlay';
+import { fetchUserId } from '../../components/userService';
+import SideBar from '../../components/SideNav';
+import { StyleSheet, View, Text, TextInput, Share, TouchableOpacity, ScrollView, SafeAreaView, Modal,  RefreshControl, Image} from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
-import { useState, useEffect, useRef } from 'react';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { useState, useEffect } from 'react';
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, query ,where, orderBy} from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, query, doc, where, updateDoc} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
-import SideBar from '../../components/SideNav';
-import { TEST_ID } from 'react-native-gifted-chat';
-
 export default function NewsfeedAut({navigation}) {
-    const isFocused = useIsFocused();
-    const [refreshing, setRefreshing] = React.useState(false);
-    const [openSideBar, setOpenSideBar] = React.useState();
+  const isFocused = useIsFocused();
+  const [reportsToday, setReportsToday] = useState(0);
+  const [totalReports, setTotalReports] = useState(0);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [openSideBar, setOpenSideBar] = React.useState();
+  const [users, setUsers] = useState([]);
+  const [userUploads, setUserUploads] = useState([]);
+  const [imageCol, setImageCol] = useState([]);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [postText, setPostText] = useState('');
+  const [postTitle, setPostTitle] = useState('');
+  const [likedPosts, setLikedPosts] = useState([]); 
+  const [commentText, setCommentText] = useState('');
 
-    const [users, setUsers] = useState([]);
-    const [userUploads, setUserUploads] = useState([]);
-    const [imageCol, setImageCol] = useState([]);
     let uploadCollection = [];
-
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
-    const imageColRef = ref(storage, "postImages/");
+    const imageColRef = ref(storage, "postImages/"); 
 
+    const toggleModal = () => {
+      setModalVisible((prevIsModalVisible) => !prevIsModalVisible);
+    };
+    
+    const handlePost = async () => {
+      // Check if both postTitle and postText are not empty
+      if (postTitle.trim() === '' || postText.trim() === '') {
+          alert('Please enter a post title and content.');
+          return;
+      }
 
-    const commentsCollection = collection(db, 'Comments');
+      try {
+          const userId = await fetchUserId();
 
-    const [reportsToday, setReportsToday] = useState(0);
-    const [totalReports, setTotalReports] = useState(0);
+          if (!userId) {
+              alert('Error fetching user ID.');
+              return;
+          }
 
-    useEffect(() => {
+          const postRef = await addDoc(collection(db, 'posts'), {
+              postTitle,
+              postContent: postText,
+              userId, // Use the fetched user ID
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          
+          // Store userId in 'users' collection
+          const userRef = doc(db, 'users', userId);
+          await updateDoc(userRef, { userId:userId }); 
+          
+          setPostTitle('');
+          setPostText('');
+          setModalVisible(false);
+      } catch (error) {
+          console.error('Error adding post: ', error);
+      }
+    };
+    
+    const handleLike = async (postId) => {
+      try {
+        // Check if the post is already liked
+        const isAlreadyLiked = likedPosts.includes(postId);
+  
+        // Toggle the liked status
+        const newLikedPosts = isAlreadyLiked
+          ? likedPosts.filter((id) => id !== postId)
+          : [...likedPosts, postId];
+  
+        // Update the state
+        setLikedPosts(newLikedPosts);
+  
+        const userId = await fetchUserId();
+
+        // Update the liked status in the database
+        await updateLikesInDatabase(postId, userId, !isAlreadyLiked);
+      } catch (error) {
+        console.error('Error liking/unliking post: ', error);
+      }
+    };
+
+  const updateLikesInDatabase = async (postId, userId, isLiked) => {
+      try {
+          const likesRef = collection(db, 'likes');
+          const likedPostQuery = query(likesRef, where('postId', '==', postId), where('userId', '==', userId));
+          const likedPostSnapshot = await getDocs(likedPostQuery);
+  
+          if (!likedPostSnapshot.empty) {
+              likedPostSnapshot.forEach(async (doc) => {
+                  await deleteDoc(doc.ref);
+              });
+          } else {
+              await addDoc(collection(db, 'likes'), {
+                  postId,
+                  userId,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+          }
+      } catch (error) {
+          console.error('Error updating likes in the database: ', error);
+      }   
+  };
+
+  useEffect(() => {    
+    // Fetch liked posts from Firebase
+    const fetchLikedPosts = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const likedPostsRef = collection(db, 'likes');
+          const userLikedPostsQuery = query(likedPostsRef, where('userId', '==', user.uid));
+          const userLikedPostsSnapshot = await getDocs(userLikedPostsQuery);
+          const likedPostsIds = userLikedPostsSnapshot.docs.map(doc => doc.data().postId);
+          setLikedPosts(likedPostsIds);
+        }
+      } catch (error) {
+        console.error('Error fetching liked posts: ', error);
+      }
+    };
+
+    // Fetch liked posts when the component mounts
+    fetchLikedPosts();
+  }, []);
+
+  const handlePostComment = async (postId, commentText) => {
+    try {
+        if (!commentText || commentText.trim() === '') {
+            console.log('Comment cannot be empty.');
+            return;
+        }
+
+        const user = auth.currentUser;
+
+        if (!user) {
+            console.error('User not authenticated.');
+            return;
+        }
+
+        // Fetch the user ID
+        const currentUserId = await fetchUserId();
+
+        if (!currentUserId) {
+            console.error('Error fetching user ID.');
+            return;
+        }
+
+        // Get the current username
+        const currentUser = users.find((u) => u.id === currentUserId);
+
+        if (!currentUser) {
+            console.error('Current user not found:', currentUserId);
+            console.log('All users:', users);
+            return;
+        }
+
+        const currentUsername = currentUser?.username || 'Unknown User';
+
+        // Prepare the comment data
+        const commentData = {
+            postId: postId,
+            userId: currentUserId,
+            username: currentUsername,
+            content: commentText,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+
+        // Add the comment to the 'comments' collection
+        await addDoc(collection(db, 'comments'), commentData);
+
+        // Fetch the updated comments for the current post
+        const commentsRef = collection(db, 'comments');
+        const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
+        const postCommentsSnapshot = await getDocs(postCommentsQuery);
+        const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
+
+        // Update the local state to display the updated comments
+        setPostComments((prevComments) => ({
+            ...prevComments,
+            [postId]: commentsData,
+        }));
+
+        // Clear the commentText state
+        setCommentText('');
+    } catch (error) {
+        console.error('Error posting comment: ', error);
+    }
+};
+
+ useEffect(() => {
       const fetchReports = async () => {
         try {
           const currentDate = new Date();
@@ -115,91 +280,6 @@ export default function NewsfeedAut({navigation}) {
             setRefreshing(false);
         }, 1000);
     }, []);
-
-    // Post Interaction 
-    
-  const [likedPosts, setLikedPosts] = useState([]);
-  const isPostLiked = (postId) => likedPosts.includes(postId);
-
-  const handleLikePress = (postId) => {
-    setLikedPosts((prevLikedPosts) => {
-      const updatedLikedPosts = new Set(prevLikedPosts);
-
-      if (updatedLikedPosts.has(postId)) {
-        updatedLikedPosts.delete(postId);
-      } else {
-        updatedLikedPosts.add(postId);
-      }
-
-      return Array.from(updatedLikedPosts);
-    });
-  };
-  // comment 
-
-  const [isCommentOverlayVisible, setCommentOverlayVisible] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState([]);
-  const [postComments, setPostComments] = useState({});
-  
-  const handleCommentPress = (postId) => {
-    // Toggle the visibility of the comment overlay
-    setCommentOverlayVisible(!isCommentOverlayVisible);
-    // Handle other logic related to the comment press if needed
-  };
-  const handlePostComment = async (postId, commentText) => {
-    try {
-      // Add the comment to the "comments" collection
-      const commentsRef = collection(db, 'Comments');
-      await addDoc(commentsRef, {
-        postId,
-        userId: auth.currentUser.uid,
-        text: commentText,
-        timestamp: new Date(),
-        username: user.username,
-      });
-  
-      // Clear the comment text after posting
-      setCommentText('');
-  
-      // Update the postComments state
-      setPostComments((prevComments) => {
-        const updatedComments = {
-          ...prevComments,
-          [postId]: [...(prevComments[postId] || []), commentText],
-        };
-        return updatedComments;
-      });
-    } catch (error) {
-      console.error('Error posting comment:', error);
-    }
-  };
-  const fetchComments = async (postId) => {
-    try {
-      const commentsQuery = query(
-        collection(db, 'comments'),
-        orderBy('timestamp', 'asc'),
-        where('postId', '==', postId)
-      );
-  
-      const snapshot = await getDocs(commentsQuery);
-  
-      const comments = snapshot.docs.map((doc) => doc.data().text);
-      setPostComments((prevComments) => ({
-        ...prevComments,
-        [postId]: comments,
-      }));
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    }
-  };
-
-  useEffect(() => {
-    console.log('userUploads:', userUploads);
-    // Fetch comments for each post
-    userUploads.forEach((uploads) => {
-      fetchComments(uploads.id);
-    });
-  }, [db, userUploads]);
   
   //Share
 
@@ -237,6 +317,93 @@ export default function NewsfeedAut({navigation}) {
     }
 
     function BodyContent() {
+      const [isCommentOverlayVisible, setIsCommentOverlayVisible] = useState({});
+      const [postComments, setPostComments] = useState({});
+      const [currentPostId, setCurrentPostId] = useState(null);
+
+      const handleToggleCommentOverlay = async (postId) => {
+        setCurrentPostId(postId);
+        setIsCommentOverlayVisible((prevState) => ({
+        ...prevState,
+        [postId]: !prevState[postId],
+        }));
+
+        try {
+        const commentsRef = collection(db, 'comments');
+        const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
+        const postCommentsSnapshot = await getDocs(postCommentsQuery);
+        const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
+        setPostComments((prevComments) => ({ ...prevComments, [postId]: commentsData }));
+        } catch (error) {
+        console.error('Error fetching comments: ', error);
+        }
+    };
+
+    const handlePostComment = async (postId, commentText) => {
+      try {
+          if (!commentText || commentText.trim() === '') {
+              console.log('Comment cannot be empty.');
+              return;
+          }
+  
+          const user = auth.currentUser;
+  
+          if (!user) {
+              console.error('User not authenticated.');
+              return;
+          }
+  
+          // Fetch the user ID
+          const currentUserId = await fetchUserId();
+  
+          if (!currentUserId) {
+              console.error('Error fetching user ID.');
+              return;
+          }
+  
+          // Get the current username
+          const currentUser = users.find((u) => u.id === currentUserId);
+  
+          if (!currentUser) {
+              console.error('Current user not found:', currentUserId);
+              console.log('All users:', users);
+              return;
+          }
+  
+          const currentUsername = currentUser?.username || 'Unknown User';
+  
+          // Prepare the comment data
+          const commentData = {
+              postId: postId,
+              userId: currentUserId,
+              username: currentUsername,
+              content: commentText,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+  
+          // Add the comment to the 'comments' collection
+          await addDoc(collection(db, 'comments'), commentData);
+  
+          // Fetch the updated comments for the current post
+          const commentsRef = collection(db, 'comments');
+          const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
+          const postCommentsSnapshot = await getDocs(postCommentsQuery);
+          const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
+  
+          // Update the local state to display the updated comments
+          setPostComments((prevComments) => ({
+              ...prevComments,
+              [postId]: commentsData,
+          }));
+  
+          // Clear the commentText state
+          setCommentText('');
+      } catch (error) {
+          console.error('Error posting comment: ', error);
+      }
+  };
+
+      
         userUploads.map((uploads) => {
           var valueToPush = {};
           valueToPush["id"] = uploads.id;
@@ -347,22 +514,13 @@ export default function NewsfeedAut({navigation}) {
                     }}
                   >
                     <Ionicons
-                      name={isPostLiked(post.id) ? 'heart' : 'heart-outline'}
-                      style={{ fontSize: 25, color: isPostLiked(post.id) ? 'red' : 'black' }}
-                      onPress={() => handleLikePress(post.id)}
+                      name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
+                      style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
+                      onPress={() => handleLike(post.id)}
                     />
                   <Ionicons
-                      name="chatbubble-outline"
-                      style={{ fontSize: 25 }}
-                      onPress={() => {
-                        handleCommentPress(post.id);
-                        setCommentOverlayVisible((prev) => ({
-                          ...prev,
-                          [post.id]: !prev[post.id],
-                        }));
-                      }}
-                    />
-                    <Ionicons
+                      name="chatbubble-outline" style={{ fontSize: 25 }} onPress={() => {handleToggleCommentOverlay(post.id)}}/>
+                  <Ionicons
               name="share-outline"
               style={{ fontSize: 25 }}
               onPress={() => handleSharePress(post.id, post.description, imageURL)}
@@ -376,8 +534,7 @@ export default function NewsfeedAut({navigation}) {
                 comments={postComments[post.id] || []}
                   commentText={commentText}
                   setCommentText={setCommentText}
-                  handlePostComment={() => handlePostComment(post.id, commentText)}
-                  
+                  handlePostComment={() => handlePostComment(post.id, commentText)}                 
                 />
               )}
               </View>
@@ -447,7 +604,7 @@ export default function NewsfeedAut({navigation}) {
                             <Text style={{fontSize: 23, fontWeight: 700, color: 'rgba(3, 73, 4, 1)', marginBottom: 5}}>NEWSFEED</Text>
                         </View>
                         <View style={{width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgb(16, 139, 0)', marginBottom: 20}}>
-                            <TouchableOpacity activeOpacity={0.5}>
+                            <TouchableOpacity activeOpacity={0.5} onPress={toggleModal}>
                                 <View style={{backgroundColor: '#ffffff', flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center'}}>
                                     <View style={[styles.containerPfp, {width: 30, height: 30}]}>
                                         <Ionicons name='person-outline' style={[styles.placeholderPfp, {fontSize: 20}]} />
@@ -456,11 +613,9 @@ export default function NewsfeedAut({navigation}) {
                                         What's on your mind?
                                     </Text>
                                     <View style={{position: 'absolute', right:15, width: 70, height: 35, backgroundColor: 'rgb(45, 105, 35)', borderRadius: 20, overflow: 'hidden'}}>
-                                        <TouchableOpacity activeOpacity={0.5}>
-                                            <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(81,175,91)'}}>
-                                                <Text style={{fontWeight: 700, color: '#ffffff'}}>POST</Text>
-                                            </View>
-                                        </TouchableOpacity>
+                                    <TouchableOpacity style={styles.modalButton}>
+                                      <Text style={{ color: 'white', fontWeight: 'bold' }}>POST</Text>
+                                  </TouchableOpacity>
                                     </View>
                                 </View>
                             </TouchableOpacity>
@@ -493,37 +648,40 @@ export default function NewsfeedAut({navigation}) {
                 </SafeAreaView>
             </ScrollView>
             {openSideBar}
+
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={isModalVisible}
+              onRequestClose={toggleModal}
+          >
+              <View style={styles.modalContainer}>
+                  <View style={styles.modalContent}>
+                      <TextInput
+                          placeholder="Post Title"
+                          value={postTitle}
+                          onChangeText={(text) => setPostTitle(text)}
+                          style={styles.modalTitleInput} 
+                      />
+                      <TextInput
+                          placeholder="Write your post content here..."
+                          multiline
+                          value={postText}
+                          onChangeText={(text) => setPostText(text)}
+                          style={styles.modalTextInput}
+                      />
+                      <TouchableOpacity style={styles.modalButton} onPress={handlePost}>
+                          <Text style={{ color: 'white', fontWeight: 'bold' }}>POST</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.modalCloseButton} onPress={toggleModal}>
+                          <Text style={{ color: 'black' }}>CLOSE</Text>
+                      </TouchableOpacity>
+                  </View>
+              </View>
+          </Modal>
         </>
     );
-    function CommentOverlay({ comments, commentText, setCommentText, handlePostComment }) {
-      return (
-        <View style={styles.commentOverlayContainer}>
-          <View style={styles.commentContainer}>
-            {comments.map((comment, index) => (
-              <View key={index} style={styles.existingComment}>
-                <Text>{comment}</Text>
-              </View>
-            ))}
-          </View>
-    
-          {/* Input text for adding a new comment */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              placeholder="Add a comment..."
-              value={commentText}
-              onChangeText={(text) => setCommentText(text)}
-              style={styles.input}
-            />
-            <TouchableOpacity onPress={handlePostComment}>
-              <View style={styles.postButton}>
-                <Text style={styles.postButtonText}>Post</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-  }
+}
 
 const styles = StyleSheet.create({
     container: {
@@ -719,6 +877,47 @@ const styles = StyleSheet.create({
       postButtonText: {
         color: '#fff',
         fontWeight: 'bold',
+      },
+      modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+      },
+      modalTitleInput: {
+          height: 40, // Adjust the height as needed
+          borderColor: 'gray',
+          borderWidth: 1,
+          borderRadius: 5,
+          marginVertical: 10,
+          padding: 10,
+      },
+      modalContent: {
+          backgroundColor: 'white',
+          borderRadius: 10,
+          padding: 20,
+          width: '80%',
+      },
+      modalTextInput: {
+          height: 100,
+          borderColor: 'gray',
+          borderWidth: 1,
+          borderRadius: 5,
+          marginVertical: 10,
+          padding: 10,
+      },
+      modalButton: {
+          backgroundColor: 'green',
+          padding: 10,
+          borderRadius: 5,
+          alignItems: 'center',
+      },
+      modalCloseButton: {
+          backgroundColor: 'lightgray',
+          padding: 10,
+          borderRadius: 5,
+          alignItems: 'center',
+          marginTop: 10,
       },
       
 });

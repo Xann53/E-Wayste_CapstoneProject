@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image } from 'react-native';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc, doc } from 'firebase/firestore';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, Modal } from 'react-native';
+import { collection, query, where, orderBy, onSnapshot, addDoc, getDocs, serverTimestamp, writeBatch, getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db, auth } from '../../../firebase_config';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,10 +10,13 @@ export default function ViewMessage({ route, navigation }) {
   const [message, setMessage] = useState('');
   const [chatData, setChatData] = useState([]);
   const [receiverEmail, setReceiverEmail] = useState(route.params.receiverEmail || '');
+  const [receiverUsername, setReceiverUsername] = useState('');
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const authInstance = getAuth();
   const currentUser = authInstance.currentUser;
-
   const { chatId } = route.params;
   const messagesRef = collection(db, 'messages');
 
@@ -23,14 +26,17 @@ export default function ViewMessage({ route, navigation }) {
         chatId,
         senderId: currentUser.uid,
         senderEmail: currentUser.email,
-        receiverEmail,
         text: message,
         timestamp: serverTimestamp(),
       });
+  
       setMessage('');
     }
   };
-  console.log('chatId:', chatId);
+  
+  const toggleDeleteModal = () => {
+    setDeleteModalVisible(!isDeleteModalVisible);
+  };  
 
   const formatTimestamp = (timestamp) => {
     return timestamp ? new Date(timestamp.seconds * 1000).toLocaleString() : '';
@@ -38,18 +44,18 @@ export default function ViewMessage({ route, navigation }) {
 
   const renderItem = ({ item }) => {
     const isUserSender = item.senderId === currentUser.uid;
+
     return (
       <View
         style={[
           styles.messageContainer,
-          isUserSender ? styles.userMessageContainer : styles.sellerMessageContainer,
+          isUserSender ? styles.userMessageContainer : styles.ReceiverMessageContainer,
         ]}
       >
-        <Text style={styles.emailText}>
-          {isUserSender ? 'me (' + currentUser.email + ')' : item.senderEmail}
-        </Text>
         {item.imageUrl ? (
           <Image source={{ uri: item.imageUrl }} style={{ width: 200, height: 200 }} />
+        ) : item.capturedImage ? (
+          <Image source={{ uri: item.capturedImage }} style={{ width: 200, height: 200 }} />
         ) : (
           <Text style={styles.messageText}>{item.text}</Text>
         )}
@@ -58,61 +64,144 @@ export default function ViewMessage({ route, navigation }) {
     );
   };
 
-  useEffect(() => {
+  const fetchChatDetails = async () => {
     if (chatId) {
-      const q = query(
-        messagesRef,
-        where('chatId', '==', chatId),
-        orderBy('timestamp', 'desc')
-      );
-  
+      const q = query(messagesRef, where('chatId', '==', chatId), orderBy('timestamp', 'desc'));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const messages = [];
+        const messages = new Set();
         querySnapshot.forEach((doc) => {
-          messages.push({ ...doc.data(), id: doc.id });
+          messages.add({ ...doc.data(), id: doc.id });
         });
-        setChatData(messages);
+        setChatData(Array.from(messages));
       });
-  
+
       if (!receiverEmail) {
-        const chatDetailsRef = doc(db, 'chats', chatId);
-        getDoc(chatDetailsRef)
-          .then((docSnap) => {
-            if (docSnap.exists()) {
-              const chatDetails = docSnap.data();
-              const otherParticipantEmail = chatDetails.users.find(
-                (email) => email !== currentUser.email
-              );
-              setReceiverEmail(otherParticipantEmail);
+        try {
+          const chatDetailsRef = doc(db, 'chats', chatId);
+          const docSnap = await getDoc(chatDetailsRef);
+
+          if (docSnap.exists()) {
+            const chatDetails = docSnap.data();
+            const otherParticipantEmail = chatDetails.users.find(
+              (email) => email !== currentUser.email
+            );
+
+            setReceiverEmail(otherParticipantEmail);
+
+            const userRef = collection(db, 'users');
+            const userQuery = query(userRef, where('email', '==', otherParticipantEmail));
+            const userDoc = await getDoc(userQuery);
+
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const receiverUsername = userData.username;
+              setReceiverUsername(receiverUsername);
+            } else {
+              console.log('User document does not exist for email:', otherParticipantEmail);
             }
-          })
-          .catch((error) => {
-            console.error('Error fetching chat details: ', error);
-          });
+          }
+        } catch (error) {
+          console.error('Error fetching receiver user data: ', error);
+        }
       }
-  
+
       return () => {
         unsubscribe();
       };
     }
-  }, [chatId, receiverEmail]);
+  };
+
+  const handleImagePress = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+  
+      if (!result.canceled) {
+        const selectedImage = result.assets[0];
+        console.log('Image URI:', selectedImage.uri);
+        if (chatId) {
+          await addDoc(messagesRef, {
+            chatId,
+            senderId: currentUser.uid,
+            senderEmail: currentUser.email,
+            imageUrl: selectedImage.uri,
+            timestamp: serverTimestamp(),
+          });
+        }
+      } else {
+        console.log('Image picker was cancelled');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+    }
+  };
+
+useEffect(() => {
+  if (chatId) {
+    const q = query(
+      messagesRef,
+      where('chatId', '==', chatId),
+      orderBy('timestamp', 'desc')
+    );
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const messages = new Set(); // Use a Set to store unique messages
+      querySnapshot.forEach((doc) => {
+        messages.add({ ...doc.data(), id: doc.id }); // Add messages to the Set
+      });
+      setChatData(Array.from(messages)); // Convert the Set back to an array
+    });
+    if (!receiverEmail) {
+      const chatDetailsRef = doc(db, 'chats', chatId);
+      getDoc(chatDetailsRef)
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            const chatDetails = docSnap.data();
+            const otherParticipantEmail = chatDetails.users.find(
+              (email) => email !== currentUser.email
+            );
+            setReceiverEmail(otherParticipantEmail);
+            const userRef = collection(db, 'users');
+            const userQuery = query(userRef, where('email', '==', otherParticipantEmail));
+            return getDoc(userQuery);  // Return the promise here
+          }
+        })
+        .then((userDoc) => {
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const receiverUsername = userData.username;
+            setReceiverUsername(receiverUsername);
+          } else {
+            console.log('User document does not exist for email:', otherParticipantEmail);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching receiver user data: ', error);
+        });
+    }
+    return () => {
+      unsubscribe();
+    };
+  }
+}, [chatId, receiverEmail]);
+  
 
   return (
-    
     <View style={styles.container}>
-      
       <View style={styles.containerHeader}>
-        <View style={{ flexDirection: 'row' }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 25 }}>
+        <View style={{ direction: 'flex', flexDirection: 'row' }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', top: 10 }}>
             <TouchableOpacity activeOpacity={0.5} onPress={() => { navigation.navigate('message') }}>
-            <Ionicons name='arrow-back' style={{ fontSize: 35, color: '#BDE47C', top: 2 }} />
+              <Ionicons name='arrow-back' style={{ fontSize: 35, color: '#BDE47C', top: 2 }} />
             </TouchableOpacity>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1, marginRight: 18 }}>Chats</Text>
-            <Text style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', top: 1 }}> yes</Text>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1, marginRight: 28 }}>Chats</Text>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1 }}>{receiverEmail}</Text>
+          </View>
         </View>
-        </View>
-    </View>
-      {/* Background Image */}
+      </View>
       <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgb(75,163,84)', zIndex: -99 }}>
         <Image
           source={require('../../../assets/NatureVector.jpg')}
@@ -126,7 +215,6 @@ export default function ViewMessage({ route, navigation }) {
           }}
         />
       </View>
-
       <FlatList
         data={chatData}
         keyExtractor={(item) => item.id.toString()}
@@ -134,11 +222,11 @@ export default function ViewMessage({ route, navigation }) {
         inverted={true}
       />
       <View style={styles.inputContainer}>
-      <View style={styles.composerContainer}>
-      <TouchableOpacity onPress={() => handleCameraPress()}>
-        <Ionicons name="camera-outline" size={24} color="green" />
-      </TouchableOpacity>
-    </View>
+        <View style={styles.composerContainer}>
+          <TouchableOpacity onPress={() => handleImagePress()}>
+            <Ionicons name="image-outline" size={24} color="green" />
+          </TouchableOpacity>
+        </View>
         <TextInput
           style={styles.textInput}
           placeholder="Type your message..."
@@ -168,9 +256,8 @@ const styles = StyleSheet.create({
   messageContainer: {
     borderRadius: 8,
     padding: 10,
-    marginVertical: 5,
+    marginVertical: 4,
     flex:1,
-   
   },
   composerContainer: {
     marginRight: 5,
@@ -179,11 +266,13 @@ const styles = StyleSheet.create({
 },
   userMessageContainer: {
     alignSelf: 'flex-end',
-    backgroundColor: '#4CAF50', // Green color for user messages
+    borderRadius: 15,
+    backgroundColor: '#87FF74', // Green color for user messages
   },
-  sellerMessageContainer: {
+  ReceiverMessageContainer: {
     alignSelf: 'flex-start',
-    backgroundColor: '#2196F3', // Blue color for seller messages
+    backgroundColor: '#FFFFFF', // Blue color for seller messages
+    borderRadius: 15,
   },
   emailText: {
     fontSize: 12,
@@ -229,5 +318,5 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  }, 
+  },
 });

@@ -782,6 +782,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgb(81,175,91)',
         textAlign: 'center',
         verticalAlign: 'middle',
+        padding: 10,
         color: '#ffffff',
         fontWeight: '900',
         fontSize: 16,
