@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import moment from 'moment/moment';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query ,where, orderBy} from 'firebase/firestore';
@@ -154,7 +155,7 @@ export default function NewsfeedAut({navigation}) {
         postId,
         userId: auth.currentUser.uid,
         text: commentText,
-        timestamp: new Date(),
+        timestamp: moment().utcOffset('+05:30').format('YYYY/MM/DD hh:mm:ss a'),
         username: user.username,
       });
   
