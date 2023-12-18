@@ -18,7 +18,7 @@ export default function Report({ navigation }) {
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
-    let uploadCollection = [];
+    let uploadCollection = [];  
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
