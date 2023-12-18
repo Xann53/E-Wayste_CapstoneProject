@@ -27,6 +27,8 @@ export default function Notifications({ navigation }) {
     const commentRef = firebase.firestore().collection("comments");
     
     let notifCollection = [];
+    const[currentUser, setCurrentUser] = useState();
+    const[currentId, setCurrentId] = useState();
 
     const isFocused = useIsFocused();
     useEffect(() => {
@@ -126,6 +128,14 @@ export default function Notifications({ navigation }) {
                 setReports(reportData);
             }
         )
+
+        const getCurrentUser = async() => {
+            let username = await AsyncStorage.getItem('userUName');
+            let id = await AsyncStorage.getItem('userId')
+            setCurrentUser(username);
+            setCurrentId(id);
+        };
+        getCurrentUser();
     }, [])
 
     function displayNotif() {
@@ -235,6 +245,29 @@ export default function Notifications({ navigation }) {
                         </View>
                     </View>
                 );
+            }
+            if(notif.notifType === 'Schedule' && notif.type === 'Assignment') {
+                users.map((user) => {
+                    if(user.username.toLowerCase() === notif.assignCollector.toLowerCase() && (user.username.toLowerCase() === currentUser.toLowerCase() || notif.userID === currentId)) {
+                        temp.push(
+                            <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                        <Ionicons name='person' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                    </View>
+                                </View>
+                                <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                    <View style={{width: '90%'}}>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    }
+                })
             }
         });
 
