@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth,  firebase } from '../../../firebase_config';
 import { useIsFocused } from '@react-navigation/native';
-import SideNav from '../../../components/SideNav';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert, Image, ScrollView } from 'react-native';
 import { collection, query, where, onSnapshot, orderBy, getDocs, limit, addDoc, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -11,19 +10,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function Message({navigation}) {
   const isFocused = useIsFocused();
-  const [openSideBar, setOpenSideBar] = React.useState();
   const [chatSummaries, setChatSummaries] = useState([]);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [optionModalVisible, setOptionModalVisible] = useState(false);
-  const [confirmDeleteModalVisible, setConfirmDeleteModalVisible] = useState(false);
-  const [ratingModalVisible, setRatingModalVisible] = useState(false);
-  const [userRating, setUserRating] = useState('');
   const [userMessage, setUserMessage] = useState('');
-  const [refreshPage, setRefreshPage] = useState(false);
-  
+  const [refreshPage, setRefreshPage] = useState(false);  
 
 const auth = getAuth();
 const currentUser = auth.currentUser;
@@ -64,20 +58,10 @@ const refreshPageAndClearForms = async () => {
   setSearchQuery('');
   setSearchResults([]);
   setSelectedChat(null);
-  setUserRating('');
   setUserMessage('');
   setRefreshPage((prev) => !prev);
 };
 
-
-const toggleSideBar = () => {
-  setOpenSideBar(!openSideBar);
-};
-useEffect(() => {
-  if(!isFocused) {
-      setOpenSideBar();
-  }
-});
 
 const handleLongPress = (chat) => {
   setSelectedChat(chat);
@@ -115,7 +99,6 @@ const handleDeleteChat = async () => {
     console.error('Error deleting chat:', error);
   }
 };
-
 
 const handleUserSelect = async (selectedEmail) => {
   setSearchModalVisible(false);
@@ -214,91 +197,79 @@ const renderItem = ({ item }) => (
   </TouchableOpacity>
 );
 
-return ( 
-<View style={styles.container}>
+return (
+  <View style={styles.container}>
     <View style={styles.containerHeader}>
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-            <TouchableOpacity activeOpacity={0.5} onPress={() => { setOpenSideBar(true) }}>
-              <Ionicons name='menu' style={{ fontSize: 40, color: '#ffffff', top: 2 }} />
-            </TouchableOpacity>
-            <Text style={{ fontSize: 20, fontWeight: 600, color: '#ffffff', top: 1 }}>Message</Text>
-          </View>
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+          <Text style={{ fontSize: 20, fontWeight: 600, color: '#ffffff', top: 25 }}>Message</Text>
         </View>
       </View>
-      <View style={styles.containerSearch}>
-          <TextInput
-          style={styles.searchBar}
-          placeholder="Search users"
-          value={searchQuery}
-          onChangeText={handleSearch}
-          />  
-        </View>
-      {/* Background Image */}
-      <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgb(75,163,84)', zIndex: -99 }}>
-        <Image
-          source={require('../../../assets/NatureVector.jpg')}
-          style={{
-            position: 'absolute',
-            resizeMode: 'stretch',
-            width: '100%',
-            height: '100%',
-            opacity: 0.5, // Set opacity to 50%
-            bottom: 0,
-          }}
-        />
-      </View>
-      {openSideBar && (
-        <View style={{ position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99 }}>
-          <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => { setOpenSideBar(false) }}>
-            <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-          </TouchableOpacity>
-          <SideNav navigation={navigation} />
-          <TouchableOpacity style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1 }} onPress={() => { setOpenSideBar(false) }} />
-        </View>
-      )}
-  {/* Display Search Results */}
-  {searchQuery.length > 0 && searchResults.length > 0 && (
-    <React.Fragment>
-    <Text style={styles.headerText}>Search Results</Text>
-    <FlatList
-      data={searchResults}
-      renderItem={({ item }) => (
-        <TouchableOpacity onPress={() => handleUserSelect(item.email)}>
-          <View style={styles.searchResultItem}>
-            <Text>{item.username}</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-      keyExtractor={(item) => item.email}
-      ListEmptyComponent={<Text>No results found</Text>}
-      />
-    </React.Fragment>
-  )}
-  {/* Display Chat Summaries */}
-  <FlatList
-    data={chatSummaries}
-    renderItem={renderItem}
-    keyExtractor={(item) => item.chatId}
-  />
-  <Modal
-  animationType="slide"
-  transparent={true}
-  visible={optionModalVisible}
-  onRequestClose={() => setOptionModalVisible(false)}
->
-  <View style={styles.modalContainer}>
-    <View style={styles.modalContent}>
-      <TouchableOpacity onPress={handleDeleteChat}>
-        <Text style={styles.modalOption}>Delete Conversation</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => setOptionModalVisible(false)}>
-        <Text style={styles.modalCancel}>Cancel</Text>
-      </TouchableOpacity>
     </View>
+    <View style={styles.containerSearch}>
+      <TextInput
+        style={styles.searchBar}
+        placeholder="Search users"
+        value={searchQuery}
+        onChangeText={handleSearch}
+      />
+    </View>
+    {/* Background Image */}
+    <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgb(75,163,84)', zIndex: -99 }}>
+      <Image
+        source={require('../../../assets/NatureVector.jpg')}
+        style={{
+          position: 'absolute',
+          resizeMode: 'stretch',
+          width: '100%',
+          height: '100%',
+          opacity: 0.5, // Set opacity to 50%
+          bottom: 0,
+        }}
+      />
+    </View>
+    {/* Display Search Results */}
+    {searchQuery.length > 0 && searchResults.length > 0 && (
+      <React.Fragment>
+        <Text style={styles.headerText}>Search Results</Text>
+        <FlatList
+          data={searchResults}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => handleUserSelect(item.email)}>
+              <View style={styles.searchResultItem}>
+                <Text>{item.username}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.email}
+          ListEmptyComponent={<Text>No results found</Text>}
+        />
+      </React.Fragment>
+    )}
+    {/* Display Chat Summaries */}
+    <FlatList
+      data={chatSummaries}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.chatId}
+    />
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={optionModalVisible}
+      onRequestClose={() => setOptionModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <TouchableOpacity onPress={handleDeleteChat}>
+            <Text style={styles.modalOption}>Delete Conversation</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setOptionModalVisible(false)}>
+            <Text style={styles.modalCancel}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   </View>
-</Modal>
-</View>
 );
 }
 
@@ -310,6 +281,7 @@ const styles = StyleSheet.create({
   containerHeader: {
     backgroundColor: '#3F3D3C',
     padding: 10,
+    height: 70,
 },
 containerSearch: {
   width: '100%',

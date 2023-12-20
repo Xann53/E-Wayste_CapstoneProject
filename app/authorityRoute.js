@@ -8,9 +8,8 @@ import ReportAut from './tab/reportPageA';
 import MapAut from './tab/mapPageAut';
 import SchedLayout from './tab/schedRouteAut';
 import MessageLayout from './tab/messageRoute';
-import NotificationsCol from './tab/notifPageC';
+import NotificationsCol from './tab/notifPage';
 import Profile from './tab/profilePage';
-import NewMessage from './tab/messageTabs/createMessage';
 
 const Tab = createBottomTabNavigator();
 

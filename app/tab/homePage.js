@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 import { parse } from 'date-fns';
 import * as ImagePicker from 'expo-image-picker';
 import uuid from 'react-native-uuid';
+import moment from 'moment';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
@@ -59,6 +60,10 @@ export default function Newsfeed({ navigation }) {
         setSelectedImage('');
     };
     
+    const fullDateTime = moment()
+        .utcOffset('+08:00')
+        .format('YYYY/MM/DD hh:mm:ss a');
+    
     useEffect(() => {
     const fetchEvents = async () => {
     try {
@@ -74,6 +79,7 @@ export default function Newsfeed({ navigation }) {
             selectedDate: eventData.selectedDate,
             title: eventData.title,
             userId: eventData.userID,
+            timestamp: eventData.dateTimeUploaded,
           };
         }
         return null; // Ignore non-event documents
@@ -136,27 +142,27 @@ export default function Newsfeed({ navigation }) {
         }
       };
       
-    const handleLike = async (postId) => {
+      const handleLike = async (postId) => {
         try {
+          const userId = await fetchUserId();
+          
           // Check if the post is already liked
           const isAlreadyLiked = likedPosts.includes(postId);
-    
+          
           // Toggle the liked status
           const newLikedPosts = isAlreadyLiked
             ? likedPosts.filter((id) => id !== postId)
             : [...likedPosts, postId];
-    
+          
           // Update the state
           setLikedPosts(newLikedPosts);
-    
-          const userId = await fetchUserId();
-
+      
           // Update the liked status in the database
           await updateLikesInDatabase(postId, userId, !isAlreadyLiked);
         } catch (error) {
           console.error('Error liking/unliking post: ', error);
         }
-      };
+    };
 
     const updateLikesInDatabase = async (postId, userId, isLiked) => {
         try {
@@ -172,7 +178,7 @@ export default function Newsfeed({ navigation }) {
                 await addDoc(collection(db, 'likes'), {
                     postId,
                     userId,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    timestamp: fullDateTime,
                 });
             }
         } catch (error) {
@@ -219,12 +225,12 @@ export default function Newsfeed({ navigation }) {
                     return;
                 }
             }
-    
+
             const postData = {
                 postContent: postText,
                 imageUrl,
                 userId,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                timestamp: fullDateTime,
             };
     
             // Continue with the post creation logic, including imageUrl or without it
@@ -256,14 +262,14 @@ export default function Newsfeed({ navigation }) {
         }
     });
 
-    useEffect(() => {    
-        // Fetch liked posts from Firebase
+    useEffect(() => {
         const fetchLikedPosts = async () => {
           try {
-            const user = auth.currentUser;
-            if (user) {
+            const userId = await fetchUserId();
+    
+            if (userId) {
               const likedPostsRef = collection(db, 'likes');
-              const userLikedPostsQuery = query(likedPostsRef, where('userId', '==', user.uid));
+              const userLikedPostsQuery = query(likedPostsRef, where('userId', '==', userId));
               const userLikedPostsSnapshot = await getDocs(userLikedPostsQuery);
               const likedPostsIds = userLikedPostsSnapshot.docs.map(doc => doc.data().postId);
               setLikedPosts(likedPostsIds);
@@ -273,9 +279,8 @@ export default function Newsfeed({ navigation }) {
           }
         };
     
-        // Fetch liked posts when the component mounts
         fetchLikedPosts();
-      }, []); 
+      }, []);
 
         useEffect(() => {
             const getUsers = async () => {
@@ -368,8 +373,13 @@ export default function Newsfeed({ navigation }) {
             console.error('Error picking image: ', error);
         }
     };
-    
 
+    const formatTimestamp = (timestamp) => {
+        // Assuming timestamp is in the format 'yyyy/MM/dd hh:mm:ss a'
+        const formattedDate = moment(timestamp, 'YYYY/MM/DD hh:mm:ss a').format('YYYY/MM/DD hh:mm:ss a');
+        return formattedDate;
+      };
+      
     function SideNavigation(navigation) {
         return (
             <>
@@ -446,7 +456,7 @@ export default function Newsfeed({ navigation }) {
                     userId: currentUserId,
                     username: currentUsername,
                     content: commentText,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    timestamp: fullDateTime,
                 };
         
                 // Add the comment to the 'comments' collection
@@ -501,12 +511,12 @@ export default function Newsfeed({ navigation }) {
                 valueFeedToPush["id"] = FeedUploads.id;
                 valueFeedToPush["imageUrl"] = FeedUploads.imageUrl;
                 valueFeedToPush["postContent"] = FeedUploads.postContent;
-                valueFeedToPush["timestamp"] = FeedUploads.timestamp;
+                valueFeedToPush["dateTime"] = FeedUploads.timestamp;
                 valueFeedToPush["userId"] = FeedUploads.userId;
                 uploadCollection.push(valueFeedToPush);
                 uploadCollection.sort((a, b) => {
-                    let fa = a.timestamp,
-                        fb = b.timestamp;
+                    let fa = a.dateTime,
+                        fb = b.dateTime;
                     if (fa < fb) {
                         return -1;
                     }
@@ -517,12 +527,10 @@ export default function Newsfeed({ navigation }) {
                 });
             });
             
-                const getUserInfo = (userId) => {
-                    const user = users.find((user) => user.id === userId);
-                    return user ? `${user.firstName} ${user.lastName}` : `User (${userId})`;
-                };
-            
-
+            const getUserInfo = (userId) => {
+                const user = users.find((user) => user.id === userId);
+                return user ? `${user.firstName} ${user.lastName}` : `User (${userId})`;
+            };
         
             uploadCollection.map((post,postFeed, index) => {
                 let imageURL;
@@ -537,37 +545,47 @@ export default function Newsfeed({ navigation }) {
                       <TouchableOpacity activeOpacity={0.5}>
                         <View style={styles.contentButtonFront}>
                           {/* User information */}
-                          <View style={{ width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15 }}>
-                            <View style={styles.containerPfp}>
+                          <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
+                            <View style={styles.containerPfp}> 
                               <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                             </View>
-                             <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}> {getUserInfo(post.userId)} </Text>
-                             
-                          </View>
-                        <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                             <Text style={{ fontSize: 13, marginBottom: 5 }}> {post.description || post.postContent} </Text>
-                            {imageURL ? (
-                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                                        <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
-                                    </View>
-                                ) : null}
-                                </SafeAreaView>
-                                <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                                <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id )}>
-                                    <Ionicons name={likedPosts.includes(post.id ) ? 'heart' : 'heart-outline'}
-                                    style={{ fontSize: 25, color: likedPosts.includes(post.id ) ? 'red' : 'black' }} />
-                                </TouchableOpacity>
-                                 <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id )}>
-                                    <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                                 </TouchableOpacity>
-                                <TouchableOpacity activeOpacity={0.5}>
-                                <Ionicons
-                                    name="share-outline"
-                                    style={{ fontSize: 25 }}
-                                    onPress={() => handleSharePress(post.id || postFeed.id, post.description || post.postContent, imageURL)}
-                                    />
-                                </TouchableOpacity>
                             </View>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)', flexShrink: 1 }}>
+                                  {getUserInfo(post.userId)}
+                                </Text>
+                                <Text style={{ fontSize: 12, color: 'gray', marginLeft: 5 }}>
+                                    {formatTimestamp(post.dateTime) || formatTimestamp(postFeed.dateTime)}
+                                    </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                            <Text style={{ fontSize: 13, marginBottom: 5, marginStart: -1 }}>{post.description || post.postContent}</Text>
+                            {imageURL ? (
+                              <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                                <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
+                              </View>
+                            ) : null}
+                          </SafeAreaView>
+                          <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                          <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id)}>
+                            <Ionicons
+                                name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
+                                style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
+                            />
+                            </TouchableOpacity>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id)}>
+                              <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
+                            </TouchableOpacity>
+                            <TouchableOpacity activeOpacity={0.5}>
+                              <Ionicons
+                                name="share-outline"
+                                style={{ fontSize: 25 }}
+                                onPress={() => handleSharePress(post.id || postFeed.id, post.description || post.postContent, imageURL)}
+                              />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       </TouchableOpacity>
                       {/* Comment overlay */}
@@ -580,7 +598,7 @@ export default function Newsfeed({ navigation }) {
                         />
                       )}
                     </View>
-                  );
+                  );                  
                 });
             return (
                 <View>
@@ -602,15 +620,24 @@ export default function Newsfeed({ navigation }) {
                             <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
                                  {event.userId && users.find((user) => user.id === event.userId)?.username || 'Unknown User'}
                             </Text>
-                          </View>
+                            <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 50,}}>
+                                {event.timestamp || 'invalid date'}
+                            </Text>
+                          </View>                     
                           <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
                             <Text style={{ fontSize: 16, color: 'green' }}>
                                 {event.title} 
                             </Text>
                             <Text style={{ fontSize: 14, marginBottom: 5 }}>
-                                {event.description}{'\n'}
-                                {event.location}{'\n'}
-                                {event.selectedDate} at {event.startTime}
+                                {event.description}{'\n\n'}
+                                <Text style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Ionicons name="location" size={16} color="green" style={{ marginRight: 5 }} />
+                                    {event.location}{'\n'}
+                                </Text>
+                                <Text style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Ionicons name="calendar" size={16} color="green" style={{ marginRight: 5 }} />
+                                    {event.selectedDate} at {event.startTime}
+                                </Text>
                             </Text>
                             </SafeAreaView>
                           < View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
@@ -646,7 +673,7 @@ export default function Newsfeed({ navigation }) {
             }
     
 
-     function ViewAllContent() {
+    function ViewAllContent() {
         const currentDate = new Date().toISOString().split('T')[0];      
     
         // Filter images based on reports uploaded today
@@ -657,7 +684,6 @@ export default function Newsfeed({ navigation }) {
                 const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
                 return reportDate.toISOString().split('T')[0] === currentDate;
             }
-    
             return false;
         });
         const imageList = imagesToday.map((url, index) => (

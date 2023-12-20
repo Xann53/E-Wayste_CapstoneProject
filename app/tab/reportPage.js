@@ -18,7 +18,7 @@ export default function Report({ navigation }) {
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
-    let uploadCollection = [];  
+    let uploadCollection = [];
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
@@ -123,6 +123,9 @@ export default function Report({ navigation }) {
 
         let temp = [];
         uploadCollection.map((post) => {
+            if (post.status === 'collected') {
+                return;
+            }
             let imageURL;
             imageCol.map((url) => {
                 if(url.includes(post.imageLink)) {
@@ -132,26 +135,31 @@ export default function Report({ navigation }) {
 
             temp.push(
                 <View style={[styles.contentButton, styles.contentGap]}>
-                    <TouchableOpacity activeOpacity={0.5}>
-                        <View style={styles.contentButtonFront}>
-                            <View style={{width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15}}>
-                                <View style={styles.containerPfp}>
-                                    <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                                </View>
-                                <Text style={{fontSize: 16, fontWeight: 500, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(post.userId === user.id) {return user.username;}})}</Text>
-                            </View>
-                            <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)'}}>
-                                <Text style={{fontSize: 13, marginBottom: 5,}}>{post.location}</Text>
-                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                                    {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
-                                    <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
-                                </View>
-                            </SafeAreaView>
-                           
+                  <TouchableOpacity activeOpacity={0.5}>
+                    <View style={styles.contentButtonFront}>
+                      <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
+                        <View style={styles.containerPfp}>
+                          <Ionicons name='person-outline' style={styles.placeholderPfp} />
                         </View>
-                    </TouchableOpacity>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
+                          {users.map((user) => { if (post.userId === user.id) { return user.username; } })}
+                        </Text>
+                        <Text style={{ fontSize: 13, marginLeft: 5, color: 'gray' }}>{post.dateTime}</Text>
+                      </View>
+                      <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Ionicons name="location" size={16} color="red" style={{ marginRight: 5 }} />
+                          <Text style={{ fontSize: 13, marginBottom: 5 }}>{post.location}</Text>
+                        </View>
+                        <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                          {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
+                          <Image src={imageURL} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
+                        </View>
+                      </SafeAreaView>
+                    </View>
+                  </TouchableOpacity>
                 </View>
-            );
+              );
         });
         
         <ul>
