@@ -5,6 +5,7 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAr
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from 'expo-image-picker';
 import { parse } from 'date-fns';
 import uuid from 'react-native-uuid';
@@ -367,11 +368,7 @@ export default function NewsfeedAut({navigation}) {
       
         return todayDate;
       }
-
-
   
-  //Share
-
   const handleSharePress = async (postId, description, imageURL) => {
     try {
       const result = await Share.share({
