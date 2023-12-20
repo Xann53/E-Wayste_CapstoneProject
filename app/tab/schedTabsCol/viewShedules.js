@@ -107,6 +107,21 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                     />
                   </View>
                 )}
+                {scheduleData.type && scheduleData.type === 'Collection' && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldName}>Collection Route</Text>
+                    {scheduleData.collectionRoute.coordinates[0] && (
+                      <Text style={styles.fieldValue}>
+                        <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {scheduleData.collectionRoute.coordinates[0].locationName}
+                      </Text>
+                    )}
+                    {scheduleData.collectionRoute.coordinates[1] && (
+                      <Text style={styles.fieldValue}>
+                        <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {scheduleData.collectionRoute.coordinates[1].locationName}
+                      </Text>
+                    )}
+                  </View>
+                )}
                 {scheduleData.selectedDate && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Date</Text>

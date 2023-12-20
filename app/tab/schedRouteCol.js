@@ -2,7 +2,7 @@ import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import ScheduleCol from './schedTabsUser/schedPage';
+import ScheduleCol from './schedTabsCol/schedPageC';
 import ViewSchedDetailsCol from './schedTabsCol/viewShedules';
 
 const Tab = createBottomTabNavigator();

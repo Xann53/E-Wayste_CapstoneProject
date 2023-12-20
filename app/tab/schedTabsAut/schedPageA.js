@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Calendar } from 'react-native-calendars'; 
 import { useIsFocused } from '@react-navigation/native'; 
 import { db } from '../../../firebase_config'; 
+import { parse } from 'date-fns';
 import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore'; 
 
 export default function ScheduleAut({ navigation }) {
@@ -16,26 +17,39 @@ export default function ScheduleAut({ navigation }) {
   const [totalReports, setTotalReports] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
-  useEffect(() => { 
-    const currentDate = new Date().toISOString().split('T')[0]; // Get the current date 
-    const fetchReports = async () => { 
-      try { 
-        // Query for reports today 
-        const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '==', currentDate)); 
-        const todaySnapshot = await getDocs(todayQuery); 
-        const reportsTodayCount = todaySnapshot.size; 
-        setReportsToday(reportsTodayCount); 
-        // Query for all reports 
-        const allReportsQuery = query(collection(db, 'generalUsersReports')); 
-        const allReportsSnapshot = await getDocs(allReportsQuery); 
-        const totalReportsCount = allReportsSnapshot.size; 
-        setTotalReports(totalReportsCount); 
-      } catch (error) { 
-        console.log('Error fetching reports:', error); 
-      } 
-    }; 
-    fetchReports(); 
-  }, []); 
+  useEffect(() => {
+    const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
+
+    const fetchReports = async () => {
+        try {
+            // Query for reports today
+            const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
+            const todaySnapshot = await getDocs(todayQuery);
+            const todayReports = [];
+
+            todaySnapshot.forEach(doc => {
+                const report = doc.data();
+                const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+
+                if (reportDate.toISOString().split('T')[0] === currentDate) {
+                    todayReports.push(report);
+                }
+            });
+
+            setReportsToday(todayReports.length);
+
+            // Query for all reports
+            const allReportsQuery = query(collection(db, 'generalUsersReports'));
+            const allReportsSnapshot = await getDocs(allReportsQuery);
+            const totalReportsCount = allReportsSnapshot.size;
+            setTotalReports(totalReportsCount);
+        } catch (error) {
+            console.log('Error fetching reports:', error);
+        }
+    };
+
+    fetchReports();
+  }, []);
 
   useEffect(() => { 
     const unsubscribe = fetchSchedule(); 
@@ -362,29 +376,28 @@ export default function ScheduleAut({ navigation }) {
     setSelectedMonth(month.month - 1); // month.month is 0-indexed, so subtract 1 to get the correct month value
   };
 
-  function HeaderContent() { 
-    return ( 
-      <> 
-        <Text style={{ fontSize: 18, fontWeight: 700, color: 'rgb(55,55,55)' }}>BANILAD, CEBU CITY</Text> 
-        <View style={{ flexDirection: 'row', gap: 7, top: 5 }}> 
-          <View style={{ alignItems: 'center' }}> 
-            <Text style={{ fontSize: 14, fontWeight: 500, color: 'rgb(55,55,55)', marginBottom: 5 }}>REPORTS TODAY</Text> 
-            <View style={styles.headerCntr}> 
-              <Text style={{ fontSize: 40, fontWeight: 700, color: 'rgb(55,55,55)' }}>{reportsToday}</Text> 
-              <Text style={{ fontSize: 14, fontWeight: 700, color: 'rgb(55,55,55)' }}>Garbages</Text> 
-            </View> 
-          </View> 
-          <View style={{ alignItems: 'center' }}> 
-            <Text style={{ fontSize: 14, fontWeight: 500, color: 'rgb(55,55,55)', marginBottom: 5 }}>TOTAL REPORT</Text> 
-            <View style={styles.headerCntr}> 
-              <Text style={{ fontSize: 40, fontWeight: 700, color: 'rgb(55,55,55)' }}>{totalReports}</Text> 
-              <Text style={{ fontSize: 14, fontWeight: 700, color: 'rgb(55,55,55)' }}>Garbages</Text> 
-            </View> 
-          </View> 
-        </View> 
-      </> 
-    ); 
-  } 
+  function HeaderContent() {
+    return (
+        <>
+            <View style={{flexDirection: 'row', gap: 7, top: 10}}>
+                <View style={{alignItems: 'center'}}>
+                    <Text style={{fontSize: 14, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>REPORTS TODAY</Text>
+                    <View style={styles.headerCntr}>
+                        <Text style={{fontSize: 40, fontWeight: 700, color:'rgb(55,55,55)'}}>{reportsToday}</Text>
+                        <Text style={{fontSize: 14, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
+                    </View>
+                </View>
+                <View style={{alignItems: 'center'}}>
+                    <Text style={{fontSize: 14, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>TOTAL REPORT</Text>
+                    <View style={styles.headerCntr}>
+                        <Text style={{fontSize: 40, fontWeight: 700, color:'rgb(55,55,55)'}}>{totalReports}</Text>
+                        <Text style={{fontSize: 14, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
+                    </View>
+                </View>
+            </View>
+      </>
+    );
+  }
   return ( 
     <> 
       <View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}> 
@@ -423,11 +436,11 @@ export default function ScheduleAut({ navigation }) {
           <SafeAreaView style={styles.body}> 
             <View style={styles.body}> 
               <View style={{ alignItems: 'center' }}> 
-                <Text style={{ fontSize: 24, fontWeight: 700, color: 'black', marginBottom: 10, marginTop: -50 }}>SCHEDULE</Text> 
+                <Text style={{ fontSize: 24, fontWeight: 700, color: 'black', marginBottom: 10, marginTop: -90 }}>SCHEDULE</Text> 
               </View> 
               <View> 
                 <Calendar
-                style={{ width: 320, backgroundColor: 'white', marginTop: -10, borderRadius: 10, paddingBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 2, }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5, }}
+                style={{ width: 320, backgroundColor: 'white', marginTop: -50, borderRadius: 10, paddingBottom: 15, shadowColor: '#000', shadowOffset: { width: 0, height: 2, }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5, }}
                 markedDates={getMarkedDates(schedule)}
                 markingType={'multi-dot'}
                 onMonthChange={onMonthChange} // Call onMonthChange when the next button is clicked
@@ -481,7 +494,7 @@ const styles = StyleSheet.create({
   header3: { 
     position: 'absolute', 
     width: 310, 
-    height: 210, 
+    height: 180, 
     top: 75, 
     backgroundColor: '#ffffff', 
     borderRadius: 15, 

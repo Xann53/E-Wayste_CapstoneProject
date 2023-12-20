@@ -10,6 +10,7 @@ import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
+import { db, auth, storage, firebase } from '../../firebase_config';
 import SideBar from '../../components/SideNav';
 
 export default function Notifications({ navigation }) {
@@ -28,6 +29,7 @@ export default function Notifications({ navigation }) {
     const commentRef = firebase.firestore().collection("comments");
     
     let notifCollection = [];
+
     const[currentUser, setCurrentUser] = useState();
     const[currentId, setCurrentId] = useState();
 
@@ -141,7 +143,6 @@ export default function Notifications({ navigation }) {
 
     function displayNotif(displayNotifType) {
         const currentDate = moment().utcOffset('+08').format('YYYY-MM-DD');
-
         reports.map((report) => {
             var valueToPush = { };
             valueToPush["notifType"] = "Report";
@@ -185,7 +186,6 @@ export default function Notifications({ navigation }) {
                 return 0;
             });
         })
-
         try {
             const temp = [];
             notifCollection.map((notif) => {

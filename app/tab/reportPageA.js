@@ -4,9 +4,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { parse } from 'date-fns';
+
 
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, query, where} from 'firebase/firestore';
+import { collection, addDoc,getDoc, getDocs, query, where} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { Circle } from 'react-native-progress';
 
@@ -37,6 +39,10 @@ export default function ReportAut({navigation}) {
     const [circleThickness, setCircleThickness] = useState(10); 
     const [progress1, setProgress1] = useState(0); // Initialize progress1
     const [progress2, setProgress2] = useState(0);
+
+    const [viewAllReports, setViewAllReports] = useState(false);
+    const currentDate = new Date().toISOString().split('T')[0];
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -72,27 +78,35 @@ export default function ReportAut({navigation}) {
         const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
     
         const fetchReports = async () => {
-          try {
-            // Query for reports today   
-            const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '==', currentDate));
-            const todaySnapshot = await getDocs(todayQuery);
-            const reportsTodayCount = todaySnapshot.size;
-            setReportsToday(reportsTodayCount);
+            try {
+                // Query for reports today
+                const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
+                const todaySnapshot = await getDocs(todayQuery);
+                const todayReports = [];
     
-            // Query for all reports
-            const allReportsQuery = query(collection(db, 'generalUsersReports'));
-            const allReportsSnapshot = await getDocs(allReportsQuery);
-            const totalReportsCount = allReportsSnapshot.size;
-            setTotalReports(totalReportsCount);
-          } catch (error) {
-            console.log('Error fetching reports:', error);
-          }
+                todaySnapshot.forEach(doc => {
+                    const report = doc.data();
+                    const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+    
+                    if (reportDate.toISOString().split('T')[0] === currentDate) {
+                        todayReports.push(report);
+                    }
+                });
+    
+                setReportsToday(todayReports.length);
+    
+                // Query for all reports
+                const allReportsQuery = query(collection(db, 'generalUsersReports'));
+                const allReportsSnapshot = await getDocs(allReportsQuery);
+                const totalReportsCount = allReportsSnapshot.size;
+                setTotalReports(totalReportsCount);
+            } catch (error) {
+                console.log('Error fetching reports:', error);
+            }
         };
     
         fetchReports();
     }, []);
-
-
 
     useEffect(() => {
         if(!isFocused) {
@@ -178,12 +192,16 @@ export default function ReportAut({navigation}) {
 
         let temp = [];
         uploadCollection.map((post) => {
+            if (post.status === 'collected') {
+                return;
+            }
+        
             let imageURL;
-            imageCol.map((url) => {
-                if(url.includes(post.imageLink)) {
-                    imageURL = url;
-                }
-            })
+            if (Array.isArray(imageCol) && imageCol.length > 0) {
+                if (post.imageLink) {
+                    imageURL = imageCol.find(url => url.includes(post.imageLink)) || '';
+                }          
+            }
 
             temp.push(
                 <View style={[styles.contentButton, styles.contentGap]}>
@@ -201,14 +219,18 @@ export default function ReportAut({navigation}) {
                             <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
                                 <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5,  justifyContent: 'flex-start', alignItems: 'flex-start'}}>
                                     {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
-                                    <Image src={imageURL} style={{width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start'}} />
-                                
-                                </View>    
+                                    {imageURL ? (
+                                            <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
+                                        ) : (
+                                            <Text>No Image Available</Text>
+                                        )}
+                                    </View>   
                             </SafeAreaView>
                         </View>
                     </TouchableOpacity>
                 </View>
             );
+            return null;
         });
         
         <ul>
@@ -224,31 +246,83 @@ export default function ReportAut({navigation}) {
         );
     }
 
+
     function ViewAllContent() {
-        let temp1 = [];
-        imageCol.map((url) => {
-            temp1.push(
-                <TouchableOpacity activeOpacity={0.5}>
+        const [selectedReport, setSelectedReport] = useState(null);
+        const currentDate = new Date().toISOString().split('T')[0];
+    
+        // Filter reports based on the current date
+        const reportsToShow = viewAllReports
+        ? userUploads.filter(report => report && report.dateTime && report.dateTime.includes(currentDate))
+        : userUploads.filter(report => {
+            const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+            const reportDateString = reportDate.toISOString().split('T')[0];
+            return reportDateString === currentDate;
+        });
+    
+        // Create a list of image components
+        const imageList = viewAllReports && imageCol
+            .filter(url => userUploads.some(report => {
+                const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+                const reportDateString = reportDate.toISOString().split('T')[0];
+                
+                return report && report.dateTime && reportDateString === currentDate && url.includes(report.associatedImage);
+            }))
+            .map((url, index) => (
+                <TouchableOpacity key={index} activeOpacity={0.5}>
                     <View style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
-                        {/* <Ionicons name='images-outline' style={{fontSize: 40, color: 'white'}} /> */}
-                        <Image src={url} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
+                        <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10 }} />
                     </View>
                 </TouchableOpacity>
-            );
-        });
-        
-        <ul>
-            {temp1.map(item =>
-                <li key="{item}">{item}</li>
-            )}
-        </ul>
+            ));
+    
+        // Create a list of report components for the current date
+        const reportList = reportsToShow.map(uploads => (
+            <TouchableOpacity key={uploads.id} activeOpacity={0.5} onPress={() => setSelectedReport(uploads)}>
+                <View style={{ width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 5, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 1, elevation: 5 }}>
+                    <View style={{ width: '100%', backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', color: 'rgba(113, 112, 108, 1)' }}>
+                        <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', paddingBottom: 5 }}>REPORTS DETAILS </Text>
+                            <Text style={{ fontSize: 13 }}>
+                                <Text style={{ fontWeight: 'bold' }}>Reported By:</Text> {users.map((user) => { if (uploads.userId === user.id) { return user.username; } })} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                                <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {uploads.dateTime} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                                <Text style={{ fontWeight: 'bold' }}>Location</Text> {uploads.location} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                                <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {uploads.status} </Text>
+                            <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5, justifyContent: 'flex-start', alignItems: 'flex-start', borderBottomEndRadius: 10 }}>
+                                {imageCol && imageCol.length > 0 && (
+                                    imageCol.find(url => url.includes(uploads.associatedImage)) && (
+                                        <Image source={{ uri: imageCol.find(url => url.includes(uploads.associatedImage)) }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
+                                    )
+                                )}
+                            </View>
+                        </SafeAreaView>
+                    </View>
+                </View>
+            </TouchableOpacity>
+        ));
 
         return (
-            <View style={{flexDirection: 'row', marginHorizontal: 10, gap: 10}}>
-                {temp1}
+            <View>
+                <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
+                    {/* Display the list of images */}
+                    {imageList}
+                </View>
+                <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
+                    {/* Display the list of reports for the current date */}
+                    {reportList}
+                </View>
+    
+                {selectedReport && (
+                    // Render your details component based on the selected report
+                    <DetailsComponent report={selectedReport} onClose={() => setSelectedReport(null)} />
+                )}
             </View>
         );
-    }
+    }           
+
     function HeaderContent() {
         return (
             <>
@@ -375,18 +449,22 @@ export default function ReportAut({navigation}) {
                             <Text style={{fontSize: 23, fontWeight: 700, color: 'rgba(113, 112, 108, 1)', marginBottom: 10}}>REPORTS</Text>
                         </View>
                         <View>
-                            <View style={{width: 315, backgroundColor: '#ffffff', borderRadius: 10, overflow: 'hidden', marginBottom: 20}}>
+                        <View style={{ width: 315, backgroundColor: '#ffffff', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
                                 <View style={{ flexDirection: 'row', width: '100%' }}>
                                     <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
-                                    <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }}>
-                                        <Text style={{textDecorationLine: 'underline'}}>
+                                    <TouchableOpacity
+                                        activeOpacity={0.5}
+                                        style={{ position: 'absolute', right: 15, marginTop: 15 }}
+                                        onPress={() => setViewAllReports(!viewAllReports)}
+                                    >
+                                        <Text style={{ textDecorationLine: 'underline' }}>
                                             View all
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
                                 <ScrollView horizontal={true}>
-                                {ViewAllContent()}
-                                </ScrollView>
+                                <ViewAllContent viewAllReports={viewAllReports} currentDate={currentDate} />
+                            </ScrollView>
                             </View>
                             {BodyContent ()}
                         </View>
