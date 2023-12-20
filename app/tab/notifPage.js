@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import moment from 'moment/moment';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
@@ -138,7 +139,9 @@ export default function Notifications({ navigation }) {
         getCurrentUser();
     }, [])
 
-    function displayNotif() {
+    function displayNotif(displayNotifType) {
+        const currentDate = moment().utcOffset('+08').format('YYYY-MM-DD');
+
         reports.map((report) => {
             var valueToPush = { };
             valueToPush["notifType"] = "Report";
@@ -183,83 +186,129 @@ export default function Notifications({ navigation }) {
             });
         })
 
-        const temp = [];
-        notifCollection.map((notif) => {
-            let username;
-            users.map((user) => {
-                if(user.id == notif.userID) {
-                    username = user.username;
-                }
-            })
-            if(notif.notifType === 'Report') {
-                temp.push(
-                    <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
-                        <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
-                            <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
-                                <Ionicons name='file-tray-full' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
-                            </View>
-                        </View>
-                        <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
-                            <View style={{width: '90%'}}>
-                                <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.notifType}</Text>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Report by {username}</Text>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
-                            </View>
-                        </View>
-                    </View>
-                );
-            } else if(notif.notifType === 'Schedule' && notif.type === 'Collection') {
-                temp.push(
-                    <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
-                        <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
-                            <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
-                                <Ionicons name='trash' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
-                            </View>
-                        </View>
-                        <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
-                            <View style={{width: '90%'}}>
-                                <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
-                            </View>
-                        </View>
-                    </View>
-                );
-            } else if(notif.notifType === 'Schedule' && notif.type === 'Event') {
-                temp.push(
-                    <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
-                        <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
-                            <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
-                                <Ionicons name='people' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
-                            </View>
-                        </View>
-                        <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
-                            <View style={{width: '90%'}}>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title} {notif.type}</Text>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
-                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
-                            </View>
-                        </View>
-                    </View>
-                );
-            }
-            if(notif.notifType === 'Schedule' && notif.type === 'Assignment') {
+        try {
+            const temp = [];
+            notifCollection.map((notif) => {
+                let username;
+                notifCollection = [];
                 users.map((user) => {
-                    if(user.username.toLowerCase() === notif.assignCollector.toLowerCase() && (user.username.toLowerCase() === currentUser.toLowerCase() || notif.userID === currentId)) {
+                    if(user.id == notif.userID) {
+                        username = user.username;
+                    }
+                })
+                
+                if (currentDate === notif.selectedDate && displayNotifType === 'Reminder') {
+                    if(notif.notifType === 'Schedule' && notif.type === 'Collection') {
                         temp.push(
                             <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
                                 <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
                                     <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
-                                        <Ionicons name='person' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                        <Ionicons name='trash' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
                                     </View>
                                 </View>
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
+                                        <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    } else if(notif.notifType === 'Schedule' && notif.type === 'Event') {
+                        temp.push(
+                            <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                        <Ionicons name='people' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                    </View>
+                                </View>
+                                <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                    <View style={{width: '90%'}}>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title} {notif.type}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    }
+                    if(notif.notifType === 'Schedule' && notif.type === 'Assignment') {
+                        users.map((user) => {
+                            if(user.username.toLowerCase() === notif.assignCollector.toLowerCase() && (user.username.toLowerCase() === currentUser.toLowerCase() || notif.userID === currentId)) {
+                                temp.push(
+                                    <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                        <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                            <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                                <Ionicons name='person' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                            </View>
+                                        </View>
+                                        <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                            <View style={{width: '90%'}}>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                                <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                );
+                            }
+                        })
+                    }
+                }
+
+                if (displayNotifType === 'All') {
+                    if(notif.notifType === 'Report') {
+                        temp.push(
+                            <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                        <Ionicons name='file-tray-full' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                    </View>
+                                </View>
+                                <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                    <View style={{width: '90%'}}>
+                                        <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.notifType}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Report by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    } else if(notif.notifType === 'Schedule' && notif.type === 'Collection') {
+                        temp.push(
+                            <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                        <Ionicons name='trash' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                    </View>
+                                </View>
+                                <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                    <View style={{width: '90%'}}>
+                                        <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    } else if(notif.notifType === 'Schedule' && notif.type === 'Event') {
+                        temp.push(
+                            <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                        <Ionicons name='people' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                    </View>
+                                </View>
+                                <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                    <View style={{width: '90%'}}>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title} {notif.type}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
                                         <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
                                         <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
                                     </View>
@@ -267,21 +316,44 @@ export default function Notifications({ navigation }) {
                             </View>
                         );
                     }
-                })
-            }
-        });
+                    if(notif.notifType === 'Schedule' && notif.type === 'Assignment') {
+                        users.map((user) => {
+                            if(user.username.toLowerCase() === notif.assignCollector.toLowerCase() && (user.username.toLowerCase() === currentUser.toLowerCase() || notif.userID === currentId)) {
+                                temp.push(
+                                    <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                        <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                            <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                                <Ionicons name='person' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                            </View>
+                                        </View>
+                                        <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                            <View style={{width: '90%'}}>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                                <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                );
+                            }
+                        })
+                    }
+                }
+            });
 
-        <ul>
-            {temp.map(item =>
-                <li key="{item}">{item}</li>
-            )}
-        </ul>
+            <ul>
+                {temp.map(item =>
+                    <li key="{item}">{item}</li>
+                )}
+            </ul>
 
-        return (
-            <View style={{gap: 15, marginBottom: 20}}>
-                {temp}
-            </View>
-        );
+            return (
+                <View style={{gap: 15, marginBottom: 20}}>
+                    {temp}
+                </View>
+            );
+        } catch(e) {}
     }
 
     return (
@@ -298,13 +370,17 @@ export default function Notifications({ navigation }) {
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>NOTIFICATIONS</Text>
                     </View>
                     <View style={{ marginTop: 50, width: 330 }}>
-                        {/* <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
-                            <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Today</Text>
+                        <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+                            <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Reminder Today</Text>
                             <Text>
-                                <Text style={{fontWeight: 600}}>Wednesday</Text>, April 19, 2023
+                                <Text style={{fontWeight: 600}}>{moment().utcOffset('+08').format('dddd')}</Text>, {moment().utcOffset('+08').format('MM/DD/YYYY')}
                             </Text>
-                        </View> */}
-                        {displayNotif()}
+                        </View>
+                        {displayNotif('Reminder')}
+                        <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+                            <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Notification History</Text>
+                        </View>
+                        {displayNotif('All')}
                     </View>
                 </SafeAreaView>
             </ScrollView>
@@ -319,7 +395,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         justifyContent: 'flex-start',
         alignItems: 'center',
-        paddingBottom: 60,
+        paddingBottom: 20,
         paddingTop: 20,
     },
 });
