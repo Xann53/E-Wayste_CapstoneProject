@@ -9,8 +9,6 @@ import moment from 'moment/moment';
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
-
-import { db, auth, storage, firebase } from '../../firebase_config';
 import SideBar from '../../components/SideNav';
 
 export default function Notifications({ navigation }) {
