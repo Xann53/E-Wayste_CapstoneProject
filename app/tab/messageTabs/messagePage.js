@@ -9,7 +9,7 @@ import { writeBatch } from 'firebase/firestore';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function Message({navigation}) {
-  const isFocused = useIsFocused();
+  const isFocused = useIsFocused(); 
   const [chatSummaries, setChatSummaries] = useState([]);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
