@@ -133,6 +133,7 @@ export default function AddSched({navigation}) {
             newTitle = "N/A";
         }
 
+
         const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
 
         let id = await AsyncStorage.getItem('userId');

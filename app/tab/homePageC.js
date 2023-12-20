@@ -705,9 +705,7 @@ export default function NewsfeedCol({ navigation }) {
                 <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }}>
                     <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
                 </TouchableOpacity>
-        
-                {openSideBar}
-        
+                {openSideBar}       
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }>

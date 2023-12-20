@@ -5,6 +5,7 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAr
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from 'expo-image-picker';
 import { parse } from 'date-fns';
 import uuid from 'react-native-uuid';
@@ -368,8 +369,68 @@ export default function NewsfeedAut({navigation}) {
         return todayDate;
       }
 
+      return Array.from(updatedLikedPosts);
+    });
+  };
+  // comment 
 
+  const [isCommentOverlayVisible, setCommentOverlayVisible] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState([]);
+  const [postComments, setPostComments] = useState({});
   
+  const handleCommentPress = (postId) => {
+    // Toggle the visibility of the comment overlay
+    setCommentOverlayVisible(!isCommentOverlayVisible);
+    // Handle other logic related to the comment press if needed
+  };
+  const handlePostComment = async (postId, commentText) => {
+    try {
+      // Add the comment to the "comments" collection
+      const commentsRef = collection(db, 'Comments');
+      await addDoc(commentsRef, {
+        postId,
+        userId: auth.currentUser.uid,
+        text: commentText,
+        timestamp: moment().utcOffset('+05:30').format('YYYY/MM/DD hh:mm:ss a'),
+        username: user.username,
+      });
+  
+      // Clear the comment text after posting
+      setCommentText('');
+  
+      // Update the postComments state
+      setPostComments((prevComments) => {
+        const updatedComments = {
+          ...prevComments,
+          [postId]: [...(prevComments[postId] || []), commentText],
+        };
+        return updatedComments;
+      });
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    }
+  };
+  const fetchComments = async (postId) => {
+    try {
+      const commentsQuery = query(
+        collection(db, 'comments'),
+        orderBy('timestamp', 'asc'),
+        where('postId', '==', postId)
+      );
+  
+      const snapshot = await getDocs(commentsQuery);
+  
+      const comments = snapshot.docs.map((doc) => doc.data().text);
+      setPostComments((prevComments) => ({
+        ...prevComments,
+        [postId]: comments,
+      }));
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
   //Share
 
   const handleSharePress = async (postId, description, imageURL) => {
