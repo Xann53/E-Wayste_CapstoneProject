@@ -159,26 +159,15 @@ export default function ViewSchedDetails({ navigation, route }) {
                     )}
                   </View>
                 )}
-                {scheduleData.title && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Title</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'title' && styles.focusedField]}
-                      value={updatedData.title}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('title')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, title: text })}
-                    />
-                  </View>
-                )}
+
+                {/* Common fields */}
                 {scheduleData.description && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Description</Text>
                     <TextInput
                       style={[styles.fieldValue, focusedField === 'description' && styles.focusedField]}
                       value={updatedData.description}
-                      editable={isEditable}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment')}
                       multiline={true}
                       onFocus={() => handleFieldFocus('description')}
                       onBlur={handleFieldBlur}
@@ -186,74 +175,199 @@ export default function ViewSchedDetails({ navigation, route }) {
                     />
                   </View>
                 )}
-                {scheduleData.location && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Location</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
-                      value={updatedData.location}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('location')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
-                    />
-                  </View>
-                )}
-                {scheduleData.selectedDate && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Date</Text>
-                    {isEditable ? (
-                      <TouchableOpacity
-                        style={[styles.fieldValue, focusedField === 'selectedDate' && styles.focusedField]}
-                        onPress={showDatePicker}
-                      >
-                        <Text>{(selectedDate || updatedData.selectedDate) && (selectedDate || updatedData.selectedDate)}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.fieldValue}>{selectedDate || updatedData.selectedDate}</Text>
+
+                {/* Collection-specific fields */}
+                {updatedData.type === 'Collection' && (
+                  <>
+                    {scheduleData.collectionRoute && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Collection Route</Text>
+                        {isEditable ? (
+                          // Display TextInput for editing
+                          <TextInput
+                            style={[styles.fieldValue, focusedField === 'collectionRoute' && styles.focusedField]}
+                            value={updatedData.collectionRoute}
+                            editable={isEditable}
+                            onFocus={() => handleFieldFocus('collectionRoute')}
+                            onBlur={handleFieldBlur}
+                            onChangeText={(text) => setUpdatedData({ ...updatedData, collectionRoute: text })}
+                          />
+                        ) : (
+                          // Display locationName values with "from" and "to" labels in different colors
+                          <>
+                            {scheduleData.collectionRoute.coordinates[0] && (
+                              <Text style={styles.fieldValue}>
+                                <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {scheduleData.collectionRoute.coordinates[0].locationName}
+                              </Text>
+                            )}
+                            {scheduleData.collectionRoute.coordinates[1] && (
+                              <Text style={styles.fieldValue}>
+                                <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {scheduleData.collectionRoute.coordinates[1].locationName}
+                              </Text>
+                            )}
+                          </>
+                        )}
+                      </View>
                     )}
-                  </View>
+                    {/* Date and Time fields */}
+                    {scheduleData.selectedDate && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Date</Text>
+                        {isEditable ? (
+                          <TouchableOpacity
+                            style={[styles.fieldValue, focusedField === 'selectedDate' && styles.focusedField]}
+                            onPress={showDatePicker}
+                          >
+                            <Text>{(selectedDate || updatedData.selectedDate) && (selectedDate || updatedData.selectedDate)}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.fieldValue}>{selectedDate || updatedData.selectedDate}</Text>
+                        )}
+                      </View>
+                    )}
+                    {scheduleData.startTime && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Time</Text>
+                        {isEditable ? (
+                          <TouchableOpacity
+                            style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
+                            onPress={() => handleFieldFocus('startTime')}
+                          >
+                            <Text>{selectedTime || updatedData.startTime}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.fieldValue}>{updatedData.startTime}</Text>
+                        )}
+                      </View>
+                    )}
+                  </>
                 )}
-                {scheduleData.startTime && (
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldName}>Time</Text>
-                  {isEditable ? (
-                    <TouchableOpacity
-                    style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
-                    onPress={() => handleFieldFocus('startTime')}
-                  >
-                    <Text>{selectedTime || updatedData.startTime}</Text>
-                  </TouchableOpacity>
-                  ) : (
-                    <Text style={styles.fieldValue}>{updatedData.startTime}</Text>
-                  )}
-                </View>
-              )}
-                {scheduleData.assignLocation && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Assigned Location</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'assignLocation' && styles.focusedField]}
-                      value={updatedData.assignLocation}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('assignLocation')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, assignLocation: text })}
-                    />
-                  </View>
+
+                {/* Assignment-specific fields */}
+                {updatedData.type === 'Assignment' && (
+                  <>
+                    {scheduleData.location && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Location</Text>
+                        <TextInput
+                          style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
+                          value={updatedData.location}
+                          editable={isEditable}
+                          onFocus={() => handleFieldFocus('location')}
+                          onBlur={handleFieldBlur}
+                          onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
+                        />
+                      </View>
+                    )}
+
+                    {/* Date and Time fields */}
+                    {scheduleData.selectedDate && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Date</Text>
+                        {isEditable ? (
+                          <TouchableOpacity
+                            style={[styles.fieldValue, focusedField === 'selectedDate' && styles.focusedField]}
+                            onPress={showDatePicker}
+                          >
+                            <Text>{(selectedDate || updatedData.selectedDate) && (selectedDate || updatedData.selectedDate)}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.fieldValue}>{selectedDate || updatedData.selectedDate}</Text>
+                        )}
+                      </View>
+                    )}
+                    {scheduleData.startTime && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Time</Text>
+                        {isEditable ? (
+                          <TouchableOpacity
+                            style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
+                            onPress={() => handleFieldFocus('startTime')}
+                          >
+                            <Text>{selectedTime || updatedData.startTime}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.fieldValue}>{updatedData.startTime}</Text>
+                        )}
+                      </View>
+                    )}
+
+                    {scheduleData.assignCollector && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Assigned Collector</Text>
+                        <TextInput
+                          style={[styles.fieldValue, focusedField === 'assignCollector' && styles.focusedField]}
+                          value={updatedData.assignCollector}
+                          editable={isEditable}
+                          onFocus={() => handleFieldFocus('assignCollector')}
+                          onBlur={handleFieldBlur}
+                          onChangeText={(text) => setUpdatedData({ ...updatedData, assignCollector: text })}
+                        />
+                      </View>
+                    )}
+                  </>
                 )}
-                {scheduleData.assignCollector && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Assigned Collector</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'assignCollector' && styles.focusedField]}
-                      value={updatedData.assignCollector}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('assignCollector')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, assignCollector: text })}
-                    />
-                  </View>
+
+                {/* Event-specific fields */}
+                {updatedData.type === 'Event' && (
+                  <>
+                    {scheduleData.title && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Title</Text>
+                        <TextInput
+                          style={[styles.fieldValue, focusedField === 'title' && styles.focusedField]}
+                          value={updatedData.title}
+                          editable={isEditable}
+                          onFocus={() => handleFieldFocus('title')}
+                          onBlur={handleFieldBlur}
+                          onChangeText={(text) => setUpdatedData({ ...updatedData, title: text })}
+                        />
+                      </View>
+                    )}
+                    {scheduleData.location && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Location</Text>
+                        <TextInput
+                          style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
+                          value={updatedData.location}
+                          editable={isEditable}
+                          onFocus={() => handleFieldFocus('location')}
+                          onBlur={handleFieldBlur}
+                          onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
+                        />
+                      </View>
+                    )}
+                    {scheduleData.selectedDate && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Date</Text>
+                        {isEditable ? (
+                          <TouchableOpacity
+                            style={[styles.fieldValue, focusedField === 'selectedDate' && styles.focusedField]}
+                            onPress={showDatePicker}
+                          >
+                            <Text>{(selectedDate || updatedData.selectedDate) && (selectedDate || updatedData.selectedDate)}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.fieldValue}>{selectedDate || updatedData.selectedDate}</Text>
+                        )}
+                      </View>
+                    )}
+                    {scheduleData.startTime && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Time</Text>
+                        {isEditable ? (
+                          <TouchableOpacity
+                            style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
+                            onPress={() => handleFieldFocus('startTime')}
+                          >
+                            <Text>{selectedTime || updatedData.startTime}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.fieldValue}>{updatedData.startTime}</Text>
+                        )}
+                      </View>
+                    )}
+                  </>
                 )}
               </>
             )}

@@ -200,4 +200,3 @@ export default function NewMessage({ navigation }) {
       color: '#ffffff',
     }
   });
-

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, navigate, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
+import { StyleSheet, View, Text, TextInput, navigate, Modal, FlatList, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Calendar } from 'react-native-calendars';
 import { SelectList } from 'react-native-dropdown-select-list';
@@ -37,6 +37,8 @@ export default function AddSched({navigation}) {
     const [routeCtr, setRouteCtr] = useState(0);
     const [latitude, setLatitude] = useState();
     const [longitude, setLongitude] = useState();
+    const [collectorList, setCollectorList] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false);
 
     const Type = [
         { key: "Collection", value: "Collection" },
@@ -83,6 +85,38 @@ export default function AddSched({navigation}) {
         setLongitude();
     }
 
+    const getGarbageCollectors = async () => {
+        const usersCollection = collection(db, 'users');
+        const querySnapshot = await getDocs(usersCollection);
+      
+        const collectorList = [];
+        querySnapshot.forEach((doc) => {
+          const userData = doc.data();
+          if (userData.accountType === 'Garbage Collector') {
+            collectorList.push({
+              id: doc.id,
+              name: userData.username,
+            });
+          }
+        });
+      
+        return collectorList;
+      };
+    
+      useEffect(() => {
+        // Fetch garbage collectors when component mounts
+        const fetchCollectors = async () => {
+          const collectors = await getGarbageCollectors();
+          setCollectorList(collectors);
+        };
+        fetchCollectors();
+      }, []);
+    
+      const handleSelectCollector = (collectorName) => {
+        setAssignCollector(collectorName);
+        setModalVisible(false);
+      };
+
     const createSchedule = async () => {
         let newHourStart, newTitle;
         if (hourStart < 10) {
@@ -99,7 +133,8 @@ export default function AddSched({navigation}) {
             newTitle = "N/A";
         }
 
-        const fullDateTime = moment().utcOffset('+05:30').format('YYYY/MM/DD hh:mm:ss a');
+
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
 
         let id = await AsyncStorage.getItem('userId');
         // Generate a unique scheduleID
@@ -476,67 +511,93 @@ export default function AddSched({navigation}) {
     function Assignment() {
         return (
             <>
-                <View style={{ width: '100%', paddingHorizontal: 25 }}>
-                    <TextInput
-                        value ={description}
-                        style={{
-                            height: 150,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            padding: 15,
-                            paddingRight: 8,
-                            textAlignVertical: 'top',
-                        }}
-                        placeholder='Add Description'
-                        onChangeText={(e)=>{setDescription(e)}}
-                        multiline={true}
+              <View style={{ width: '100%', paddingHorizontal: 25 }}>
+                <TextInput
+                  value={description}
+                  style={{
+                    height: 150,
+                    width: '100%',
+                    backgroundColor: 'rgb(231,247,233)',
+                    borderRadius: 5,
+                    borderWidth: 0.5,
+                    borderColor: 'rgb(215,233,217)',
+                    color: 'rgba(45, 105, 35, 1)',
+                    padding: 15,
+                    paddingRight: 8,
+                    textAlignVertical: 'top',
+                  }}
+                  placeholder='Add Description'
+                  onChangeText={(e) => {
+                    setDescription(e);
+                  }}
+                  multiline={true}
+                />
+              </View>
+        
+              <View style={{ width: '100%', paddingHorizontal: 25, marginTop: 5 }}>
+                <TextInput
+                  style={{
+                    height: 40,
+                    width: '100%',
+                    backgroundColor: 'rgb(231,247,233)',
+                    borderRadius: 5,
+                    borderWidth: 0.5,
+                    borderColor: 'rgb(215,233,217)',
+                    color: 'rgba(45, 105, 35, 1)',
+                    paddingLeft: 15,
+                  }}
+                  placeholder='Select Collector to Assign'
+                  value={assignCollector}
+                  onFocus={() => setModalVisible(true)}
+                />
+              </View>
+        
+              <View style={{ width: '100%', paddingHorizontal: 25, marginTop: 5 }}>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => setAddNewLocation(true)}>
+                  <TextInput
+                    value={location}
+                    style={{
+                      height: 40,
+                      width: '100%',
+                      backgroundColor: 'rgb(231,247,233)',
+                      borderRadius: 5,
+                      borderWidth: 0.5,
+                      borderColor: 'rgb(215,233,217)',
+                      color: 'rgba(45, 105, 35, 1)',
+                      paddingLeft: 15,
+                    }}
+                    placeholder='Select Assignment Location'
+                    editable={false}
+                  />
+                </TouchableOpacity>
+              </View>
+        
+              {SelectDateTime()}
+        
+              {/* Modal to display collector list */}
+              <Modal visible={modalVisible} animationType='slide' transparent={true}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: 'rgb(231,247,233)', width: 310, padding: 20, borderRadius: 10, elevation: 5, borderWidth: 1, borderColor: 'green'}}>
+                    <FlatList
+                      data={collectorList}
+                      keyExtractor={(item) => item.id.toString()}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity onPress={() => handleSelectCollector(item.name)}>
+                          <Text style={{ fontSize: 16, marginBottom: 10 }}>{item.name}</Text>
+                        </TouchableOpacity>
+                      )}
                     />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TextInput
-                        style={{
-                            height: 40,
-                            width: '100%',
-                            backgroundColor: 'rgb(231,247,233)',
-                            borderRadius: 5,
-                            borderWidth: 0.5,
-                            borderColor: "rgb(215,233,217)",
-                            color: "rgba(45, 105, 35, 1)",
-                            paddingLeft: 15,
-                        }}
-                        placeholder='Select Collector to Assign'
-                        onChangeText={(e) => {
-                            setAssignCollector(e);
-                        }}
-                    />
-                </View>
-                <View style={{width: '100%', paddingHorizontal: 25, marginTop: 5}}>
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(true)}}>
-                        <TextInput
-                            value ={location}
-                            style={{
-                                height: 40,
-                                width: '100%',
-                                backgroundColor: 'rgb(231,247,233)',
-                                borderRadius: 5,
-                                borderWidth: 0.5,
-                                borderColor: "rgb(215,233,217)",
-                                color: "rgba(45, 105, 35, 1)",
-                                paddingLeft: 15,
-                            }}
-                            placeholder='Select Assignment Location'
-                            editable = {false}
-                        />
+        
+                    {/* Close modal button */}
+                    <TouchableOpacity onPress={() => setModalVisible(false)}>
+                      <Text style={{ fontSize: 12, color: 'blue', marginTop: 10 }}>Close</Text>
                     </TouchableOpacity>
+                  </View>
                 </View>
-                {SelectDateTime()}
+              </Modal>
             </>
-        );
-    }
+          );
+        }
 
     function Event() {
         return (
@@ -789,6 +850,7 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: 'rgb(81,175,91)',
         textAlign: 'center',
+        padding: 10,
         verticalAlign: 'middle',
         color: '#ffffff',
         fontWeight: '900',
