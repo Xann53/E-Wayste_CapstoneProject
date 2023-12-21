@@ -9,7 +9,6 @@ import moment from 'moment/moment';
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
-
 import SideBar from '../../components/SideNav';
 
 export default function Notifications({ navigation }) {
@@ -208,8 +207,8 @@ export default function Notifications({ navigation }) {
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
                                         <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
                                         <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
                                     </View>
                                 </View>
@@ -226,8 +225,8 @@ export default function Notifications({ navigation }) {
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
                                         <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title} {notif.type}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
                                         <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
                                     </View>
                                 </View>
@@ -247,8 +246,8 @@ export default function Notifications({ navigation }) {
                                         <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                             <View style={{width: '90%'}}>
                                                 <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
                                                 <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
                                             </View>
                                         </View>
@@ -271,9 +270,9 @@ export default function Notifications({ navigation }) {
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
                                         <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.notifType}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Report by {username}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                        <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Garbage Report by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 10}}>{notif.dateTimeUploaded}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -289,9 +288,9 @@ export default function Notifications({ navigation }) {
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
                                         <Text style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                        <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Garbage Collection scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 10}}>{notif.dateTimeUploaded}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -307,9 +306,9 @@ export default function Notifications({ navigation }) {
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
                                         <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title} {notif.type}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                        <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
+                                        <Text style={{fontSize: 10}}>{notif.dateTimeUploaded}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -328,9 +327,9 @@ export default function Notifications({ navigation }) {
                                         <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                             <View style={{width: '90%'}}>
                                                 <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 11, marginTop: 5}}>{notif.description}</Text>
-                                                <Text style={{fontSize: 9}}>{notif.dateTimeUploaded}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
+                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 14, marginTop: 5}}>{notif.description}</Text>
+                                                <Text style={{fontSize: 10}}>{notif.dateTimeUploaded}</Text>
                                             </View>
                                         </View>
                                     </View>
@@ -368,7 +367,7 @@ export default function Notifications({ navigation }) {
                     <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>NOTIFICATIONS</Text>
                     </View>
-                    <View style={{ marginTop: 50, width: 330 }}>
+                    <View style={{ marginTop: 10, width: 330 }}>
                         <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
                             <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Reminder Today</Text>
                             <Text>

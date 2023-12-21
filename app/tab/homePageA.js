@@ -311,21 +311,15 @@ export default function NewsfeedAut({navigation}) {
     
         try {
             let imageUrl = '';
-    
-            // Check if a user has selected an image
             if (selectedImage) {
-                // Use a random name for the image
                 const imageName = uuid.v1(); // Generating a random name using uuid
                 const imageDestination = 'FeedpostImages/' + imageName;
-    
-                // Continue with the image upload logic
+
                 userId = await fetchUserId();
-    
                 if (!userId) {
                     alert('Error fetching user ID.');
                     return;
                 }
-    
                 const response = await fetch(selectedImage);
                 const blob = await response.blob();
                 const imageRef = ref(storage, imageDestination);
@@ -347,15 +341,11 @@ export default function NewsfeedAut({navigation}) {
                 timestamp: fullDateTime,
             };
     
-            // Continue with the post creation logic, including imageUrl or without it
             const postRef = await addDoc(collection(db, 'posts'), postData);
-    
-            // Reset state values
             setPostTitle('');
             setPostText('');
             setSelectedImage('');
-    
-            // Close the modal
+
             setModalVisible(false);
         } catch (error) {
             console.error('Error adding post: ', error);
@@ -546,10 +536,10 @@ export default function NewsfeedAut({navigation}) {
             uploadCollection.sort((a, b) => {
                 let fa = a.dateTime,
                     fb = b.dateTime;
-                if (fa < fb) {
+                if (fa > fb) {
                     return -1;
                 }
-                if (fa > fb) {
+                if (fa < fb) {
                     return 1;
                 }
                 return 0;
@@ -567,10 +557,10 @@ export default function NewsfeedAut({navigation}) {
                 uploadCollection.sort((a, b) => {
                     let fa = a.dateTime,
                         fb = b.dateTime;
-                    if (fa < fb) {
+                    if (fa > fb) {
                         return -1;
                     }
-                    if (fa > fb) {
+                    if (fa < fb) {
                         return 1;
                     }
                     return 0;

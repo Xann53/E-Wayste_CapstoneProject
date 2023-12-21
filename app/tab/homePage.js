@@ -496,10 +496,10 @@ export default function Newsfeed({ navigation }) {
             uploadCollection.sort((a, b) => {
                 let fa = a.dateTime,
                     fb = b.dateTime;
-                if (fa < fb) {
+                if (fa > fb) {
                     return -1;
                 }
-                if (fa > fb) {
+                if (fa < fb) {
                     return 1;
                 }
                 return 0;
@@ -517,10 +517,10 @@ export default function Newsfeed({ navigation }) {
                 uploadCollection.sort((a, b) => {
                     let fa = a.dateTime,
                         fb = b.dateTime;
-                    if (fa < fb) {
+                    if (fa > fb) {
                         return -1;
                     }
-                    if (fa > fb) {
+                    if (fa < fb) {
                         return 1;
                     }
                     return 0;

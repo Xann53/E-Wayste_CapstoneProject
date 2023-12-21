@@ -494,10 +494,10 @@ export default function NewsfeedCol({ navigation }) {
             uploadCollection.sort((a, b) => {
                 let fa = a.dateTime,
                     fb = b.dateTime;
-                if (fa < fb) {
+                if (fa > fb) {
                     return -1;
                 }
-                if (fa > fb) {
+                if (fa < fb) {
                     return 1;
                 }
                 return 0;
@@ -515,10 +515,10 @@ export default function NewsfeedCol({ navigation }) {
                 uploadCollection.sort((a, b) => {
                     let fa = a.dateTime,
                         fb = b.dateTime;
-                    if (fa < fb) {
+                    if (fa > fb) {
                         return -1;
                     }
-                    if (fa > fb) {
+                    if (fa < fb) {
                         return 1;
                     }
                     return 0;
@@ -695,7 +695,6 @@ export default function NewsfeedCol({ navigation }) {
     
         return (
             <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
-                {/* Display the list of images */}
                 {imageList}
             </View>
         );
@@ -704,6 +703,9 @@ export default function NewsfeedCol({ navigation }) {
             <>
                 <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }}>
                     <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
+                    <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)'}} />
                 </TouchableOpacity>
                 {openSideBar}
         
