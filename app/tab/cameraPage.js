@@ -150,7 +150,7 @@ export default function CameraOpen({ navigation: {goBack} }) {
         });
 
         const fullDateTime = moment()
-            .utcOffset('+05:30')
+            .utcOffset('+08:00')
             .format('YYYY/MM/DD hh:mm:ss a');
 
         const userID = await AsyncStorage.getItem('userId');

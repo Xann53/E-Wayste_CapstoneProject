@@ -5,10 +5,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import NewsfeedCol from './tab/homePageC';
 import ReportCol from './tab/reportPageC';
-import Map from './tab/mapPage';
-import ScheduleCol from './tab/schedPageC';
-import Message from './tab/messagePage';
-import NotificationsCol from './tab/notifPageC';
+import MapCol from './tab/mapPageCol';
+import SchedColLayout from './tab/schedRouteCol';
+import MessageLayout from './tab/messageRoute';
+import NotificationsCol from './tab/notifPage';
 import Profile from './tab/profilePage';
 
 const Tab = createBottomTabNavigator();
@@ -66,9 +66,9 @@ export default function CollectorLayout() {
         >
             <Tab.Screen name='home' component={NewsfeedCol} options={{headerShown: false}} />
             <Tab.Screen name='report' component={ReportCol} options={{ headerShown: false }} />
-            <Tab.Screen name='map' component={Map} options={{ headerShown: false }} />
-            <Tab.Screen name='schedule' component={ScheduleCol} options={{ headerShown: false }} />
-            <Tab.Screen name='message' component={Message} options={{ headerShown: false }} />
+            <Tab.Screen name='map' component={MapCol} options={{ headerShown: false }} />
+            <Tab.Screen name='schedule' component={SchedColLayout} options={{ headerShown: false }} />
+            <Tab.Screen name='message' component={MessageLayout} options={{ headerShown: false }} />
             <Tab.Screen name='notification' component={NotificationsCol} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
             <Tab.Screen name='profile' component={Profile} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' }  }} />
         </Tab.Navigator>

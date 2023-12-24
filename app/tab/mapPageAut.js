@@ -27,16 +27,16 @@ export default function MapAut({ navigation }) {
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
     const [collectorLocation, setCollectorLocation] = useState([]);
-    const [schedRoute, setSchedRoute] = useState([]);
+    const [schedRoute, setSchedRoute] = useState([]); //........................................................This is New
     const [state, setState] = useState({ coordinates: [] });
     const [track, setTrack] = useState({ coordinates: [] });
-    const [routeFlag, setRouteFlag] = useState([]);
-    const [displayFlag, setDisplayFlag] = useState(false);
+    const [routeFlag, setRouteFlag] = useState([]); //..........................................This is New
+    const [displayFlag, setDisplayFlag] = useState(false); //...................................This is New
 
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
-    const scheduleRef = firebase.firestore().collection("schedule");
+    const scheduleRef = firebase.firestore().collection("schedule"); //...........................................This is New
     const imageColRef = ref(storage, "postImages/");
 
     const [infoID, setInfoID] = useState();
@@ -133,7 +133,7 @@ export default function MapAut({ navigation }) {
             }
         )
 
-        scheduleRef.onSnapshot(
+        scheduleRef.onSnapshot( //.......................................................................This is New
             querySnapshot => {
                 const uploads = []
                 querySnapshot.forEach((doc) => {
@@ -257,7 +257,7 @@ export default function MapAut({ navigation }) {
             }, 5000)
         }
 
-        const showRoute = async() => {
+        const showRoute = async() => { //......................................................................This is New
             setRouteFlag([]);
             schedRoute.map((temp) => {
                 if(temp.collectionRoute.coordinates.length > 0) {
@@ -275,7 +275,7 @@ export default function MapAut({ navigation }) {
             })
         }
 
-        function ShowFlag() {
+        function ShowFlag() { //..............................................................................This is New
             let temp = [];
             routeFlag.map((marker) => {
                 for (let i = 0; i < marker.coordinates.length; i++) {
@@ -306,6 +306,22 @@ export default function MapAut({ navigation }) {
                     {temp}
                 </>
             );
+        }
+
+        const statusChange = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'collected'
+            };
+            await updateDoc(userUploadDoc, newFields);
+        }
+
+        const statusChange2 = async(id) => {
+            const userUploadDoc = doc(db, "generalUsersReports", id);
+            const newFields = {
+                status: 'uncollected'
+            };
+            await updateDoc(userUploadDoc, newFields);
         }
 
         return (
@@ -403,7 +419,7 @@ export default function MapAut({ navigation }) {
                         </Marker>
                     ))}
 
-                    {displayFlag ?
+                    {displayFlag ? //............................................................................This is New
                         <>
                             {ShowFlag()}
                         </>
@@ -440,15 +456,31 @@ export default function MapAut({ navigation }) {
                                     <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
                                         {mapType === 'uncollected' ?
                                             <>
-                                                <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center'}}>
-                                                    <Text style={{fontWeight: 700, color: 'white'}}>UNCOLLECTED</Text>
-                                                </View>
+                                                {colStatus === 'uncollected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                    </View>
+                                                }
                                             </>
                                             :
                                             <>
-                                                <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
-                                                    <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
-                                                </View>
+                                                {colStatus === 'collected' ?
+                                                    <TouchableOpacity style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {statusChange2(infoID)}}>
+                                                        <View style={{flex: 1, backgroundColor: '#E5E5E5', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <Text style={{fontWeight: 700, color: 'grey'}}>COLLECTED</Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                    :
+                                                    <View style={{flex: 1, width: '70%', borderRadius: 10, overflow: 'hidden', backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                        <Text style={{fontWeight: 700, color: 'white'}}>COLLECT</Text>
+                                                    </View>
+                                                }
                                             </>
                                         }
                                     </View>
@@ -533,13 +565,6 @@ export default function MapAut({ navigation }) {
                 />
                 <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                     {loadMap()}
-                </View>
-                <View style={{ position: 'absolute', right: 20, bottom: 78, zIndex: 10, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 0.5, borderColor: 'rgb(0,0,0)', overflow: 'hidden' }}>
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('camera')}}>
-                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(255,203,60)', top: -2.3, right: -1.2 }} />
-                        </View>
-                    </TouchableOpacity>
                 </View>
             </View>
         </>
