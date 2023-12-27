@@ -7,7 +7,7 @@ import Newsfeed from './tab/homePage';
 import Report from './tab/reportPage';
 import Map from './tab/mapPage';
 import SchedUserLayout from './tab/schedRoute';
-import Notifications from './tab/notifPage';
+import NotificationScreen from './tab/notifPage';
 import Profile from './tab/profilePage';
 import Camera from './tab/cameraPage';
 
@@ -68,7 +68,7 @@ export default function UserLayout() {
             <Tab.Screen name='report' component={Report} options={{ headerShown: false }} />
             <Tab.Screen name='map' component={Map} options={{ headerShown: false }} />
             <Tab.Screen name='schedule' component={SchedUserLayout} options={{ headerShown: false }} />
-            <Tab.Screen name='notification' component={Notifications} options={{ headerShown: false }} />
+            <Tab.Screen name='notification' component={NotificationScreen} options={{ headerShown: false }} />
             <Tab.Screen name='profile' component={Profile} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' }  }} />
             <Tab.Screen name='camera' component={Camera} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' }  }} />
         </Tab.Navigator>

@@ -11,9 +11,11 @@ import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/fir
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import SideBar from '../../components/SideNav';
 
-export default function Notifications({ navigation }) {
+export default function NotificationScreen({ navigation }) {
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
+
+    const [userToken, setUserToken] = useState(null);
 
     const [users, setUsers] = useState([]);
     const [schedules, setSchedules] = useState([]);
@@ -30,6 +32,16 @@ export default function Notifications({ navigation }) {
 
     const[currentUser, setCurrentUser] = useState();
     const[currentId, setCurrentId] = useState();
+    
+    const onPrintTokenPress = async () => {
+        try {
+            const token = await firebase.messaging().getToken();
+            setUserToken(token);
+            console.log('User Token:', token);
+        } catch (error) {
+            console.error('Error getting user token:', error);
+        }
+    };
 
     const isFocused = useIsFocused();
     useEffect(() => {
