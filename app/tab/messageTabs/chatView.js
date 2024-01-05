@@ -5,6 +5,9 @@ import { getAuth } from 'firebase/auth';
 import { db, auth } from '../../../firebase_config';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../../firebase_config';
+
 
 export default function ViewMessage({ route, navigation }) {
   const [message, setMessage] = useState('');
@@ -31,6 +34,7 @@ export default function ViewMessage({ route, navigation }) {
       });
   
       setMessage('');
+      setRefreshPage((prev) => !prev);
     }
   };
   
@@ -65,51 +69,39 @@ export default function ViewMessage({ route, navigation }) {
   };
 
   const fetchChatDetails = async () => {
-    if (chatId) {
-      const q = query(messagesRef, where('chatId', '==', chatId), orderBy('timestamp', 'desc'));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const messages = new Set();
-        querySnapshot.forEach((doc) => {
-          messages.add({ ...doc.data(), id: doc.id });
-        });
-        setChatData(Array.from(messages));
-      });
-
-      if (!receiverEmail) {
-        try {
-          const chatDetailsRef = doc(db, 'chats', chatId);
-          const docSnap = await getDoc(chatDetailsRef);
-
-          if (docSnap.exists()) {
-            const chatDetails = docSnap.data();
-            const otherParticipantEmail = chatDetails.users.find(
-              (email) => email !== currentUser.email
-            );
-
-            setReceiverEmail(otherParticipantEmail);
-
-            const userRef = collection(db, 'users');
-            const userQuery = query(userRef, where('email', '==', otherParticipantEmail));
-            const userDoc = await getDoc(userQuery);
-
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              const receiverUsername = userData.username;
-              setReceiverUsername(receiverUsername);
-            } else {
-              console.log('User document does not exist for email:', otherParticipantEmail);
-            }
+    if (chatId) { 
+      try {
+        const chatDetailsRef = doc(db, 'chats', chatId);
+        const docSnap = await getDoc(chatDetailsRef);
+  
+        if (docSnap.exists()) {
+          const chatDetails = docSnap.data();
+          const otherParticipantEmail = chatDetails.users.find(
+            (email) => email !== currentUser.email
+          );
+  
+          setReceiverEmail(otherParticipantEmail);
+  
+          const userRef = collection(db, 'users');
+          const userQuery = query(userRef, where('email', '==', otherParticipantEmail));
+          const userDocs = await getDocs(userQuery);
+  
+          userDocs.forEach((doc) => {
+            const userData = doc.data();
+            const receiverUsername = userData.username;
+            setReceiverUsername(receiverUsername);
+          });
+  
+          if (userDocs.empty) {
+            console.log('No user document found for email:', otherParticipantEmail);
           }
-        } catch (error) {
-          console.error('Error fetching receiver user data: ', error);
         }
+      } catch (error) {
+        console.error('Error fetching receiver user data: ', error);
       }
-
-      return () => {
-        unsubscribe();
-      };
     }
   };
+  
 
   const handleImagePress = async () => {
     try {
@@ -142,6 +134,7 @@ export default function ViewMessage({ route, navigation }) {
 
 useEffect(() => {
   if (chatId) {
+    fetchChatDetails(); 
     const q = query(
       messagesRef,
       where('chatId', '==', chatId),
@@ -197,7 +190,7 @@ useEffect(() => {
             <TouchableOpacity activeOpacity={0.5} onPress={() => { navigation.navigate('message') }}>
               <Ionicons name='arrow-back' style={{ fontSize: 35, color: '#BDE47C', top: 2 }} />
             </TouchableOpacity>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1, marginRight: 28 }}>Chats</Text>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1, marginRight: 40 }}>Chats</Text>
             <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1 }}>{receiverEmail}</Text>
           </View>
         </View>

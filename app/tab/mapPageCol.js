@@ -5,7 +5,8 @@ import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from 'expo-location';
-
+import moment from 'moment/moment';
+// Start Here
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
@@ -52,6 +53,13 @@ export default function MapCol({ navigation }) {
     let description
     let location
     let dateTime
+
+    const [colMenu, setColMenu] = useState(false);
+    const colInProgressRef = firebase.firestore().collection("collectionInProgress");
+    const colInProgressRef2 = collection(db, "collectionInProgress");
+    const [colID, setColID] = useState();
+    const [colInProgress, setColInProgress] = useState();
+    let collectionIDTemp
     // =============================================================================================================================================================================================
     useEffect(() => {
         if(!isFocused) {
@@ -137,23 +145,42 @@ export default function MapCol({ navigation }) {
                 setCollectorLocation(uploads)
             }
         )
+    }, []);
 
-        scheduleRef.onSnapshot(
-            querySnapshot => {
-                const uploads = []
-                querySnapshot.forEach((doc) => {
-                    const {collectionRoute, type, selectedDate, startTime} = doc.data();
-                    uploads.push({
-                        id: doc.id,
-                        collectionRoute,
-                        type,
-                        selectedDate,
-                        startTime
-                    })
-                })
-                setSchedRoute(uploads)
-            }
-        )
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            setColInProgress(newData);
+
+        };
+
+        const unsubscribe = colInProgressRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            setSchedRoute(newData);
+
+        };
+
+        const unsubscribe = scheduleRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
     function loadMap() {
@@ -197,7 +224,6 @@ export default function MapCol({ navigation }) {
             })
             setInfoID();
             createLocData();
-            trackCollectors();
         }
 
         const reload2 = async() => {
@@ -237,21 +263,21 @@ export default function MapCol({ navigation }) {
             })
             setInfoID();
             createLocData();
-            trackCollectors();
         }
 
         const createLocData = async() => {
             try {
                 const userID = await AsyncStorage.getItem('userId');
-                let temp = false;
-                collectorLocation.map((colLocation) => {
+                const temp = collectorLocation.map((colLocation) => {
                     if(colLocation.userId === userID) {
-                        temp = true;
+                        return true;
                     }
                 })
-                console.log(temp);
+                const targetVal = true;
+                const temp2 = temp.includes(targetVal);
+                console.log(temp2);
 
-                if(!temp) {
+                if(!temp2) {
                     await addDoc(collectorLoc, {
                         userId: userID,
                         latitude: '',
@@ -263,7 +289,22 @@ export default function MapCol({ navigation }) {
             }
         }
 
-        const updateLocData = async(latitude, longitude) => {
+        const updateLocData = async(latitude, longitude, tempId) => {
+            const colDoc = doc(db, "collectorLocationTrack", tempId);
+            const newFields = {
+                latitude: latitude,
+                longitude: longitude
+            };
+            await updateDoc(colDoc, newFields);
+        }
+
+        const trackRoute = async() => {
+            const {status} = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
             const userID = await AsyncStorage.getItem('userId');
             let tempId;
             collectorLocation.map((colLocation) => {
@@ -272,12 +313,17 @@ export default function MapCol({ navigation }) {
                 }
             })
 
-            const colDoc = doc(db, "collectorLocationTrack", tempId);
-            const newFields = {
-                latitude: latitude,
-                longitude: longitude
-            };
-            await updateDoc(colDoc, newFields);
+            await Location.watchPositionAsync({
+                accuracy: Location.Accuracy.BestForNavigation,
+                timeInterval: 1000,
+                distanceInterval: 1,
+            },(location) => {
+                setCurrentLat(location.coords.latitude);
+                setCurrentLon(location.coords.longitude);
+                updateLocData(location.coords.latitude, location.coords.longitude, tempId);
+            })
+
+            console.log('is Tracking');
         }
 
         const quickRoute = async(desLatitude, desLongitude) => {
@@ -289,11 +335,7 @@ export default function MapCol({ navigation }) {
                 }
                 let currentLocation = await Location.getCurrentPositionAsync({});
 
-                setInterval(async() => { 
-                    setCurrentLat(currentLocation.coords.latitude);
-                    setCurrentLon(currentLocation.coords.longitude);
-                    updateLocData(currentLocation.coords.latitude, currentLocation.coords.longitude);
-                }, 5000);
+                trackRoute();
 
                 setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
                 setDestination({latitude: desLatitude, longitude: desLongitude});
@@ -331,6 +373,7 @@ export default function MapCol({ navigation }) {
                                 longitude: parseFloat(marker.coordinates[i].longitude)
                             }}
                             style={{zIndex: 95}}
+                            onPress={() => {setColMenu(true); setColID(marker.id); setInfoID()}} // ==================================================== Come Back Here
                         >
                             <Ionicons name='flag' style={{fontSize: 25, color: marker.color}} />    
                         </Marker>
@@ -352,11 +395,71 @@ export default function MapCol({ navigation }) {
         }
 
         const statusChange = async(id) => {
-            const userUploadDoc = doc(db, "generalUsersReports", id);
-            const newFields = {
-                status: 'collected'
-            };
-            await updateDoc(userUploadDoc, newFields);
+            setInfoID();
+            try {
+                const docRef = firebase.firestore().collection("generalUsersReports").doc(id);
+                await docRef.update({
+                    status: 'collected',
+                });
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        const startACol = async() => {
+            const id = await AsyncStorage.getItem('userId');
+            const collectorID = id + '';
+            const collectionID = colID + '';
+            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+
+            if(collectorID !== null && collectionID !== null) {
+                await addDoc(colInProgressRef2, {
+                    collectionID: collectionID,
+                    collectorID: collectorID,
+                    fullDateTime: fullDateTime,
+                });
+            }
+        }
+
+        const stopACol = async() => {
+            let id
+            colInProgress.map((temp) => {
+                if(temp.collectionID.includes(colID)) {
+                    id = temp.id;
+                }
+            })
+
+            try {
+                const docRef = firebase.firestore().collection('collectionInProgress').doc(id);
+                await docRef.delete();
+            } catch(e) {
+                console.log(e);
+            }
+        }
+
+        function menuDisplayRoute() {
+            let temp = [];
+            schedRoute.map((pin) => {
+                if(pin.id.includes(colID)) {
+                    pin.collectionRoute.coordinates.map((coord) => {
+                        temp.push(
+                            <Text style={{fontSize: 12}}><Ionicons name='location' />{coord.locationName}</Text>
+                        )
+                    })
+                }
+            });
+
+            <ul>
+                {temp.map(item =>
+                    <li key="{item}">{item}</li>
+                )}
+            </ul>
+
+            return(
+                <>
+                    {temp}
+                </>
+            );
         }
 
         return (
@@ -397,7 +500,7 @@ export default function MapCol({ navigation }) {
                                         latitude: parseFloat(marker.latitude),
                                         longitude: parseFloat(marker.longitude)
                                     }}
-                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image); setColMenu(false)}}
                                     onCalloutPress={() => {quickRoute(marker.latitude, marker.longitude)}}
                                     style={{zIndex: 100}}
                                 >
@@ -472,7 +575,7 @@ export default function MapCol({ navigation }) {
                     }
                 </MapView>
                 {infoID ?
-                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 140, width: '90%', padding: 5, bottom: '12%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
                             <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10}}>
                                 <Image style={{width: '100%', height: '100%',  flex: 1, resizeMode: 'cover', borderRadius: 5}} source={{uri: infoImage}} />
@@ -523,6 +626,53 @@ export default function MapCol({ navigation }) {
                                 </View>
                             </View>
                             <TouchableOpacity activeOpacity={0.5} onPress={() => {setInfoID()}}>
+                                <View style={{position: 'absolute', height: 20, width: 20, backgroundColor: '#E5E5E5', right: 5, top: 5, borderRadius: 100}}>
+                                    <Ionicons name='close' style={{fontSize: 20, color: 'grey'}} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    :
+                    <></>
+                }
+                {colMenu ?
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                        <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
+                            <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10, justifyContent: 'center', alignItems: 'center'}}>
+                                <Ionicons name='trash' style={{fontSize: 90, color: 'green'}} />
+                            </View>
+                            <View style={{flex: 2}}>
+                                <View style={{flex: 1, padding: 5, overflow: 'hidden'}}>
+                                    <View style={{flex: 4}}>
+                                        <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>COLLECTION</Text>
+                                        <Text style={{fontSize: 10}}>date</Text>
+                                        <ScrollView style={{marginTop: 5, display: 'flex', flex: 1, marginBottom: 2}}>
+                                            {menuDisplayRoute()}
+                                        </ScrollView>
+                                    </View>
+                                    {colInProgress.map((pin) => {
+                                        if(pin.collectionID.includes(colID)) {
+                                            collectionIDTemp = true;
+                                        }
+                                    })}
+                                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                                        {collectionIDTemp === true ?
+                                            <TouchableOpacity style={{flex: 1, width: '75%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {stopACol()}}>
+                                                <View style={{flex: 1, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center'}}>
+                                                    <Text style={{fontWeight: 700, color: 'white'}}>STOP COLLECTION</Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                            :
+                                            <TouchableOpacity style={{flex: 1, width: '75%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {startACol()}}>
+                                                <View style={{flex: 1, backgroundColor: 'green', justifyContent: 'center', alignItems: 'center'}}>
+                                                    <Text style={{fontWeight: 700, color: 'white'}}>START COLLECTION</Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        }
+                                    </View>
+                                </View>
+                            </View>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setColMenu(false)}}>
                                 <View style={{position: 'absolute', height: 20, width: 20, backgroundColor: '#E5E5E5', right: 5, top: 5, borderRadius: 100}}>
                                     <Ionicons name='close' style={{fontSize: 20, color: 'grey'}} />
                                 </View>
