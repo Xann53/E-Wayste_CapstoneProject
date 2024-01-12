@@ -19,6 +19,7 @@ export default function Message({navigation}) {
   const [userMessage, setUserMessage] = useState('');
   const [refreshPage, setRefreshPage] = useState(false);  
 
+
 const auth = getAuth();
 const currentUser = auth.currentUser;
 
@@ -177,7 +178,7 @@ useEffect(() => {
       unsubscribeChats();
     }
   };
-}, [currentUser, refreshPage]);
+}, [currentUser, refreshPage, chatSummaries]);
 
 
 const renderItem = ({ item }) => (
@@ -377,12 +378,12 @@ searchInput: {
     fontSize: 16,
     paddingVertical: 10,
     textAlign: 'center',
-    color: 'red', // Customize the color as needed
+    color: 'red',
   },
   modalCancel: {
     fontSize: 16,
     paddingVertical: 10,
     textAlign: 'center',
-    color: 'black', // Customize the color as needed
+    color: 'black', 
   },
 });

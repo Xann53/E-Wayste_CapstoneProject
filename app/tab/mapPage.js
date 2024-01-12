@@ -26,7 +26,6 @@ export default function MapAut({ navigation }) {
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
-    const [collectorLocation, setCollectorLocation] = useState([]);
     const [schedRoute, setSchedRoute] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
     const [track, setTrack] = useState({ coordinates: [] });
@@ -87,52 +86,6 @@ export default function MapAut({ navigation }) {
         };
         getUsers();
 
-        reportRef.onSnapshot(
-            querySnapshot => {
-                const uploads = []
-                querySnapshot.forEach((doc) => {
-                    const {associatedImage, dateTime, description, location, status, userId, longitude, latitude} = doc.data();
-                    uploads.push({
-                        id: doc.id,
-                        associatedImage,
-                        dateTime,
-                        description,
-                        location,
-                        status,
-                        userId,
-                        longitude,
-                        latitude
-                    })
-                })
-                setUserUploads(uploads)
-
-                listAll(imageColRef).then((response) => {
-                    setImageCol([]);
-                    response.items.forEach((item) => {
-                        getDownloadURL(item).then((url) => {
-                            setImageCol((prev) => [...prev, url])
-                        })
-                    })
-                })
-            }
-        )
-
-        collectorLocRef.onSnapshot(
-            querySnapshot => {
-                const uploads = []
-                querySnapshot.forEach((doc) => {
-                    const {userId, latitude, longitude} = doc.data();
-                    uploads.push({
-                        id: doc.id,
-                        userId,
-                        latitude,
-                        longitude
-                    })
-                })
-                setCollectorLocation(uploads)
-            }
-        )
-
         scheduleRef.onSnapshot(
             querySnapshot => {
                 const uploads = []
@@ -151,19 +104,26 @@ export default function MapAut({ navigation }) {
         )
     }, []);
 
-    function loadMap() {
-        const changeMap = async() => {
-            if(mapType === 'uncollected') {
-                setMapType('collected');
-            } else if(mapType === 'collected') {
-                setMapType('uncollected');
-            }
-            reload2();
-        }
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
 
-        const reload = async() => {
+            setUserUploads(newData);
+
+            listAll(imageColRef).then((response) => {
+                setImageCol([]);
+                response.items.forEach((item) => {
+                    getDownloadURL(item).then((url) => {
+                        setImageCol((prev) => [...prev, url])
+                    })
+                })
+            })
+
             setState({ coordinates: [] });
-            userUploads.map((pin) => {
+            newData.map((pin) => {
                 let imageURL;
                 imageCol.map((url) => {
                     if(url.includes(pin.associatedImage)) {
@@ -191,10 +151,60 @@ export default function MapAut({ navigation }) {
                 }
             })
             setInfoID();
-            trackCollectors();
-        }
 
-        const reload2 = async() => {
+        };
+
+        const unsubscribe = reportRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            setTrack({ coordinates: [] });
+            newData.map((pin) => {
+                let collector;
+                users.map((user) => {
+                    if(user.id.includes(pin.userId)) {
+                        collector = user.firstName + ' ' + user.lastName;
+                    }
+                })
+
+                console.log(pin.latitude);
+                console.log(pin.longitude);
+                
+                if(pin.latitude !== '' && pin.longitude !== '') {
+                    try {
+                        const lat = parseFloat(pin.latitude);
+                        const long = parseFloat(pin.longitude);
+                        setTrack((prev) => ({
+                            ...prev,
+                            coordinates: [...prev.coordinates, { name: pin.id, user: pin.userId, collectorName: collector, latitude: lat, longitude: long }],
+                        }));
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
+            })
+
+        };
+
+        const unsubscribe = collectorLocRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
+    function loadMap() {
+        const reload = async() => {
             let temp;
             if(mapType === 'collected')
                 temp = 'uncollected';
@@ -230,31 +240,6 @@ export default function MapAut({ navigation }) {
                 }
             })
             setInfoID();
-            trackCollectors();
-        }
-
-        const trackCollectors = async() => {
-            setInterval(async() => {
-                setTrack({ coordinates: [] });
-                collectorLocation.map((pin) => {
-                    let collector;
-                    users.map((user) => {
-                        if(user.id.includes(pin.userId)) {
-                            collector = user.firstName + ' ' + user.lastName;
-                        }
-                    })
-                    try {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setTrack((prev) => ({
-                            ...prev,
-                            coordinates: [...prev.coordinates, { name: pin.id, user: pin.userId, collectorName: collector, latitude: lat, longitude: long }],
-                        }));
-                    } catch (e) {
-                        console.log(e);
-                    }
-                })
-            }, 5000)
         }
 
         const showRoute = async() => {
@@ -310,18 +295,15 @@ export default function MapAut({ navigation }) {
 
         return (
             <>
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {reload()}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
-                    <Ionicons name='refresh-circle' style={{ fontSize: 30, top: 0, left: 1, color: 'white' }} />
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {setDisplayFlag(!displayFlag ? true : false); showRoute();}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 65, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {setDisplayFlag(!displayFlag ? true : false); showRoute();}} style={{position: 'absolute', height: 40, width: 40, backgroundColor: 'orange', top: 20, right: 15, zIndex: 99, justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <Ionicons name='flag' style={{ fontSize: 25, top: 0, left: 1, color: 'white' }} />
                 </TouchableOpacity>
                 {mapType === 'uncollected' ?
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setMapType('collected'); reload()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
                         <Text style={{fontWeight: 800, color: '#F76811', fontSize: 18}}>UNCOLLECTED</Text>
                     </TouchableOpacity>
                     :
-                    <TouchableOpacity activeOpacity={0.5} onPress={() => {changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setMapType('uncollected'); reload()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
                         <Text style={{fontWeight: 800, color: '#24E559', fontSize: 18}}>COLLECTED</Text>
                     </TouchableOpacity>
                 }

@@ -26,9 +26,10 @@
     "expo-location": "~15.1.1",
     "expo-media-library": "~15.2.3",
     "expo-router": "^1.5.3",
-    "expo-status-bar": "^1.4.4",
+    "expo-status-bar": "~1.4.4",
     "firebase": "^10.6.0",
     "moment": "^2.29.4",
+    "native-notify": "^3.2.5",
     "react": "18.2.0",
     "react-datepicker": "^4.21.0",
     "react-lifecycles-compat": "^3.0.4",
@@ -56,7 +57,9 @@
     "react-native-vision-camera": "^3.0.0",
     "react-native-web": "~0.18.10",
     "react-navigation": "^4.4.4",
-    "react-navigation-stack": "^2.10.4"
+    "react-navigation-stack": "^2.10.4",
+    "expo-device": "~5.2.1",
+    "expo-notifications": "~0.18.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

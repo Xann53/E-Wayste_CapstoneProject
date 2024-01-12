@@ -5,6 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from 'moment/moment';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
@@ -14,10 +15,10 @@ import SideBar from '../../components/SideNav';
 export default function Notifications({ navigation }) {
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
-
     const [users, setUsers] = useState([]);
     const [schedules, setSchedules] = useState([]);
     const [reports, setReports] = useState([]);
+    const [collectionInProgress, setCollectionInProgress] = useState([]);
     
     const userRef = firebase.firestore().collection("users");
     const schedRef = firebase.firestore().collection("schedule");
@@ -25,6 +26,7 @@ export default function Notifications({ navigation }) {
     const postRef = firebase.firestore().collection("posts");
     const likeRef = firebase.firestore().collection("likes");
     const commentRef = firebase.firestore().collection("comments");
+    const collectionInProgressRef = firebase.firestore().collection("collectionInProgress");
     
     let notifCollection = [];
 
@@ -130,6 +132,22 @@ export default function Notifications({ navigation }) {
             }
         )
 
+        collectionInProgressRef.onSnapshot(
+            collectionInProgressSnap => {
+              const collectionInProgressData = [];
+              collectionInProgressSnap.forEach((collectionItem) => {
+                const { collectionID, collectorID, fullDateTime} = collectionItem.data();
+                collectionInProgressData.push({
+                  id: collectionItem.id,
+                  collectionID,
+                  collectorID,
+                  fullDateTime
+                });
+              });
+              setCollectionInProgress(collectionInProgressData);
+            }
+        )
+      
         const getCurrentUser = async() => {
             let username = await AsyncStorage.getItem('userUName');
             let id = await AsyncStorage.getItem('userId')
@@ -138,6 +156,30 @@ export default function Notifications({ navigation }) {
         };
         getCurrentUser();
     }, [])
+
+    function displayCollectionInProgress() {
+        return (
+            <View style={{ gap: 15, marginBottom: 50 }}>
+                {collectionInProgress.map(item => (
+                    <View key={item.id} style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: '#FFE082', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                        <View style={{ height: '100%', width: 70, backgroundColor: '#FBC02D', justifyContent: 'center', alignItems: 'center' }}>
+                            <View style={{ width: 50, height: 50, borderRadius: 100, backgroundColor: '#E65100', justifyContent: 'center', alignItems: 'center' }}>
+                                <Icon name='truck' style={{ fontSize: 35, color: '#F9A825' }} />
+                            </View>
+                        </View>
+                        <View style={{ display: 'flex', flex: 1, marginLeft: 10, marginTop: 7 }}>
+                            <View style={{ width: '90%' }}>
+                                <Text style={{ fontSize: 16, fontWeight: 900, color: '#FF6F00' }}>Collection In Progress</Text>
+                                <Text ellipsizeMode='tail' numberOfLines={1} style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>Collection ID: {item.collectionID}</Text>
+                                <Text ellipsizeMode='tail' numberOfLines={1} style={{ fontSize: 14 }}>Collector ID: {item.collectorID}</Text>
+                                <Text style={{ fontSize: 10 }}>{item.fullDateTime}</Text>
+                            </View>
+                        </View>
+                    </View>
+                ))}
+            </View>
+        );
+    }
 
     function displayNotif(displayNotifType) {
         const currentDate = moment().utcOffset('+08').format('YYYY-MM-DD');
@@ -258,7 +300,7 @@ export default function Notifications({ navigation }) {
                     }
                 }
 
-                if (displayNotifType === 'All') {
+                if (displayNotifType === 'All') {                    
                     if(notif.notifType === 'Report') {
                         temp.push(
                             <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
@@ -356,34 +398,35 @@ export default function Notifications({ navigation }) {
 
     return (
         <>
-            {openSideBar}
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }>
-                <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
-                    <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                </TouchableOpacity>
-                <SafeAreaView style={styles.container}>
-                    <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
-                        <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>NOTIFICATIONS</Text>
-                    </View>
-                    <View style={{ marginTop: 10, width: 330 }}>
-                        <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
-                            <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Reminder Today</Text>
-                            <Text>
-                                <Text style={{fontWeight: 600}}>{moment().utcOffset('+08').format('dddd')}</Text>, {moment().utcOffset('+08').format('MM/DD/YYYY')}
-                            </Text>
-                        </View>
-                        {displayNotif('Reminder')}
-                        <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
-                            <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Notification History</Text>
-                        </View>
-                        {displayNotif('All')}
-                    </View>
-                </SafeAreaView>
-            </ScrollView>
+          {openSideBar}
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }>
+            <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
+              <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+            </TouchableOpacity>
+            <SafeAreaView style={styles.container}>
+              <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
+                <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>NOTIFICATIONS</Text>
+              </View>
+              <View style={{ marginTop: 10, width: 330 }}>
+                <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+                  <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Reminder Today</Text>
+                  <Text>
+                    <Text style={{fontWeight: 600}}>{moment().utcOffset('+08').format('dddd')}</Text>, {moment().utcOffset('+08').format('MM/DD/YYYY')}
+                  </Text>
+                </View>
+                {displayNotif('Reminder')}
+                {displayCollectionInProgress()}
+                <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+                  <Text style={{ fontSize: 20, fontWeight: 700, color: 'rgb(13,86,1)', marginBottom: 5 }}>Notification History</Text>
+                </View>
+                {displayNotif('All')}                
+              </View>
+            </SafeAreaView>
+          </ScrollView>
         </>
-    );
+    );   
 }
 
 const styles = StyleSheet.create({

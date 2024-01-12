@@ -12,12 +12,14 @@ import { Camera, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useIsFocused } from '@react-navigation/native';
 
-import { db, auth, storage } from '../../firebase_config';
+import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
 
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
+
+import PushNotif from '../../components/PushNotification';
 
 export default function CameraOpen({ navigation: {goBack} }) {
     const isFocused = useIsFocused();
@@ -37,6 +39,27 @@ export default function CameraOpen({ navigation: {goBack} }) {
 
     const [isEnabled, setIsEnabled] = useState(false);
     const toggleSwitch = () => setIsEnabled(previousState => !previousState);
+
+    const [users, setUsers] = useState();
+    const userRef = firebase.firestore().collection("users");
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            setUsers(newData);
+
+        };
+
+        const unsubscribe = userRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
 
     const userLocation = async () => {
         let {status} = await Location.requestForegroundPermissionsAsync();
@@ -166,6 +189,17 @@ export default function CameraOpen({ navigation: {goBack} }) {
             longitude: longitude,
             latitude: latitude,
         });
+
+        let userFullName;
+        users.map((user) => {
+            if(user.id.includes(userID)) {
+                userFullName = user.firstName + ' ' + user.lastName;
+            }
+        });
+
+        const title = userFullName.toUpperCase() + ' HAS MADE A REPORT!';
+        const body = 'User ' + userFullName + 'has submitted a report for collection';
+        PushNotif(title, body, fullDateTime);
 
         setImage(null);
         goBack();

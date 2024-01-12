@@ -7,13 +7,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from 'expo-location';
 import moment from 'moment/moment';
 
-import { db } from '../../../firebase_config';
+import { db, auth, storage, firebase } from '../../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../../environments';
+
+import PushNotif from '../../../components/PushNotification';
 
 export default function AddSched({navigation}) {
 
@@ -39,6 +41,27 @@ export default function AddSched({navigation}) {
     const [longitude, setLongitude] = useState();
     const [collectorList, setCollectorList] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
+
+    const [users, setUsers] = useState();
+    const userRef = firebase.firestore().collection("users");
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            setUsers(newData);
+
+        };
+
+        const unsubscribe = userRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
 
     const Type = [
         { key: "Collection", value: "Collection" },
@@ -149,13 +172,25 @@ export default function AddSched({navigation}) {
                     startTime: start,
                     title: '',
                     userID: id,
-                    assignCollector: '',
+                    assignCollector: assignCollector,
                     selectedDate: selectedDate,
                     collectionRoute: route,
                     latitude: '',
                     longitude: '',
                     dateTimeUploaded: fullDateTime
                 });
+
+                let userFullName;
+                users.map((user) => {
+                    if(user.id.includes(id)) {
+                        userFullName = user.firstName + ' ' + user.lastName;
+                    }
+                });
+
+                const title = 'NEW COLLECTION SCHEDULE HAS BEEN MADE!';
+                const body = userFullName + ' has made a new garbage collection schedule';
+                PushNotif(title, body, fullDateTime);
+
             } else if(selectType === 'Assignment') {
                 await addDoc(schedCollection, {
                     scheduleID: scheduleID, 
@@ -172,6 +207,18 @@ export default function AddSched({navigation}) {
                     longitude: longitude,
                     dateTimeUploaded: fullDateTime
                 });
+
+                let userFullName;
+                users.map((user) => {
+                    if(user.id.includes(id)) {
+                        userFullName = user.firstName + ' ' + user.lastName;
+                    }
+                });
+
+                const title = 'NEW SCHEDULED ASSIGNMENT HAS BEEN MADE!';
+                const body = userFullName + ' has made a new garbage scheduled assignment';
+                PushNotif(title, body, fullDateTime);
+
             } else if(selectType === 'Event') {
                 await addDoc(schedCollection, {
                     scheduleID: scheduleID, 
@@ -188,6 +235,18 @@ export default function AddSched({navigation}) {
                     longitude: longitude,
                     dateTimeUploaded: fullDateTime
                 });
+
+                let userFullName;
+                users.map((user) => {
+                    if(user.id.includes(id)) {
+                        userFullName = user.firstName + ' ' + user.lastName;
+                    }
+                });
+
+                const title = 'NEW EVENT HAS BEEN SCHEDULED!';
+                const body = userFullName + ' has scheduled a new event';
+                PushNotif(title, body, fullDateTime);
+
             }
 
             alert("Schedule successfully added!");
@@ -501,8 +560,46 @@ export default function AddSched({navigation}) {
                         multiline={true}
                     />
                 </View>
+                <View style={{ width: '100%', paddingHorizontal: 25, marginTop: 5 }}>
+                    <TextInput
+                    style={{
+                        height: 40,
+                        width: '100%',
+                        backgroundColor: 'rgb(231,247,233)',
+                        borderRadius: 5,
+                        borderWidth: 0.5,
+                        borderColor: 'rgb(215,233,217)',
+                        color: 'rgba(45, 105, 35, 1)',
+                        paddingLeft: 15,
+                    }}
+                    placeholder='Select Collector to Assign'
+                    value={assignCollector}
+                    onFocus={() => setModalVisible(true)}
+                    />
+                </View>
                 {CollectionRoute()}
                 {SelectDateTime()}
+
+                <Modal visible={modalVisible} animationType='slide' transparent={true}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: 'rgb(231,247,233)', width: 310, padding: 20, borderRadius: 10, elevation: 5, borderWidth: 1, borderColor: 'green'}}>
+                    <FlatList
+                      data={collectorList}
+                      keyExtractor={(item) => item.id.toString()}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity onPress={() => handleSelectCollector(item.name)}>
+                          <Text style={{ fontSize: 16, marginBottom: 10 }}>{item.name}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+        
+                    {/* Close modal button */}
+                    <TouchableOpacity onPress={() => setModalVisible(false)}>
+                      <Text style={{ fontSize: 12, color: 'blue', marginTop: 10 }}>Close</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
             </>
         );
     }
