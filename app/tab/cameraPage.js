@@ -15,10 +15,8 @@ import { useIsFocused } from '@react-navigation/native';
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
-
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
-
 import PushNotif from '../../components/PushNotification';
 
 export default function CameraOpen({ navigation: {goBack} }) {

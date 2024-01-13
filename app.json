@@ -23,7 +23,12 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.cmabs.EWayste",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps":{
+          "apiKey":"AIzaSyCJxjr37KaccJuCPGnJ_p6_N7Ke1I7b9ys"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
