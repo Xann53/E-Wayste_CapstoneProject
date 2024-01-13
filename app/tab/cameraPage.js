@@ -8,13 +8,13 @@ import moment from 'moment/moment';
 import * as Location from 'expo-location';
 
 import { Camera, CameraType, FlashMode } from 'expo-camera';
-// import * as MediaLibrary from 'expo-media-library';
 import * as ImagePicker from 'expo-image-picker';
 import { useIsFocused } from '@react-navigation/native';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
+
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import PushNotif from '../../components/PushNotification';
@@ -195,8 +195,8 @@ export default function CameraOpen({ navigation: {goBack} }) {
             }
         });
 
-        const title = userFullName.toUpperCase() + ' HAS MADE A REPORT!';
-        const body = 'User ' + userFullName + 'has submitted a report for collection';
+        const title = 'NEW GARBAGE REPORT!';
+        const body = userFullName + 'has submitted a report for collection';
         PushNotif(title, body, fullDateTime);
 
         setImage(null);

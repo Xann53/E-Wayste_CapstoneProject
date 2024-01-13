@@ -16,7 +16,6 @@ import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import SideBar from '../../components/SideNav';
-
 import PushNotif from '../../components/PushNotification';
 
 export default function MapCol({ navigation }) {
@@ -416,7 +415,7 @@ export default function MapCol({ navigation }) {
                     }
                 })
 
-                const title = 'REPORTED GARBAGE HAS BEEN COLLECTED!';
+                const title = 'COLLECTED GARBAGE REPORT';
                 const body = 'Garbage reported by ' + userFullName + ' at location (' + location + ') has been collected';
                 const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
                 PushNotif(title, body, fullDateTime);
@@ -440,7 +439,7 @@ export default function MapCol({ navigation }) {
             }
             
             const title = 'GARBAGE COLLECTION DAY!';
-            const body = 'Scheduled Collection has Started';
+            const body = 'Scheduled Collection has started';
             PushNotif(title, body, fullDateTime);
         }
 
@@ -673,7 +672,7 @@ export default function MapCol({ navigation }) {
                                 <View style={{flex: 1, padding: 5, overflow: 'hidden'}}>
                                     <View style={{flex: 4}}>
                                         <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>COLLECTION</Text>
-                                        <Text style={{fontSize: 10}}>date</Text>
+                                        <Text style={{fontSize: 10}}>{moment().utcOffset('+08:00').format('YYYY/MM/DD')}</Text>
                                         <ScrollView style={{marginTop: 5, display: 'flex', flex: 1, marginBottom: 2}}>
                                             {menuDisplayRoute()}
                                         </ScrollView>

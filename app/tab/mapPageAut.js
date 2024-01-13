@@ -49,6 +49,13 @@ export default function MapAut({ navigation }) {
     let description
     let location
     let dateTime
+
+    const [colMenu, setColMenu] = useState(false);
+    const colInProgressRef = firebase.firestore().collection("collectionInProgress");
+    // const colInProgressRef2 = collection(db, "collectionInProgress");
+    const [colID, setColID] = useState();
+    const [colInProgress, setColInProgress] = useState();
+    let collectionIDTemp
     // =============================================================================================================================================================================================
     useEffect(() => {
         if(!isFocused) {
@@ -206,6 +213,24 @@ export default function MapAut({ navigation }) {
         };
     }, []);
 
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            setColInProgress(newData);
+
+        };
+
+        const unsubscribe = colInProgressRef.onSnapshot(onSnapshot);
+
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
     function loadMap() {
         const reload = async() => {
             let temp;
@@ -308,6 +333,7 @@ export default function MapAut({ navigation }) {
                                 longitude: parseFloat(marker.coordinates[i].longitude)
                             }}
                             style={{zIndex: 95}}
+                            onPress={() => {setColMenu(true); setColID(marker.id); setInfoID()}}
                         >
                             <Ionicons name='flag' style={{fontSize: 25, color: marker.color}} />    
                         </Marker>
@@ -347,7 +373,7 @@ export default function MapAut({ navigation }) {
                     }
                 })
 
-                const title = 'REPORTED GARBAGE HAS BEEN COLLECTED!';
+                const title = 'REPORTED GARBAGE COLLECTED';
                 const body = 'Garbage reported by ' + userFullName + ' at location (' + location + ') has been collected';
                 const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
                 PushNotif(title, body, fullDateTime);
@@ -367,6 +393,46 @@ export default function MapAut({ navigation }) {
                 console.error(e);
             }
             reload2();
+        }
+
+        function menuDisplayRoute() {
+            let temp = [];
+            schedRoute.map((pin) => {
+                if(pin.id.includes(colID)) {
+                    pin.collectionRoute.coordinates.map((coord) => {
+                        temp.push(
+                            <Text style={{fontSize: 12}}><Ionicons name='location' />{coord.locationName}</Text>
+                        )
+                    })
+                }
+            });
+
+            <ul>
+                {temp.map(item =>
+                    <li key="{item}">{item}</li>
+                )}
+            </ul>
+
+            return(
+                <>
+                    {temp}
+                </>
+            );
+        }
+
+        const delayNotif = async() => {
+            const title = 'COLLECTION HAS BEEN DELAYED!';
+            let body = 'Collection for Route: [';
+            schedRoute.map((pin) => {
+                if(pin.id.includes(colID)) {
+                    pin.collectionRoute.coordinates.map((coord) => {
+                        body = body + coord.locationName + ', ';
+                    })
+                }
+            });
+            body = body + '] has been delayed.';
+            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+            PushNotif(title, body, fullDateTime);
         }
 
         return (
@@ -529,6 +595,49 @@ export default function MapAut({ navigation }) {
                                 </View>
                             </View>
                             <TouchableOpacity activeOpacity={0.5} onPress={() => {setInfoID()}}>
+                                <View style={{position: 'absolute', height: 20, width: 20, backgroundColor: '#E5E5E5', right: 5, top: 5, borderRadius: 100}}>
+                                    <Ionicons name='close' style={{fontSize: 20, color: 'grey'}} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    :
+                    <></>
+                }
+                {colMenu ?
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                        <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
+                            <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10, justifyContent: 'center', alignItems: 'center'}}>
+                                <Ionicons name='trash' style={{fontSize: 90, color: 'green'}} />
+                            </View>
+                            <View style={{flex: 2}}>
+                                <View style={{flex: 1, padding: 5, overflow: 'hidden'}}>
+                                    {colInProgress.map((pin) => {
+                                        if(pin.collectionID.includes(colID)) {
+                                            collectionIDTemp = true;
+                                        }
+                                    })}
+                                    <View style={{flex: 4}}>
+                                        {collectionIDTemp === true ?
+                                            <Text style={{fontSize: 12, fontWeight: 900, color: 'orange'}}>COLLECTION IN PROGRESS</Text>
+                                            :
+                                            <Text style={{fontSize: 12, fontWeight: 900, color: 'green'}}>COLLECTION HASN'T STARTED</Text>
+                                        }
+                                        <Text style={{fontSize: 10}}>{moment().utcOffset('+08:00').format('YYYY/MM/DD')}</Text>
+                                        <ScrollView style={{marginTop: 5, display: 'flex', flex: 1, marginBottom: 2}}>
+                                            {menuDisplayRoute()}
+                                        </ScrollView>
+                                    </View>
+                                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                                        <TouchableOpacity style={{flex: 1, width: '75%', borderRadius: 10, overflow: 'hidden'}} activeOpacity={0.5} onPress={() => {delayNotif()}}>
+                                            <View style={{flex: 1, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center'}}>
+                                                <Text style={{fontWeight: 700, color: 'white'}}>COLLECTION DELAYED</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setColMenu(false)}}>
                                 <View style={{position: 'absolute', height: 20, width: 20, backgroundColor: '#E5E5E5', right: 5, top: 5, borderRadius: 100}}>
                                     <Ionicons name='close' style={{fontSize: 20, color: 'grey'}} />
                                 </View>

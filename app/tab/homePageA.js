@@ -301,56 +301,71 @@ export default function NewsfeedAut({navigation}) {
     };
     
     const handlePost = async () => {
-        // Check if both postTitle and postText are not empty
-        if (postText.trim() === '') {
-            alert('Please enter a content.');
-            return;
-        }
-    
-        let userId;
-    
-        try {
-            let imageUrl = '';
-            if (selectedImage) {
-                const imageName = uuid.v1(); // Generating a random name using uuid
-                const imageDestination = 'FeedpostImages/' + imageName;
+      if (postText.trim() === '') {
+          alert('Please enter a content.');
+          return;
+      }
+  
+      let userId;
+  
+      try {
+          let imageUrl = '';
+  
+          if (selectedImage) {
+              const imageName = uuid.v1(); // Generating a random name using uuid
+              const imageDestination = 'FeedpostImages/' + imageName;
+  
+              userId = await fetchUserId();
+              if (!userId) {
+                  alert('Error fetching user ID.');
+                  return;
+              }
+  
+              const response = await fetch(selectedImage);
+              const blob = await response.blob();
+              const imageRef = ref(storage, imageDestination);
+              await uploadBytes(imageRef, blob);
+              imageUrl = imageName;
+              alert('Image Uploaded');
+          } else {
+              userId = await fetchUserId();
+              if (!userId) {
+                  alert('Error fetching user ID.');
+                  return;
+              }
+          }
 
-                userId = await fetchUserId();
-                if (!userId) {
-                    alert('Error fetching user ID.');
-                    return;
-                }
-                const response = await fetch(selectedImage);
-                const blob = await response.blob();
-                const imageRef = ref(storage, imageDestination);
-                await uploadBytes(imageRef, blob);
-                imageUrl = imageName;
-                alert('Image Uploaded');
-            } else {
-                userId = await fetchUserId();
-                if (!userId) {
-                    alert('Error fetching user ID.');
-                    return;
-                }
-            }
-    
-            const postData = {
-                postContent: postText,
-                imageUrl,
-                userId,
-                timestamp: fullDateTime,
-            };
-    
-            const postRef = await addDoc(collection(db, 'posts'), postData);
-            setPostTitle('');
-            setPostText('');
-            setSelectedImage('');
+          const postData = {
+              postContent: postText,
+              imageUrl,
+              userId,
+              timestamp: fullDateTime,
+          };
+  
+          // Continue with the post creation logic, including imageUrl or without it
+          const postRef = await addDoc(collection(db, 'posts'), postData);
+  
+          // Reset state values
+          setPostTitle('');
+          setPostText('');
+          setSelectedImage('');
+          setModalVisible(false);
 
-            setModalVisible(false);
-        } catch (error) {
-            console.error('Error adding post: ', error);
-        }
-    }; 
+           // Check if the number of posts exceeds 500
+          const postsQuery = query(collection(db, 'posts'));
+          const postsSnapshot = await getDocs(postsQuery);
+          const numPosts = postsSnapshot.size;
+          if (numPosts > 500) {
+          const sortedPostsQuery = query(collection(db, 'posts'), orderBy('timestamp', 'asc'));
+          const sortedPostsSnapshot = await getDocs(sortedPostsQuery);
+          const oldestPost = sortedPostsSnapshot.docs[0];
+          // Delete the oldest post
+          await deleteDoc(doc(db, 'posts', oldestPost.id));
+          }
+      } catch (error) {
+          console.error('Error adding post: ', error);
+      }
+  };
      
     function getCurrentDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };

@@ -187,7 +187,7 @@ export default function AddSched({navigation}) {
                     }
                 });
 
-                const title = 'NEW COLLECTION SCHEDULE HAS BEEN MADE!';
+                const title = 'NEW COLLECTION SCHEDULE';
                 const body = userFullName + ' has made a new garbage collection schedule';
                 PushNotif(title, body, fullDateTime);
 
@@ -215,7 +215,7 @@ export default function AddSched({navigation}) {
                     }
                 });
 
-                const title = 'NEW SCHEDULED ASSIGNMENT HAS BEEN MADE!';
+                const title = 'NEW ASSIGNMENT SCHEDULED';
                 const body = userFullName + ' has made a new garbage scheduled assignment';
                 PushNotif(title, body, fullDateTime);
 
@@ -243,7 +243,7 @@ export default function AddSched({navigation}) {
                     }
                 });
 
-                const title = 'NEW EVENT HAS BEEN SCHEDULED!';
+                const title = 'NEW EVENT SCHEDULE';
                 const body = userFullName + ' has scheduled a new event';
                 PushNotif(title, body, fullDateTime);
 

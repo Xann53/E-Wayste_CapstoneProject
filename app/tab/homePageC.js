@@ -190,7 +190,6 @@ export default function NewsfeedCol({ navigation }) {
     };
     
     const handlePost = async () => {
-        // Check if both postTitle and postText are not empty
         if (postText.trim() === '') {
             alert('Please enter a content.');
             return;
@@ -201,15 +200,11 @@ export default function NewsfeedCol({ navigation }) {
         try {
             let imageUrl = '';
     
-            // Check if a user has selected an image
             if (selectedImage) {
-                // Use a random name for the image
                 const imageName = uuid.v1(); // Generating a random name using uuid
                 const imageDestination = 'FeedpostImages/' + imageName;
     
-                // Continue with the image upload logic
                 userId = await fetchUserId();
-    
                 if (!userId) {
                     alert('Error fetching user ID.');
                     return;
@@ -228,7 +223,7 @@ export default function NewsfeedCol({ navigation }) {
                     return;
                 }
             }
-    
+
             const postData = {
                 postContent: postText,
                 imageUrl,
@@ -243,13 +238,23 @@ export default function NewsfeedCol({ navigation }) {
             setPostTitle('');
             setPostText('');
             setSelectedImage('');
-    
-            // Close the modal
             setModalVisible(false);
+
+             // Check if the number of posts exceeds 500
+            const postsQuery = query(collection(db, 'posts'));
+            const postsSnapshot = await getDocs(postsQuery);
+            const numPosts = postsSnapshot.size;
+            if (numPosts > 500) {
+            const sortedPostsQuery = query(collection(db, 'posts'), orderBy('timestamp', 'asc'));
+            const sortedPostsSnapshot = await getDocs(sortedPostsQuery);
+            const oldestPost = sortedPostsSnapshot.docs[0];
+            // Delete the oldest post
+            await deleteDoc(doc(db, 'posts', oldestPost.id));
+            }
         } catch (error) {
             console.error('Error adding post: ', error);
         }
-    }; 
+    };
      
     function getCurrentDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
