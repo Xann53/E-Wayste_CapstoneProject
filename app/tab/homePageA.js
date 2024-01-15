@@ -204,9 +204,11 @@ export default function NewsfeedAut({navigation}) {
                 }
             };
             getUsers()
+            
+            const queryOptions = { limit: 200 }; // Set the limit
 
-            reportRef.onSnapshot(
-                querySnapshot => {
+            reportRef.orderBy('dateTime', 'desc').limit(queryOptions.limit).onSnapshot(
+              querySnapshot => {
                     const uploads = []
                     querySnapshot.forEach((doc) => {
                         const {associatedImage, dateTime, description, location, status, userId} = doc.data();
@@ -232,8 +234,8 @@ export default function NewsfeedAut({navigation}) {
                     })
                 }
             )
-            reportFeedRef.onSnapshot(
-                querySnapshot => {
+            reportFeedRef.orderBy('timestamp', 'desc').limit(queryOptions.limit).onSnapshot(
+              querySnapshot => {
                     const feedUploads = []
                     querySnapshot.forEach((doc) => {
                         const {imageUrl, postContent, timestamp, userId} = doc.data();
@@ -466,282 +468,285 @@ export default function NewsfeedAut({navigation}) {
     }
 
     function BodyContent() {
-        const [isCommentOverlayVisible, setIsCommentOverlayVisible] = useState({});
-        const [postComments, setPostComments] = useState({});
-        const [currentPostId, setCurrentPostId] = useState(null);
+      const [isCommentOverlayVisible, setIsCommentOverlayVisible] = useState({});
+      const [postComments, setPostComments] = useState({});
+      const [currentPostId, setCurrentPostId] = useState(null);
 
-        const handleToggleCommentOverlay = async (postId) => {
-            setCurrentPostId(postId);
-            setIsCommentOverlayVisible((prevState) => ({
-            ...prevState,
-            [postId]: !prevState[postId],
-            }));
+      const limitedUserUploads = userUploads.slice(0, 100);
+      const limitedUserFeedUploads = userFeedUploads.slice(0, 100);
 
-            try {
-            const commentsRef = collection(db, 'comments');
-            const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
-            const postCommentsSnapshot = await getDocs(postCommentsQuery);
-            const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
-            setPostComments((prevComments) => ({ ...prevComments, [postId]: commentsData }));
-            } catch (error) {
-            console.error('Error fetching comments: ', error);
-            }
-        };
+      const handleToggleCommentOverlay = async (postId) => {
+          setCurrentPostId(postId);
+          setIsCommentOverlayVisible((prevState) => ({
+          ...prevState,
+          [postId]: !prevState[postId],
+          }));
 
-        const handlePostComment = async (postId, commentText) => {
-            try {
-                if (!commentText || commentText.trim() === '') {
-                    console.log('Comment cannot be empty.');
-                    return;
-                }
-        
-                const user = auth.currentUser;
-        
-                if (!user) {
-                    console.error('User not authenticated.');
-                    return;
-                }
-        
-                // Fetch the user ID
-                const currentUserId = await fetchUserId();
-        
-                if (!currentUserId) {
-                    console.error('Error fetching user ID.');
-                    return;
-                }
-        
-                // Get the current username
-                const currentUser = users.find((u) => u.id === currentUserId);
-        
-                if (!currentUser) {
-                    console.error('Current user not found:', currentUserId);
-                    console.log('All users:', users);
-                    return;
-                }
-        
-                const currentUsername = currentUser?.username || 'Unknown User';
-        
-                // Prepare the comment data
-                const commentData = {
-                    postId: postId,
-                    userId: currentUserId,
-                    username: currentUsername,
-                    content: commentText,
-                    timestamp: fullDateTime,
-                };
-        
-                // Add the comment to the 'comments' collection
-                await addDoc(collection(db, 'comments'), commentData);
-        
-                // Fetch the updated comments for the current post
-                const commentsRef = collection(db, 'comments');
-                const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
-                const postCommentsSnapshot = await getDocs(postCommentsQuery);
-                const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
-        
-                // Update the local state to display the updated comments
-                setPostComments((prevComments) => ({
-                    ...prevComments,
-                    [postId]: commentsData,
-                }));
-        
-                // Clear the commentText state
-                setCommentText('');
-            } catch (error) {
-                console.error('Error posting comment: ', error);
-            }
-        };
+          try {
+          const commentsRef = collection(db, 'comments');
+          const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
+          const postCommentsSnapshot = await getDocs(postCommentsQuery);
+          const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
+          setPostComments((prevComments) => ({ ...prevComments, [postId]: commentsData }));
+          } catch (error) {
+          console.error('Error fetching comments: ', error);
+          }
+      };
 
-        let temp = [];
-        if(isAllPressed){
-        userUploads.map((uploads) => {
-            var valueToPush = {};
-            valueToPush["id"] = uploads.id;
-            valueToPush["imageLink"] = uploads.associatedImage;
-            valueToPush["dateTime"] = uploads.dateTime;
-            valueToPush["description"] = uploads.description;
-            valueToPush["location"] = uploads.location;
-            valueToPush["status"] = uploads.status;
-            valueToPush["userId"] = uploads.userId;
-            uploadCollection.push(valueToPush);
-            uploadCollection.sort((a, b) => {
-                let fa = a.dateTime,
-                    fb = b.dateTime;
-                if (fa > fb) {
-                    return -1;
-                }
-                if (fa < fb) {
-                    return 1;
-                }
-                return 0;
-            });
-        });
-    
-            userFeedUploads.map((FeedUploads) => {
-                var valueFeedToPush = {};
-                valueFeedToPush["id"] = FeedUploads.id;
-                valueFeedToPush["imageUrl"] = FeedUploads.imageUrl;
-                valueFeedToPush["postContent"] = FeedUploads.postContent;
-                valueFeedToPush["dateTime"] = FeedUploads.timestamp;
-                valueFeedToPush["userId"] = FeedUploads.userId;
-                uploadCollection.push(valueFeedToPush);
-                uploadCollection.sort((a, b) => {
-                    let fa = a.dateTime,
-                        fb = b.dateTime;
-                    if (fa > fb) {
-                        return -1;
-                    }
-                    if (fa < fb) {
-                        return 1;
-                    }
-                    return 0;
-                });
-            });
-            
-            const getUserInfo = (userId) => {
-                const user = users.find((user) => user.id === userId);
-                return user ? `${user.firstName} ${user.lastName}` : `User (${userId})`;
-            };
-        
-            uploadCollection.map((post,postFeed, index) => {
-                let imageURL;
-                if (post.imageLink) {
-                  imageURL = imageCol.find((url) => url.includes(post.imageLink));
-                } else if (post.imageUrl) {
-                  imageURL = imageFeedCol.find((url) => url.includes(post.imageUrl));
-                }
-                
-                temp.push(
-                    <View key={`${post.id}-${postFeed.id}`} style={[styles.contentButton, styles.contentGap]}>
-                      <TouchableOpacity activeOpacity={0.5}>
-                        <View style={styles.contentButtonFront}>
-                          {/* User information */}
-                          <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
-                            <View style={styles.containerPfp}> 
-                              <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)', flexShrink: 1 }}>
-                                  {getUserInfo(post.userId)}
-                                </Text>
-                                <Text style={{ fontSize: 12, color: 'gray', marginLeft: 5 }}>
-                                    {formatTimestamp(post.dateTime) || formatTimestamp(postFeed.dateTime)}
-                                    </Text>
-                              </View>
-                            </View>
+      const handlePostComment = async (postId, commentText) => {
+          try {
+              if (!commentText || commentText.trim() === '') {
+                  console.log('Comment cannot be empty.');
+                  return;
+              }
+      
+              const user = auth.currentUser;
+      
+              if (!user) {
+                  console.error('User not authenticated.');
+                  return;
+              }
+      
+              // Fetch the user ID
+              const currentUserId = await fetchUserId();
+      
+              if (!currentUserId) {
+                  console.error('Error fetching user ID.');
+                  return;
+              }
+      
+              // Get the current username
+              const currentUser = users.find((u) => u.id === currentUserId);
+      
+              if (!currentUser) {
+                  console.error('Current user not found:', currentUserId);
+                  console.log('All users:', users);
+                  return;
+              }
+      
+              const currentUsername = currentUser?.username || 'Unknown User';
+      
+              // Prepare the comment data
+              const commentData = {
+                  postId: postId,
+                  userId: currentUserId,
+                  username: currentUsername,
+                  content: commentText,
+                  timestamp: fullDateTime,
+              };
+      
+              // Add the comment to the 'comments' collection
+              await addDoc(collection(db, 'comments'), commentData);
+      
+              // Fetch the updated comments for the current post
+              const commentsRef = collection(db, 'comments');
+              const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
+              const postCommentsSnapshot = await getDocs(postCommentsQuery);
+              const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
+      
+              // Update the local state to display the updated comments
+              setPostComments((prevComments) => ({
+                  ...prevComments,
+                  [postId]: commentsData,
+              }));
+      
+              // Clear the commentText state
+              setCommentText('');
+          } catch (error) {
+              console.error('Error posting comment: ', error);
+          }
+      };
+
+      let temp = [];
+      if(isAllPressed){
+      limitedUserUploads.map((uploads) => {
+          var valueToPush = {};
+          valueToPush["id"] = uploads.id;
+          valueToPush["imageLink"] = uploads.associatedImage;
+          valueToPush["dateTime"] = uploads.dateTime;
+          valueToPush["description"] = uploads.description;
+          valueToPush["location"] = uploads.location;
+          valueToPush["status"] = uploads.status;
+          valueToPush["userId"] = uploads.userId;
+          uploadCollection.push(valueToPush);
+          uploadCollection.sort((a, b) => {
+              let fa = a.dateTime,
+                  fb = b.dateTime;
+              if (fa > fb) {
+                  return -1;
+              }
+              if (fa < fb) {
+                  return 1;
+              }
+              return 0;
+          });
+      });
+  
+          limitedUserFeedUploads.map((FeedUploads) => {
+              var valueFeedToPush = {};
+              valueFeedToPush["id"] = FeedUploads.id;
+              valueFeedToPush["imageUrl"] = FeedUploads.imageUrl;
+              valueFeedToPush["postContent"] = FeedUploads.postContent;
+              valueFeedToPush["dateTime"] = FeedUploads.timestamp;
+              valueFeedToPush["userId"] = FeedUploads.userId;
+              uploadCollection.push(valueFeedToPush);
+              uploadCollection.sort((a, b) => {
+                  let fa = a.dateTime,
+                      fb = b.dateTime;
+                  if (fa > fb) {
+                      return -1;
+                  }
+                  if (fa < fb) {
+                      return 1;
+                  }
+                  return 0;
+              });
+          });
+          
+          const getUserInfo = (userId) => {
+              const user = users.find((user) => user.id === userId);
+              return user ? `${user.firstName} ${user.lastName}` : `User (${userId})`;
+          };
+      
+          uploadCollection.map((post,postFeed, index) => {
+              let imageURL;
+              if (post.imageLink) {
+                imageURL = imageCol.find((url) => url.includes(post.imageLink));
+              } else if (post.imageUrl) {
+                imageURL = imageFeedCol.find((url) => url.includes(post.imageUrl));
+              }
+              
+              temp.push(
+                  <View key={`${post.id}-${postFeed.id}`} style={[styles.contentButton, styles.contentGap]}>
+                    <TouchableOpacity activeOpacity={0.5}>
+                      <View style={styles.contentButtonFront}>
+                        {/* User information */}
+                        <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
+                          <View style={styles.containerPfp}> 
+                            <Ionicons name='person-outline' style={styles.placeholderPfp} />
                           </View>
-                          <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                            <Text style={{ fontSize: 13, marginBottom: 5, marginStart: -1 }}>{post.description || post.postContent}</Text>
-                            {imageURL ? (
-                              <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                                <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
-                              </View>
-                            ) : null}
-                          </SafeAreaView>
-                          <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                          <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id)}>
-                            <Ionicons
-                                name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
-                                style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
-                            />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id)}>
-                              <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5}>
-                              <Ionicons
-                                name="share-outline"
-                                style={{ fontSize: 25 }}
-                                onPress={() => handleSharePress(post.id || postFeed.id, post.description || post.postContent, imageURL)}
-                              />
-                            </TouchableOpacity>
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)', flexShrink: 1 }}>
+                                {getUserInfo(post.userId)}
+                              </Text>
+                              <Text style={{ fontSize: 12, color: 'gray', marginLeft: 5 }}>
+                                  {formatTimestamp(post.dateTime) || formatTimestamp(postFeed.dateTime)}
+                                  </Text>
+                            </View>
                           </View>
                         </View>
-                      </TouchableOpacity>
-                      {/* Comment overlay */}
-                      {isCommentOverlayVisible[post.id] && (
+                        <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                          <Text style={{ fontSize: 13, marginBottom: 5, marginStart: -1 }}>{post.description || post.postContent}</Text>
+                          {imageURL ? (
+                            <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                              <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
+                            </View>
+                          ) : null}
+                        </SafeAreaView>
+                        <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                        <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id)}>
+                          <Ionicons
+                              name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
+                              style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
+                          />
+                          </TouchableOpacity>
+                          <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id)}>
+                            <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
+                          </TouchableOpacity>
+                          <TouchableOpacity activeOpacity={0.5}>
+                            <Ionicons
+                              name="share-outline"
+                              style={{ fontSize: 25 }}
+                              onPress={() => handleSharePress(post.id || postFeed.id, post.description || post.postContent, imageURL)}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                    {/* Comment overlay */}
+                    {isCommentOverlayVisible[post.id] && (
+                      <CommentOverlay
+                        comments={postComments[post.id] || []}
+                        commentText={commentText}
+                        setCommentText={setCommentText}
+                        handlePostComment={() => handlePostComment(post.id, commentText)}
+                      />
+                    )}
+                  </View>
+                );                  
+              });
+          return (
+              <View>
+                   {temp.length > 0 ? temp : <Text>No data to display</Text>}
+              </View>
+              );      
+          }
+          else if (isEventsPressed) {
+              return (
+                <View>
+                  {userEvents.map((event) => (
+                    <View key={event.id} style={[styles.contentButton, styles.contentGap]}>
+                      <View style={styles.contentButtonFront}>
+                        {/* User information */}
+                        <View style={{ width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15 }}>
+                          <View style={styles.containerPfp}>
+                            <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                          </View> 
+                          <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
+                               {event.userId && users.find((user) => user.id === event.userId)?.username || 'Unknown User'}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 50,}}>
+                              {event.timestamp || 'invalid date'}
+                          </Text>
+                        </View>                     
+                        <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                          <Text style={{ fontSize: 16, color: 'green' }}>
+                              {event.title} 
+                          </Text>
+                          <Text style={{ fontSize: 14, marginBottom: 5 }}>
+                              {event.description}{'\n\n'}
+                              <Text style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <Ionicons name="location" size={16} color="green" style={{ marginRight: 5 }} />
+                                  {event.location}{'\n'}
+                              </Text>
+                              <Text style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <Ionicons name="calendar" size={16} color="green" style={{ marginRight: 5 }} />
+                                  {event.selectedDate} at {event.startTime}
+                              </Text>
+                          </Text>
+                          </SafeAreaView>
+                        < View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                          <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(event.id)}>
+                            <Ionicons name={likedPosts.includes(event.id) ? 'heart' : 'heart-outline'}
+                              style={{ fontSize: 25, color: likedPosts.includes(event.id) ? 'red' : 'black' }} />
+                          </TouchableOpacity>
+                          <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(event.id)}>
+                            <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
+                          </TouchableOpacity>
+                          <TouchableOpacity activeOpacity={0.5}>
+                            <Ionicons
+                              name="share-outline"
+                              style={{ fontSize: 25 }}
+                              onPress={() => handleSharePress(event.id, event.selectedDate, event.location, event.title, event.description)}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      {isCommentOverlayVisible[event.id] && (
                         <CommentOverlay
-                          comments={postComments[post.id] || []}
+                          comments={postComments[event.id] || []}
                           commentText={commentText}
                           setCommentText={setCommentText}
-                          handlePostComment={() => handlePostComment(post.id, commentText)}
+                          handlePostComment={() => handlePostComment(event.id, commentText)}
                         />
                       )}
                     </View>
-                  );                  
-                });
-            return (
-                <View>
-                     {temp.length > 0 ? temp : <Text>No data to display</Text>}
+                  ))}
                 </View>
-                );      
+              );
             }
-            else if (isEventsPressed) {
-                return (
-                  <View>
-                    {userEvents.map((event) => (
-                      <View key={event.id} style={[styles.contentButton, styles.contentGap]}>
-                        <View style={styles.contentButtonFront}>
-                          {/* User information */}
-                          <View style={{ width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15 }}>
-                            <View style={styles.containerPfp}>
-                              <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                            </View> 
-                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
-                                 {event.userId && users.find((user) => user.id === event.userId)?.username || 'Unknown User'}
-                            </Text>
-                            <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 40,}}>
-                                {event.timestamp || 'invalid date'}
-                            </Text>
-                          </View>                     
-                          <SafeAreaView style={{ width: '100%', marginVertical: 5, paddingHorizontal: 15, paddingBottom: 2, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                            <Text style={{ fontSize: 16, color: 'green' }}>
-                                {event.title} 
-                            </Text>
-                            <Text style={{ fontSize: 14, marginBottom: 5 }}>
-                                {event.description}{'\n\n'}
-                                <Text style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Ionicons name="location" size={16} color="green" style={{ marginRight: 5 }} />
-                                    {event.location}{'\n'}
-                                </Text>
-                                <Text style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Ionicons name="calendar" size={16} color="green" style={{ marginRight: 5 }} />
-                                    {event.selectedDate} at {event.startTime}
-                                </Text>
-                            </Text>
-                            </SafeAreaView>
-                          < View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(event.id)}>
-                              <Ionicons name={likedPosts.includes(event.id) ? 'heart' : 'heart-outline'}
-                                style={{ fontSize: 25, color: likedPosts.includes(event.id) ? 'red' : 'black' }} />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(event.id)}>
-                              <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5}>
-                              <Ionicons
-                                name="share-outline"
-                                style={{ fontSize: 25 }}
-                                onPress={() => handleSharePress(event.id, event.selectedDate, event.location, event.title, event.description)}
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                        {isCommentOverlayVisible[event.id] && (
-                          <CommentOverlay
-                            comments={postComments[event.id] || []}
-                            commentText={commentText}
-                            setCommentText={setCommentText}
-                            handlePostComment={() => handlePostComment(event.id, commentText)}
-                          />
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                );
-              }
-            }
+          }
   
       function HeaderContent() {
         return (

@@ -310,7 +310,9 @@ export default function NewsfeedCol({ navigation }) {
             };
             getUsers()
 
-            reportRef.onSnapshot(
+            const queryOptions = { limit: 200 }; // Set the limit
+
+            reportRef.orderBy('dateTime', 'desc').limit(queryOptions.limit).onSnapshot(
                 querySnapshot => {
                     const uploads = []
                     querySnapshot.forEach((doc) => {
@@ -337,7 +339,7 @@ export default function NewsfeedCol({ navigation }) {
                     })
                 }
             )
-            reportFeedRef.onSnapshot(
+            reportFeedRef.orderBy('timestamp', 'desc').limit(queryOptions.limit).onSnapshot(
                 querySnapshot => {
                     const feedUploads = []
                     querySnapshot.forEach((doc) => {
@@ -410,6 +412,9 @@ export default function NewsfeedCol({ navigation }) {
         const [postComments, setPostComments] = useState({});
         const [currentPostId, setCurrentPostId] = useState(null);
 
+        const limitedUserUploads = userUploads.slice(0, 100);
+        const limitedUserFeedUploads = userFeedUploads.slice(0, 100);
+
         const handleToggleCommentOverlay = async (postId) => {
             setCurrentPostId(postId);
             setIsCommentOverlayVisible((prevState) => ({
@@ -436,6 +441,7 @@ export default function NewsfeedCol({ navigation }) {
                 }
         
                 const user = auth.currentUser;
+        
                 if (!user) {
                     console.error('User not authenticated.');
                     return;
@@ -493,7 +499,7 @@ export default function NewsfeedCol({ navigation }) {
 
         let temp = [];
         if(isAllPressed){
-        userUploads.map((uploads) => {
+        limitedUserUploads.map((uploads) => {
             var valueToPush = {};
             valueToPush["id"] = uploads.id;
             valueToPush["imageLink"] = uploads.associatedImage;
@@ -516,7 +522,7 @@ export default function NewsfeedCol({ navigation }) {
             });
         });
     
-            userFeedUploads.map((FeedUploads) => {
+            limitedUserFeedUploads.map((FeedUploads) => {
                 var valueFeedToPush = {};
                 valueFeedToPush["id"] = FeedUploads.id;
                 valueFeedToPush["imageUrl"] = FeedUploads.imageUrl;
