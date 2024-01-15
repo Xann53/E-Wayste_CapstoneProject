@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Modal, FlatList } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { db } from '../../../firebase_config';
+import { db, firebase } from '../../../firebase_config';
 import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, } from 'firebase/firestore';
 import DatePicker from 'react-native-datepicker';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+
+import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../../environments';
+import * as Location from 'expo-location';
 
 export default function ViewSchedDetails({ navigation, route }) {
   const { scheduleId } = route.params;
@@ -24,6 +27,35 @@ export default function ViewSchedDetails({ navigation, route }) {
   const [collectorList, setCollectorList] = useState([]);
   const [assignCollector, setAssignCollector]= useState("");
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [selectColRoute, setSelectColRoute] = useState(false);
+  let routeLongitude, routeLatitude, routeLocName;
+  const [route2, setRoute2] = useState({ coordinates: [] });
+  const [routeCtr, setRouteCtr] = useState(0);
+  const [latitude, setLatitude] = useState();
+  const [longitude, setLongitude] = useState();
+  const [location, setLocation] = useState("");
+  const schedRef = firebase.firestore().collection("schedule");
+  const [schedRoute, setSchedRoute] = useState();
+  let from, to;
+
+  useEffect(() => {
+    const onSnapshot = snapshot => {
+        const newData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        setSchedRoute(newData);
+
+    };
+
+    const unsubscribe = schedRef.onSnapshot(onSnapshot);
+
+    return () => {
+        unsubscribe();
+    };
+}, []);
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -147,6 +179,155 @@ export default function ViewSchedDetails({ navigation, route }) {
     hideDatePicker();
     setUpdatedData({ ...updatedData, selectedDate: formattedDate });
   };
+
+  const updateRoute = async() => {
+    const schedDocRef = doc(db, "schedule", scheduleId);
+    const newFields = {
+      collectionRoute: route2
+    };
+    await updateDoc(schedDocRef, newFields);
+  }
+
+  function CollectionRoute() {
+    const editRoute = async (name, newLat, newLon) => {
+        try {
+            const address = await Location.reverseGeocodeAsync({
+                latitude: parseFloat(newLat),
+                longitude: parseFloat(newLon)
+            });
+            let finalAddress = '';
+            if(address[0].streetNumber !== null)
+                finalAddress = finalAddress + address[0].streetNumber + ', ';
+            if(address[0].street !== null)
+                finalAddress = finalAddress + address[0].street + ', ';
+            if(address[0].name !== null)
+                finalAddress = finalAddress + address[0].name + ', ';
+            if(address[0].district !== null)
+                finalAddress = finalAddress + address[0].district + ', ';
+            if(address[0].city !== null)
+                finalAddress = finalAddress + address[0].city + ', ';
+            if(address[0].subregion !== null)
+                finalAddress = finalAddress + address[0].subregion + ', ';
+            if(address[0].region !== null)
+                finalAddress = finalAddress + address[0].region + ' region, ';
+            if(address[0].country !== null)
+                finalAddress = finalAddress + address[0].country;
+            // setLocation(finalAddress);
+            setRoute2({ 
+                coordinates: route2.coordinates.map((coordinate) => 
+                    coordinate.name === name ? {
+                        ...coordinate,
+                        locationName: finalAddress,
+                        latitude: newLat,
+                        longitude: newLon
+                    } : coordinate
+                )
+            });
+        } catch(e) {console.log(e)}
+    }
+
+    function ShowRoute() {
+        let temp = [];
+        route2.coordinates.map((coord) => {
+            temp.push(
+                <View style={{backgroundColor: '#F7F1E7', padding: 10, borderRadius: 5, display: 'flex', flex: 1, flexDirection: 'row'}}>
+                    <View style={{flex: 10, justifyContent: 'center'}}>
+                        <Text ellipsizeMode='tail' numberOfLines={1} style={{color: '#7E430F', margin: 0, padding: 0, paddingRight: 10, fontWeight: 600}}>{coord.locationName}</Text>
+                        <View style={{flexDirection: 'row', marginTop: 5}}>
+                            <View style={{flex: 1}}>
+                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 12, paddingRight: 15, fontWeight: 600}}>Lat: <Text style={{fontWeight: 'normal'}}>{coord.latitude}</Text></Text>
+                            </View>
+                            <View style={{flex: 1}}>
+                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 12, paddingRight: 15, fontWeight: 600}}>Lon: <Text style={{fontWeight: 'normal'}}>{coord.longitude}</Text></Text>
+                            </View>
+                        </View>
+                    </View>
+                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                        <TouchableOpacity activeOpacity={0.5} onPress={() => {
+                            setRoute2({
+                                coordinates: route2.coordinates.filter((coordinate) => coordinate.name !== coord.name),
+                            });
+                        }}>
+                            <Ionicons name='trash' style={{fontSize: 25, color: '#E19036'}} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            );
+        });
+
+        <ul>
+            {temp.map(item =>
+                <li key="{item}">{item}</li>
+            )}
+        </ul>
+
+        return (
+            <View style={{width: '100%', gap: 5, paddingHorizontal: 5}}>
+                {temp}
+            </View>
+        );
+    }
+
+    return (
+        <>
+            {selectColRoute ?
+                <View style={{width: 310, marginTop: 10, alignItems: 'center'}}>
+                    <TouchableOpacity style={{width: '100%', marginBottom: 10, backgroundColor: 'white', shadowColor: 'black', shadowOpacity: 0.7, shadowRadius: 2, elevation: 2, borderRadius: 15}} activeOpacity={0.5} onPress={() => {setSelectColRoute(false)}}>
+                        <View style={{width: '100%', height: 20, backgroundColor: '#F3F3F3', borderRadius: 15, borderWidth: 0.5, borderColor: '#C5C5C5', justifyContent: 'center', alignItems: 'center'}}>
+                            <Text style={{fontSize: 12}}>Collapse Routing Menu</Text>
+                        </View>
+                    </TouchableOpacity>
+                    <View style={{width: '100%', alignItems: 'flex-end', gap: 5}}>
+                        <View style={{width: '100%', height: 300, overflow: 'hidden', borderRadius: 10, borderWidth: 0.5}}>
+                            <MapView
+                                style={{width: '100%', height: '120%'}}
+                                provider={PROVIDER_GOOGLE}
+                                initialRegion={{
+                                    latitude: 10.3156992,
+                                    longitude: 123.88543660000005,
+                                    latitudeDelta: 0.0922,
+                                    longitudeDelta: 0.0421,
+                                }}
+                                customMapStyle={mapStyle}
+                            >
+                                {route2.coordinates.map(marker => (
+                                    <Marker
+                                        key={marker.name}
+                                        coordinate={{
+                                            latitude: parseFloat(marker.latitude),
+                                            longitude: parseFloat(marker.longitude)
+                                        }}
+                                        style={{zIndex: 95}}
+                                        draggable
+                                        onDragEnd={(e) => {
+                                            editRoute(marker.name, e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude);
+                                        }}
+                                    >
+                                        <Ionicons name='flag' style={{fontSize: 25, color: '#D41818'}} />    
+                                    </Marker>
+                                ))}
+                            </MapView>
+                        </View>
+                        <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(true)}}>
+                            <View style={{width: 35, height: 35, backgroundColor: 'orange', borderRadius: 5, justifyContent: 'center', alignItems: 'center', overflow: 'hidden'}}>
+                                <Text style={{fontSize: 40, fontWeight: 500, color: 'white', marginTop: -11}}>+</Text>
+                            </View>
+                        </TouchableOpacity>
+                        {ShowRoute()}
+                    </View>
+                </View>
+                :
+                <View style={{width: 310, marginTop: 10, alignItems: 'center'}}>
+                    <TouchableOpacity style={{width: '100%', backgroundColor: 'white', shadowColor: 'black', shadowOpacity: 0.7, shadowRadius: 2, elevation: 2, borderRadius: 15}} activeOpacity={0.5} onPress={() => {setSelectColRoute(true)}}>
+                        <View style={{width: '100%', height: 20, backgroundColor: '#F3F3F3', borderRadius: 15, borderWidth: 0.5, borderColor: '#C5C5C5', justifyContent: 'center', alignItems: 'center'}}>
+                            <Text style={{fontSize: 12}}>Expand Routing Menu</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            }
+        </>
+    );
+  }
   
 
   return (
@@ -166,7 +347,12 @@ export default function ViewSchedDetails({ navigation, route }) {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={handleUpdate}>
+            <TouchableOpacity onPress={() => {
+              handleUpdate();
+              if(updatedData.type === "Collection") {
+                updateRoute();
+              }
+            }}>
               <Ionicons name="checkmark" style={{ fontSize: 35, color: "rgb(179, 229, 94)"}} />
             </TouchableOpacity>
           )}
@@ -237,25 +423,26 @@ export default function ViewSchedDetails({ navigation, route }) {
                         <Text style={styles.fieldName}>Collection Route</Text>
                         {isEditable ? (
                           // Display TextInput for editing
-                          <TextInput
-                            style={[styles.fieldValue, focusedField === 'collectionRoute' && styles.focusedField]}
-                            value={updatedData.collectionRoute}
-                            editable={isEditable}
-                            onFocus={() => handleFieldFocus('collectionRoute')}
-                            onBlur={handleFieldBlur}
-                            onChangeText={(text) => setUpdatedData({ ...updatedData, collectionRoute: text })}
-                          />
+                          <>{CollectionRoute()}</>
                         ) : (
                           // Display locationName values with "from" and "to" labels in different colors
                           <>
-                            {scheduleData.collectionRoute.coordinates[0] && (
+                            {schedRoute.map((temp) => {
+                              if(temp.collectionRoute.coordinates[0] !== undefined && temp.id.includes(scheduleId)) {
+                                from = temp.collectionRoute.coordinates[0].locationName + '';
+                              }
+                              if(temp.collectionRoute.coordinates[1] !== undefined && temp.id.includes(scheduleId)) {
+                                to = temp.collectionRoute.coordinates[1].locationName + '';
+                              }
+                            })}
+                            {from && (
                               <Text style={styles.fieldValue}>
-                                <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {scheduleData.collectionRoute.coordinates[0].locationName}
+                                <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {from}
                               </Text>
                             )}
-                            {scheduleData.collectionRoute.coordinates[1] && (
+                            {to && (
                               <Text style={styles.fieldValue}>
-                                <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {scheduleData.collectionRoute.coordinates[1].locationName}
+                                <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {to}
                               </Text>
                             )}
                           </>
@@ -492,7 +679,7 @@ export default function ViewSchedDetails({ navigation, route }) {
                                 activeOpacity={0.5}
                                 onPress={() => {
                                     if(routeLocName !== undefined && routeLatitude !== undefined && routeLongitude !== undefined) {
-                                        if(selectType === 'Collection') {
+                                        if(updatedData.type === 'Collection') {
                                             (async() => {
                                                 let {status} = await Location.requestForegroundPermissionsAsync();
                                                 if (status !== 'granted') {
@@ -500,16 +687,16 @@ export default function ViewSchedDetails({ navigation, route }) {
                                                     return;
                                                 }
                                             })();
-                                            setRoute((prev) => ({
+                                            setRoute2((prev) => ({
                                                 ...prev,
                                                 coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
                                             }));
                                             setRouteCtr(routeCtr + 1);
-                                        } else if(selectType === 'Assignment') {
+                                        } else if(updatedData.type === 'Assignment') {
                                             setLocation(routeLocName);
                                             setLatitude(routeLatitude);
                                             setLongitude(routeLongitude);
-                                        } else if(selectType === 'Event') {
+                                        } else if(updatedData.type === 'Event') {
                                             setLocation(routeLocName);
                                             setLatitude(routeLatitude);
                                             setLongitude(routeLongitude);
@@ -582,3 +769,22 @@ const styles = StyleSheet.create({
     width: 310,
   },
 });
+
+const mapStyle = [
+  {
+      elementType: 'labels.icon',
+      stylers: [
+          {
+              visibility: 'off',
+          },
+      ],
+  },
+  {
+      featureType: 'poi.business',
+      stylers: [
+          {
+              visibility: 'off',
+          },
+      ],
+  },
+];
