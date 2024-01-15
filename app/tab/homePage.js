@@ -11,7 +11,7 @@ import uuid from 'react-native-uuid';
 import moment from 'moment';
 
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL, uploadBytes } from 'firebase/storage';
 
 import SideBar from '../../components/SideNav';
@@ -65,40 +65,59 @@ export default function Newsfeed({ navigation }) {
         .format('YYYY/MM/DD hh:mm:ss a');
     
     useEffect(() => {
-    const fetchEvents = async () => {
-    try {
-      const eventsData = await getDocs(collection(db, 'schedule'));
-      const events = eventsData.docs.map((doc) => {
-        const eventData = doc.data();
-        if (eventData.type === 'Event') {
-          return {
-            id: doc.id,
-            description: eventData.description,
-            location: eventData.location,
-            startTime: eventData.startTime,
-            selectedDate: eventData.selectedDate,
-            title: eventData.title,
-            userId: eventData.userID,
-            timestamp: eventData.dateTimeUploaded,
-          };
-        }
-        return null; // Ignore non-event documents
-      }).filter(event => event !== null);
-
-      // Fetch user information for each event
-      const userIds = events.map(event => event.userId);
-      const eventUsers = await getUsersByIds(userIds);
-
-      const enrichedEvents = events.map((event, index) => ({
-        ...event,
-        userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
-      }));
-
-      setUserEvents(enrichedEvents);
-    } catch (error) {
-      console.error('Error fetching events: ', error);
-        }
-    };
+        useEffect(() => {
+            const fetchEvents = () => {
+              try {
+                const eventsRef = collection(db, 'schedule');
+          
+                // Subscribe to changes and listen for real-time updates
+                const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
+                  const events = querySnapshot.docs.map((doc) => {
+                    const eventData = doc.data();
+                    if (eventData.type === 'Event') {
+                      return {
+                        id: doc.id,
+                        description: eventData.description,
+                        location: eventData.location,
+                        startTime: eventData.startTime,
+                        selectedDate: eventData.selectedDate,
+                        title: eventData.title,
+                        userId: eventData.userID,
+                        timestamp: eventData.dateTimeUploaded,
+                      };
+                    }
+                    return null; // Ignore non-event documents
+                  }).filter(event => event !== null);
+          
+                  // Sort events in ascending order based on timestamp
+                  events.sort((a, b) => {
+                    const timestampA = new Date(a.timestamp).getTime();
+                    const timestampB = new Date(b.timestamp).getTime();
+                    return timestampB - timestampA;
+                  });
+          
+                  // Fetch user information for each event
+                  const userIds = events.map(event => event.userId);
+                  const eventUsers = await getUsersByIds(userIds);
+          
+                  const enrichedEvents = events.map((event, index) => ({
+                    ...event,
+                    userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
+                  }));
+          
+                  setUserEvents(enrichedEvents);
+                });
+          
+                // Store the unsubscribe function to clean up the subscription when the component unmounts
+                return () => unsubscribe();
+              } catch (error) {
+                console.error('Error fetching events: ', error);
+              }
+            };
+          
+            // Fetch events when the component mounts
+            fetchEvents();
+          }, []);
         // Fetch events when the component mounts
         fetchEvents();
       }, []);
@@ -227,17 +246,14 @@ export default function Newsfeed({ navigation }) {
                 userId,
                 timestamp: fullDateTime,
             };
-    
-            // Continue with the post creation logic, including imageUrl or without it
             const postRef = await addDoc(collection(db, 'posts'), postData);
     
-            // Reset state values
             setPostTitle('');
             setPostText('');
             setSelectedImage('');
             setModalVisible(false);
 
-             // Check if the number of posts exceeds 500
+            // Check if the number of posts exceeds 500
             const postsQuery = query(collection(db, 'posts'));
             const postsSnapshot = await getDocs(postsQuery);
             const numPosts = postsSnapshot.size;
@@ -245,7 +261,6 @@ export default function Newsfeed({ navigation }) {
             const sortedPostsQuery = query(collection(db, 'posts'), orderBy('timestamp', 'asc'));
             const sortedPostsSnapshot = await getDocs(sortedPostsQuery);
             const oldestPost = sortedPostsSnapshot.docs[0];
-            // Delete the oldest post
             await deleteDoc(doc(db, 'posts', oldestPost.id));
             }
         } catch (error) {
@@ -612,9 +627,10 @@ export default function Newsfeed({ navigation }) {
                 );      
             }
             else if (isEventsPressed) {
+                const sortedEvents = userEvents.sort((a, b) => moment(a.timestamp).valueOf() - moment(b.timestamp).valueOf());
                 return (
                   <View>
-                    {userEvents.map((event) => (
+                    {sortedEvents.map((event) => (
                       <View key={event.id} style={[styles.contentButton, styles.contentGap]}>
                         <View style={styles.contentButtonFront}>
                           {/* User information */}
@@ -625,7 +641,7 @@ export default function Newsfeed({ navigation }) {
                             <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
                                  {event.userId && users.find((user) => user.id === event.userId)?.username || 'Unknown User'}
                             </Text>
-                            <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 50,}}>
+                            <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 50}}>
                                 {event.timestamp || 'invalid date'}
                             </Text>
                           </View>                     
@@ -767,7 +783,7 @@ export default function Newsfeed({ navigation }) {
                                     <TouchableOpacity activeOpacity={0.5} onPress={handleEventsPress}>
                                         <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: isEventsPressed ? 'rgb(179, 229, 94)' : 'white' }}>
                                             <Text style={{ fontWeight: 700, fontSize: 12, color: 'rgb(113, 112, 108)' }}>Events</Text>
-                                        </View>
+                                        </View> 
                                     </TouchableOpacity>
                                 </View>
                             </View>     

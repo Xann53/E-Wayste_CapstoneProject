@@ -415,7 +415,7 @@ export default function MapCol({ navigation }) {
                     }
                 })
 
-                const title = 'COLLECTED GARBAGE REPORT';
+                const title = 'REPORTED GARBAGE COLLECTED';
                 const body = 'Garbage reported by ' + userFullName + ' at location (' + location + ') has been collected';
                 const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
                 PushNotif(title, body, fullDateTime);
@@ -458,7 +458,7 @@ export default function MapCol({ navigation }) {
                 console.log(e);
             }
 
-            const title = 'COLLECTION HAS ENDED!';
+            const title = 'COLLECTION HAS ENDED';
             const body = 'Scheduled Collection has Ended';
             const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
             PushNotif(title, body, fullDateTime);
@@ -602,7 +602,8 @@ export default function MapCol({ navigation }) {
                     }
                 </MapView>
                 {infoID ?
-                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 140, width: '90%', margin:20,
+                     padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 5}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
                             <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10}}>
                                 <Image style={{width: '100%', height: '100%',  flex: 1, resizeMode: 'cover', borderRadius: 5}} source={{uri: infoImage}} />
@@ -663,7 +664,7 @@ export default function MapCol({ navigation }) {
                     <></>
                 }
                 {colMenu ?
-                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, margin: 20, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
                             <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10, justifyContent: 'center', alignItems: 'center'}}>
                                 <Ionicons name='trash' style={{fontSize: 90, color: 'green'}} />

@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 import { parse } from 'date-fns';
 import moment from 'moment';
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 import SideBar from '../../components/SideNav';
@@ -68,41 +68,50 @@ export default function NewsfeedCol({ navigation }) {
     };    
     
     useEffect(() => {
-    const fetchEvents = async () => {
-    try {
-      const eventsData = await getDocs(collection(db, 'schedule'));
-      const events = eventsData.docs.map((doc) => {
-        const eventData = doc.data();
-        if (eventData.type === 'Event') {
-          return {
-            id: doc.id,
-            description: eventData.description,
-            location: eventData.location,
-            startTime: eventData.startTime,
-            selectedDate: eventData.selectedDate,
-            title: eventData.title,
-            userId: eventData.userID,
-            timestamp: eventData.dateTimeUploaded,
-          };
-        }
-        return null; // Ignore non-event documents
-      }).filter(event => event !== null);
+        const fetchEvents = () => {
+          try {
+            const eventsRef = collection(db, 'schedule');
+      
+            const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
+              const events = querySnapshot.docs.map((doc) => {
+                const eventData = doc.data();
+                if (eventData.type === 'Event') {
+                  return {
+                    id: doc.id,
+                    description: eventData.description,
+                    location: eventData.location,
+                    startTime: eventData.startTime,
+                    selectedDate: eventData.selectedDate,
+                    title: eventData.title,
+                    userId: eventData.userID,
+                    timestamp: eventData.dateTimeUploaded,
+                  };
+                }
+                return null; 
+              }).filter(event => event !== null);
+      
+              events.sort((a, b) => {
+                const timestampA = new Date(a.timestamp).getTime();
+                const timestampB = new Date(b.timestamp).getTime();
+                return timestampB - timestampA;
+              });
+      
+              const userIds = events.map(event => event.userId);
+              const eventUsers = await getUsersByIds(userIds);
+      
+              const enrichedEvents = events.map((event, index) => ({
+                ...event,
+                userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
+              }));
+      
+              setUserEvents(enrichedEvents);
+            });
 
-      // Fetch user information for each event
-      const userIds = events.map(event => event.userId);
-      const eventUsers = await getUsersByIds(userIds);
-
-      const enrichedEvents = events.map((event, index) => ({
-        ...event,
-        userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
-      }));
-
-      setUserEvents(enrichedEvents);
-    } catch (error) {
-      console.error('Error fetching events: ', error);
-        }
-    };
-        // Fetch events when the component mounts
+            return () => unsubscribe();
+          } catch (error) {
+            console.error('Error fetching events: ', error);
+          }
+        };
         fetchEvents();
       }, []);
       
@@ -231,7 +240,6 @@ export default function NewsfeedCol({ navigation }) {
                 timestamp: fullDateTime,
             };
     
-            // Continue with the post creation logic, including imageUrl or without it
             const postRef = await addDoc(collection(db, 'posts'), postData);
     
             // Reset state values
@@ -428,7 +436,6 @@ export default function NewsfeedCol({ navigation }) {
                 }
         
                 const user = auth.currentUser;
-        
                 if (!user) {
                     console.error('User not authenticated.');
                     return;

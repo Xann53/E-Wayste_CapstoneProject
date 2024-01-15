@@ -394,7 +394,7 @@ export default function MapAut({ navigation }) {
                     }
                 </MapView>
                 {infoID ?
-                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                    <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, margin: 20, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
                             <View style={{flex: 1, backgroundColor: '#E4EEEA', padding: 5, borderRadius: 10}}>
                                 <Image style={{width: '100%', height: '100%',  flex: 1, resizeMode: 'cover', borderRadius: 5}} source={{uri: infoImage}} />

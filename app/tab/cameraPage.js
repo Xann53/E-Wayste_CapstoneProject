@@ -196,7 +196,7 @@ export default function CameraOpen({ navigation: {goBack} }) {
         });
 
         const title = 'NEW GARBAGE REPORT!';
-        const body = userFullName + 'has submitted a report for collection';
+        const body = userFullName + ' has submitted a report for collection';
         PushNotif(title, body, fullDateTime);
 
         setImage(null);

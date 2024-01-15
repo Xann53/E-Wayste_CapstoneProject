@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage"; 
 import { db } from '../../../firebase_config'; 
 import { collection, addDoc, getDocs, where, query, onSnapshot } from 'firebase/firestore'; 
+import PushNotif from '../../../components/PushNotification';
 
 export default function ScheduleCol({navigation}) {  
   const [openSideBar, setOpenSideBar] = React.useState(); 

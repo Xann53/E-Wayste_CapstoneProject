@@ -1,17 +1,18 @@
 import React from 'react';
 import { fetchUserId } from '../../components/userService';
 import CommentOverlay from '../../components/commentOverlay';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image , Share, Modal} from "react-native";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button,  RefreshControl, Image , Share, Modal} from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from 'expo-image-picker';
 import { parse } from 'date-fns';
+
 import uuid from 'react-native-uuid';
 import moment from 'moment';
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc, onSnapshot} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL,  uploadBytes} from 'firebase/storage';
 import SideBar from '../../components/SideNav';
 
@@ -74,44 +75,59 @@ export default function NewsfeedAut({navigation}) {
         return formattedDate;
     }; 
 
-     useEffect(() => {
-      const fetchEvents = async () => {
-      try {
-        const eventsData = await getDocs(collection(db, 'schedule'));
-        const events = eventsData.docs.map((doc) => {
-          const eventData = doc.data();
-          if (eventData.type === 'Event') {
-            return {
-              id: doc.id,
-              description: eventData.description,
-              location: eventData.location,
-              startTime: eventData.startTime,
-              selectedDate: eventData.selectedDate,
-              title: eventData.title,
-              userId: eventData.userID,
-              timestamp: eventData.dateTimeUploaded,
-            };
-          }
-          return null; // Ignore non-event documents
-        }).filter(event => event !== null);
-  
-        // Fetch user information for each event
-        const userIds = events.map(event => event.userId);
-        const eventUsers = await getUsersByIds(userIds);
-  
-        const enrichedEvents = events.map((event, index) => ({
-          ...event,
-          userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
-        }));
-  
-        setUserEvents(enrichedEvents);
-      } catch (error) {
-        console.error('Error fetching events: ', error);
-          }
+    useEffect(() => {
+      const fetchEvents = () => {
+        try {
+          const eventsRef = collection(db, 'schedule');
+    
+          // Subscribe to changes and listen for real-time updates
+          const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
+            const events = querySnapshot.docs.map((doc) => {
+              const eventData = doc.data();
+              if (eventData.type === 'Event') {
+                return {
+                  id: doc.id,
+                  description: eventData.description,
+                  location: eventData.location,
+                  startTime: eventData.startTime,
+                  selectedDate: eventData.selectedDate,
+                  title: eventData.title,
+                  userId: eventData.userID,
+                  timestamp: eventData.dateTimeUploaded,
+                };
+              }
+              return null; // Ignore non-event documents
+            }).filter(event => event !== null);
+    
+            // Sort events in ascending order based on timestamp
+            events.sort((a, b) => {
+              const timestampA = new Date(a.timestamp).getTime();
+              const timestampB = new Date(b.timestamp).getTime();
+              return timestampB - timestampA;
+            });
+    
+            // Fetch user information for each event
+            const userIds = events.map(event => event.userId);
+            const eventUsers = await getUsersByIds(userIds);
+    
+            const enrichedEvents = events.map((event, index) => ({
+              ...event,
+              userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
+            }));
+    
+            setUserEvents(enrichedEvents);
+          });
+    
+          // Store the unsubscribe function to clean up the subscription when the component unmounts
+          return () => unsubscribe();
+        } catch (error) {
+          console.error('Error fetching events: ', error);
+        }
       };
-          // Fetch events when the component mounts
-          fetchEvents();
-        }, []);
+    
+      // Fetch events when the component mounts
+      fetchEvents();
+    }, []);
         
         const getUsersByIds = async (userIds) => {
           try {
@@ -675,11 +691,11 @@ export default function NewsfeedAut({navigation}) {
                             <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
                                  {event.userId && users.find((user) => user.id === event.userId)?.username || 'Unknown User'}
                             </Text>
-                            <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 50,}}>
+                            <Text style={{ fontSize: 12, color: 'rgba(113, 112, 108, 1)', marginLeft: 40,}}>
                                 {event.timestamp || 'invalid date'}
                             </Text>
                           </View>                     
-                          <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                          <SafeAreaView style={{ width: '100%', marginVertical: 5, paddingHorizontal: 15, paddingBottom: 2, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
                             <Text style={{ fontSize: 16, color: 'green' }}>
                                 {event.title} 
                             </Text>

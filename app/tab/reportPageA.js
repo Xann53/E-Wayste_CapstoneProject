@@ -6,12 +6,10 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parse } from 'date-fns';
 
-
 import { db, auth, storage, firebase } from '../../firebase_config';
-import { collection, addDoc,getDoc, getDocs, query, where} from 'firebase/firestore';
+import { collection, addDoc,getDoc, getDocs, query, where, onSnapshot} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { Circle } from 'react-native-progress';
-
 
 import SideBar from '../../components/SideNav';
 
@@ -42,7 +40,6 @@ export default function ReportAut({navigation}) {
 
     const [viewAllReports, setViewAllReports] = useState(false);
     const currentDate = new Date().toISOString().split('T')[0];
-
 
     useEffect(() => {
         const fetchData = async () => {
@@ -107,6 +104,39 @@ export default function ReportAut({navigation}) {
     
         fetchReports();
     }, []);
+
+    useEffect(() => {
+        const reportsCollection = collection(db, "generalUsersReports");
+        const setupCollectedListener = () => {
+          const collectedQuery = query(reportsCollection, where('status', '==', 'collected'));
+    
+          const unsubscribe = onSnapshot(collectedQuery, (collectedSnapshot) => {
+            setCollectedCount(collectedSnapshot.size);
+            setProgress1(collectedSnapshot.size);
+          });
+    
+          return unsubscribe;
+        };
+
+        const setupUncollectedListener = () => {
+          const uncollectedQuery = query(reportsCollection, where('status', '==', 'uncollected'));
+    
+          const unsubscribe = onSnapshot(uncollectedQuery, (uncollectedSnapshot) => {
+            setUncollectedCount(uncollectedSnapshot.size);
+            setProgress2(uncollectedSnapshot.size);
+          });
+    
+          return unsubscribe;
+        };
+    
+        const collectedListener = setupCollectedListener();
+        const uncollectedListener = setupUncollectedListener();
+    
+        return () => {
+          collectedListener();
+          uncollectedListener();
+        };
+      }, [reportRef])
 
     useEffect(() => {
         if(!isFocused) {
