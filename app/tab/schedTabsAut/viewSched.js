@@ -385,19 +385,33 @@ export default function ViewSchedDetails({ navigation, route }) {
                 )}
                 {/* Common fields */}
                 {scheduleData.description && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Description</Text>
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldName}>Description</Text>
+                  {updatedData && updatedData.description && updatedData.description.length > 150 ? (
+                    <ScrollView style={{ maxHeight: 150 }}>
+                      <TextInput
+                        style={[styles.fieldValue, focusedField === 'description' && styles.focusedField, { height: 150 }]}
+                        value={updatedData.description}
+                        editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || scheduleData.type === 'Event')}
+                        multiline={true}
+                        onFocus={() => handleFieldFocus('description')}
+                        onBlur={handleFieldBlur}
+                        onChangeText={(text) => setUpdatedData({ ...updatedData, description: text })}
+                      />
+                    </ScrollView>
+                  ) : (
                     <TextInput
                       style={[styles.fieldValue, focusedField === 'description' && styles.focusedField]}
                       value={updatedData.description}
-                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment')}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || scheduleData.type === 'Event')}
                       multiline={true}
                       onFocus={() => handleFieldFocus('description')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, description: text })}
                     />
-                  </View>
-                )}
+                  )}
+                </View>
+              )}
                 {/* Dynamic location field based on the type */}
                 {(updatedData.type === 'Event' || updatedData.type === 'Assignment') && (
                     <View style={styles.fieldContainer}>
@@ -405,7 +419,7 @@ export default function ViewSchedDetails({ navigation, route }) {
                     {isEditable ? (
                       <TouchableOpacity
                         style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
-                        onPress={() => setAddNewLocation(true)} // Trigger addNewLocation when editing the location
+                        onPress={() => setAddNewLocation(true)} 
                       >
                         <Text>{updatedData.location}</Text>
                       </TouchableOpacity>

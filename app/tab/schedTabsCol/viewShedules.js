@@ -81,20 +81,34 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                   </View>
                 )}
                 {scheduleData.description && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Description</Text>
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldName}>Description</Text>
+                  {updatedData && updatedData.description && updatedData.description.length > 140 ? (
+                    <ScrollView style={{ maxHeight: 140 }}>
+                      <TextInput
+                        style={[styles.fieldValue, focusedField === 'description' && styles.focusedField, { height: 140 }]}
+                        value={updatedData.description}
+                        editable={(updatedData.type === 'Collection' || updatedData.type === 'Assignment' || scheduleData.type === 'Event')}
+                        multiline={true}
+                        onFocus={() => handleFieldFocus('description')}
+                        onBlur={handleFieldBlur}
+                        onChangeText={(text) => setUpdatedData({ ...updatedData, description: text })}
+                      />
+                    </ScrollView>
+                  ) : (
                     <TextInput
                       style={[styles.fieldValue, focusedField === 'description' && styles.focusedField]}
                       value={updatedData.description}
-                      editable={isEditable}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || scheduleData.type === 'Event')}
                       multiline={true}
                       onFocus={() => handleFieldFocus('description')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, description: text })}
                     />
-                  </View>
+                  )}
+                </View>
                 )}
-                {scheduleData.location && (
+                {/*{scheduleData.location && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Location</Text>
                     <TextInput
@@ -106,6 +120,34 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                       onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
                     />
                   </View>
+                )}*/}
+                {scheduleData.location && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldName}>Location</Text>
+                  {updatedData && updatedData.location && updatedData.location.length > 100 ? (
+                    <ScrollView style={{ maxHeight: 100 }}>
+                      <TextInput
+                        style={[styles.fieldValue, focusedField === 'location' && styles.focusedField, { height: 100 }]}
+                        value={updatedData.location}
+                        editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || scheduleData.type === 'Event')}
+                        multiline={true}
+                        onFocus={() => handleFieldFocus('location')}
+                        onBlur={handleFieldBlur}
+                        onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
+                      />
+                    </ScrollView>
+                  ) : (
+                    <TextInput
+                      style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
+                      value={updatedData.location}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || scheduleData.type === 'Event')}
+                      multiline={true}
+                      onFocus={() => handleFieldFocus('location')}
+                      onBlur={handleFieldBlur}
+                      onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
+                    />
+                  )}
+                </View>
                 )}
                 {scheduleData.type && scheduleData.type === 'Collection' && (
                   <View style={styles.fieldContainer}>
