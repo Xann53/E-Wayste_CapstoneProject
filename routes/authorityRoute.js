@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import NewsfeedAut from '../app/homePageA';
+import Manage from '../app/managePage';
 import ReportAut from '../app/reportPageA';
 import MapAut from '../app/mapPageAut';
 import SchedLayout from './schedRouteAut';
@@ -23,6 +24,9 @@ export default function AuthorityLayout() {
                     let rn = route.name;
                     if (rn === 'home') {
                         iconName = focused ? 'home' : 'home-outline'
+                    }
+                    if (rn === 'manage') {
+                        iconName = focused ? 'list' : 'list-outline'
                     }
                     if (rn === 'report') {
                         iconName = focused ? 'file-tray-stacked' : 'file-tray-stacked-outline'
@@ -65,6 +69,7 @@ export default function AuthorityLayout() {
             })}
         >
             <Tab.Screen name='home' component={NewsfeedAut} options={{headerShown: false}} />
+            <Tab.Screen name='manage' component={Manage} options={{headerShown: false}} />
             <Tab.Screen name='report' component={ReportAut} options={{ headerShown: false }} />
             <Tab.Screen name='map' component={MapAut} options={{ headerShown: false }} />
             <Tab.Screen name='schedule' component={SchedLayout} options={{ headerShown: false }} />

@@ -20,7 +20,7 @@ export default function Login({navigation}) {
       querySnapshot => {
         const uploads = []
         querySnapshot.forEach((doc) => {
-          const {accountType, username, firstName, lastName, province, municipality, barangay, email, contactNo, plateNo} = doc.data();
+          const {accountType, username, firstName, lastName, province, municipality, barangay, email, contactNo, lguCode} = doc.data();
           uploads.push({
             id: doc.id,
             accountType,
@@ -32,7 +32,7 @@ export default function Login({navigation}) {
             barangay,
             email,
             contactNo,
-            plateNo
+            lguCode
           })
         })
         setUsers(uploads)
@@ -59,7 +59,7 @@ export default function Login({navigation}) {
       let municipality;
       let barangay;
       let contactNo;
-      let plateNo;
+      let lguCode;
 
       users.map((user) => {
         if (user.username === usernameEmail.trim()) {
@@ -80,10 +80,10 @@ export default function Login({navigation}) {
             municipality = user.municipality;
             barangay = user.barangay;
             contactNo = user.contactNo;
-            if(user.plateNo !== undefined)
-              plateNo = user.plateNo;
+            if(user.lguCode !== undefined)
+              lguCode = user.lguCode;
             else
-              plateNo = 'N/A';
+              lguCode = 'N/A';
           }
         })
       } else if(!usernameUsed) {
@@ -99,10 +99,10 @@ export default function Login({navigation}) {
             municipality = user.municipality;
             barangay = user.barangay;
             contactNo = user.contactNo;
-            if(user.plateNo !== undefined)
-              plateNo = user.plateNo;
+            if(user.lguCode !== undefined)
+              lguCode = user.lguCode;
             else
-              plateNo = 'N/A';
+              lguCode = 'N/A';
           }
         })
       }
@@ -120,7 +120,7 @@ export default function Login({navigation}) {
         await AsyncStorage.setItem('userMunicipality', municipality);
         await AsyncStorage.setItem('userBarangay', barangay);
         await AsyncStorage.setItem('userContact', contactNo);
-        await AsyncStorage.setItem('userPlateNo', plateNo);
+        await AsyncStorage.setItem('userLguCode', lguCode);
 
         console.log(
           await AsyncStorage.getItem('userId') + ", " +
@@ -133,7 +133,7 @@ export default function Login({navigation}) {
           await AsyncStorage.getItem('userMunicipality') + ", " +
           await AsyncStorage.getItem('userBarangay') + ", " +
           await AsyncStorage.getItem('userContact') + ", and " +
-          await AsyncStorage.getItem('userPlateNo')
+          await AsyncStorage.getItem('userLguCode')
         );
 
         Redirect(email);
