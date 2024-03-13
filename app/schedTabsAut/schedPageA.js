@@ -5,9 +5,11 @@ import { Calendar } from 'react-native-calendars';
 import { useIsFocused } from '@react-navigation/native'; 
 import { db } from '../../firebase_config';
 import { parse } from 'date-fns';
-import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
+import OpenSideBar from '../../components/OpenSideNav';
 
 export default function ScheduleAut({ navigation }) {
+  const isFocused = useIsFocused();
   const [refreshing, setRefreshing] = useState(false);
   const [openSideBar, setOpenSideBar] = useState(false);
   const [viewSched, setViewSched] = useState(false);
@@ -72,14 +74,23 @@ export default function ScheduleAut({ navigation }) {
     } catch (error) { 
       console.log('Error fetching schedule:', error); 
     } 
-  }; 
+  };
 
-  const isFocused = useIsFocused(); 
-  useEffect(() => { 
-    if (!isFocused) { 
-      setOpenSideBar(false); 
-    } 
-  }); 
+  useEffect(() => {
+      if(!isFocused) {
+          setOpenSideBar();
+      }
+  });
+
+  function SideNavigation(navigation) {
+      const closeSideNav = async() => {
+          setOpenSideBar();
+      }
+
+      return (
+          <OpenSideBar navigation={navigation} close={closeSideNav} />
+      );
+  }
 
   const onRefresh = React.useCallback(() => { 
     setRefreshing(true); 
@@ -109,130 +120,7 @@ export default function ScheduleAut({ navigation }) {
       } 
       return markedDates; 
     }, {}); 
-  } 
-
-  function SideBar({ navigation }) { 
-    return ( 
-      <> 
-        <View 
-          style={{ 
-            position: 'absolute', 
-            width: '100%', 
-            height: '100%', 
-            justifyContent: 'center', 
-            alignItems: 'flex-start', 
-            backgroundColor: 'rgba(0,0,0,0.7)', 
-            zIndex: 99, 
-          }} 
-        > 
-          <View 
-            style={{ 
-              width: 280, 
-              height: '100%', 
-              backgroundColor: '#ffffff', 
-              paddingBottom: 60, 
-              alignItems: 'center', 
-            }} 
-          > 
-            <TouchableOpacity 
-              style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} 
-              onPress={() => { 
-                setOpenSideBar(false); 
-              }} 
-            > 
-              <Ionicons name="arrow-back" style={{ fontSize: 40, color: 'rgb(81,175,91)' }} /> 
-            </TouchableOpacity> 
-            <View style={{ width: '100%', alignItems: 'center', gap: 10, marginTop: 60 }}> 
-              <Image 
-                source={require('../../assets/E-Wayste-logo.png')} 
-                style={{ width: 180, height: 161, marginBottom: 10 }} 
-              /> 
-              <View 
-                style={{ 
-                  width: '95%', 
-                  height: 40, 
-                  backgroundColor: 'rgb(230, 230, 230)', 
-                  overflow: 'hidden', 
-                  borderRadius: 10, 
-                  borderWidth: 0.5, 
-                }} 
-              > 
-                <TouchableOpacity activeOpacity={0.5} onPress={() => { setOpenSideBar(false); navigation.navigate('profile') }}> 
-                  <View 
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      backgroundColor: 'rgb(247, 245, 243)', 
-                    }} 
-                  > 
-                    <Text>User Profile</Text> 
-                  </View> 
-                </TouchableOpacity> 
-              </View> 
-              <View 
-                style={{ 
-                  width: '95%', 
-                  height: 40, 
-                  backgroundColor: 'rgb(230, 230, 230)', 
-                  overflow: 'hidden', 
-                  borderRadius: 10, 
-                  borderWidth: 0.5, 
-                }} 
-              > 
-                <TouchableOpacity activeOpacity={0.5}> 
-                  <View 
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      justifyContent: 'center', 
-                      alignItems: 'center', 
-                      backgroundColor: 'rgb(247, 245, 243)', 
-                    }} 
-                  > 
-                    <Text>Settings</Text> 
-                  </View> 
-                </TouchableOpacity> 
-              </View> 
-            </View> 
-            <View 
-              style={{ 
-                position: 'absolute', 
-                width: '95%', 
-                height: 40, 
-                bottom: 80, 
-                backgroundColor: 'rgb(230, 230, 230)', 
-                overflow: 'hidden', 
-                borderRadius: 10, 
-                borderWidth: 0.5, 
-              }} 
-            > 
-              <TouchableOpacity activeOpacity={0.5} onPress={() => { setOpenSideBar(false); navigation.navigate('login') }}> 
-                <View 
-                  style={{ 
-                    width: '100%', 
-                    height: '100%', 
-                    justifyContent: 'center', 
-                    alignItems: 'center', 
-                    backgroundColor: 'rgb(247, 245, 243)', 
-                  }} 
-                > 
-                  <Text>Logout</Text> 
-                </View> 
-              </TouchableOpacity> 
-            </View> 
-          </View> 
-          <TouchableOpacity 
-            style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1 }} 
-            onPress={() => { 
-              setOpenSideBar(false); 
-            }} 
-          /> 
-        </View> 
-      </> 
-    ); 
-  } 
+  }
   
   function ViewSchedButton({ scheduleData }) { 
     return ( 
@@ -412,7 +300,7 @@ export default function ScheduleAut({ navigation }) {
       }> 
         <SafeAreaView style={styles.container}> 
           <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }}> 
-            <Ionicons name="menu" style={{ fontSize: 40, color: '#ffffff' }} onPress={() => { setOpenSideBar(true) }} /> 
+            <Ionicons name="menu" style={{ fontSize: 40, color: '#ffffff' }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }} /> 
           </TouchableOpacity> 
           <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => { navigation.navigate('notification') }}> 
             <Ionicons name="notifications" style={{ fontSize: 35, color: '#ffffff' }} /> 
@@ -465,7 +353,7 @@ export default function ScheduleAut({ navigation }) {
           </SafeAreaView> 
         </SafeAreaView> 
       </ScrollView> 
-      {openSideBar && <SideBar navigation={navigation} />} 
+      {openSideBar} 
     </> 
   ); 
 } 

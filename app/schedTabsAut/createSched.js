@@ -16,6 +16,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { GOOGLE_API_KEY } from '../../environments';
 
 import PushNotif from '../../components/PushNotification';
+import TruckList from '../../components/SchedTruckList';
 
 export default function AddSched({navigation}) {
 
@@ -28,7 +29,7 @@ export default function AddSched({navigation}) {
     const [description, setDescription] = useState("");
     const [location, setLocation] = useState("");
     const [title, setTitle] = useState("");
-    const [assignCollector, setAssignCollector]= useState("");
+    const [assignedTruck, setAssignedTruck]= useState("");
     const [selectedDate, setSelectedDate] = useState(null);
     const [markedDates, setMarkedDates] = useState({});
     
@@ -39,7 +40,7 @@ export default function AddSched({navigation}) {
     const [routeCtr, setRouteCtr] = useState(0);
     const [latitude, setLatitude] = useState();
     const [longitude, setLongitude] = useState();
-    const [collectorList, setCollectorList] = useState([]);
+    const [truckList, setTruckList] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
 
     const [users, setUsers] = useState();
@@ -97,7 +98,7 @@ export default function AddSched({navigation}) {
         setDescription("");
         setLocation("");
         setTitle("");
-        setAssignCollector("");
+        setAssignedTruck("");
         setSelectedDate(null);
         setHourStart(null);
         setMinStart(null);
@@ -109,36 +110,48 @@ export default function AddSched({navigation}) {
     }
 
     const getGarbageCollectors = async () => {
-        const usersCollection = collection(db, 'users');
-        const querySnapshot = await getDocs(usersCollection);
+        const truckCollection = collection(db, 'trucks');
+        const querySnapshot = await getDocs(truckCollection);
       
-        const collectorList = [];
+        const tempCollection = [];
+        const code = await AsyncStorage.getItem('userLguCode');
+
         querySnapshot.forEach((doc) => {
-          const userData = doc.data();
-          if (userData.accountType === 'Garbage Collector') {
-            collectorList.push({
+          const tempData = doc.data();
+          console.log(tempData.dateTime);
+          if(tempData.lguCode === code) {
+            tempCollection.push({
               id: doc.id,
-              name: userData.username,
+              dateTime: tempData.dateTime,
+              driverID: tempData.driverID,
+              lguCode: tempData.lguCode,
+              lguID: tempData.lguID,
+              members: tempData.members,
+              plateNo: tempData.plateNo
             });
           }
         });
       
-        return collectorList;
-      };
+        return tempCollection;
+    };
     
-      useEffect(() => {
+    useEffect(() => {
         // Fetch garbage collectors when component mounts
         const fetchCollectors = async () => {
-          const collectors = await getGarbageCollectors();
-          setCollectorList(collectors);
+            const collectors = await getGarbageCollectors();
+            setTruckList(collectors);
         };
         fetchCollectors();
-      }, []);
-    
-      const handleSelectCollector = (collectorName) => {
-        setAssignCollector(collectorName);
+    }, []);
+
+    const closeTruckModal = async() => {
         setModalVisible(false);
-      };
+    }
+
+    const handleSelectCollector = (collectorName) => {
+        setAssignedTruck(collectorName);
+        closeTruckModal();
+    };
 
     const createSchedule = async () => {
         let newHourStart, newTitle;
@@ -162,7 +175,7 @@ export default function AddSched({navigation}) {
         // Generate a unique scheduleID
         const scheduleID = Math.random().toString(36).substring(2, 10);
         // Validate necessary values
-        if (((location !== "" && latitude !== "" && longitude !== "") || route.coordinates.length !== 0) && setAssignCollector !== "" && description !== "" && selectedDate) {
+        if (((location !== "" && latitude !== "" && longitude !== "") || route.coordinates.length !== 0) && setAssignedTruck !== "" && description !== "" && selectedDate) {
             if(selectType === 'Collection') {
                 await addDoc(schedCollection, {
                     scheduleID: scheduleID, 
@@ -172,7 +185,7 @@ export default function AddSched({navigation}) {
                     startTime: start,
                     title: '',
                     userID: id,
-                    assignCollector: assignCollector,
+                    assignedTruck: assignedTruck,
                     selectedDate: selectedDate,
                     collectionRoute: route,
                     latitude: '',
@@ -200,7 +213,7 @@ export default function AddSched({navigation}) {
                     startTime: start,
                     title: '',
                     userID: id,
-                    assignCollector: assignCollector,
+                    assignedTruck: assignedTruck,
                     selectedDate: selectedDate,
                     collectionRoute: { coordinates: [] },
                     latitude: latitude,
@@ -228,7 +241,7 @@ export default function AddSched({navigation}) {
                     startTime: start,
                     title: newTitle,
                     userID: id,
-                    assignCollector: '',
+                    assignedTruck: '',
                     selectedDate: selectedDate,
                     collectionRoute: { coordinates: [] },
                     latitude: latitude,
@@ -572,34 +585,15 @@ export default function AddSched({navigation}) {
                         color: 'rgba(45, 105, 35, 1)',
                         paddingLeft: 15,
                     }}
-                    placeholder='Select Collector to Assign'
-                    value={assignCollector}
+                    placeholder='Select Garbage Truck to Assign'
+                    value={assignedTruck}
                     onFocus={() => setModalVisible(true)}
                     />
                 </View>
                 {CollectionRoute()}
                 {SelectDateTime()}
-
-                <Modal visible={modalVisible} animationType='slide' transparent={true}>
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <View style={{ backgroundColor: 'rgb(231,247,233)', width: 310, padding: 20, borderRadius: 10, elevation: 5, borderWidth: 1, borderColor: 'green'}}>
-                    <FlatList
-                      data={collectorList}
-                      keyExtractor={(item) => item.id.toString()}
-                      renderItem={({ item }) => (
-                        <TouchableOpacity onPress={() => handleSelectCollector(item.name)}>
-                          <Text style={{ fontSize: 16, marginBottom: 10 }}>{item.name}</Text>
-                        </TouchableOpacity>
-                      )}
-                    />
-        
-                    {/* Close modal button */}
-                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                      <Text style={{ fontSize: 12, color: 'blue', marginTop: 10 }}>Close</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
+                
+                {(modalVisible === true) && <TruckList close={closeTruckModal} dataList={truckList} selected={handleSelectCollector} />}
             </>
         );
     }
@@ -642,8 +636,8 @@ export default function AddSched({navigation}) {
                     color: 'rgba(45, 105, 35, 1)',
                     paddingLeft: 15,
                   }}
-                  placeholder='Select Collector to Assign'
-                  value={assignCollector}
+                  placeholder='Select Garbage Truck to Assign'
+                  value={assignedTruck}
                   onFocus={() => setModalVisible(true)}
                 />
               </View>
@@ -669,28 +663,8 @@ export default function AddSched({navigation}) {
               </View>
         
               {SelectDateTime()}
-        
-              {/* Modal to display collector list */}
-              <Modal visible={modalVisible} animationType='slide' transparent={true}>
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <View style={{ backgroundColor: 'rgb(231,247,233)', width: 310, padding: 20, borderRadius: 10, elevation: 5, borderWidth: 1, borderColor: 'green'}}>
-                    <FlatList
-                      data={collectorList}
-                      keyExtractor={(item) => item.id.toString()}
-                      renderItem={({ item }) => (
-                        <TouchableOpacity onPress={() => handleSelectCollector(item.name)}>
-                          <Text style={{ fontSize: 16, marginBottom: 10 }}>{item.name}</Text>
-                        </TouchableOpacity>
-                      )}
-                    />
-        
-                    {/* Close modal button */}
-                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                      <Text style={{ fontSize: 12, color: 'blue', marginTop: 10 }}>Close</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Modal>
+
+              {(modalVisible === true) && <TruckList close={closeTruckModal} dataList={truckList} selected={handleSelectCollector} />}
             </>
           );
         }

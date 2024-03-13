@@ -1,6 +1,6 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, Image } from "react-native";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Button, Image, Modal } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -40,16 +40,19 @@ export default function DisplayWorkID({ imageLink, setImageFunction }) {
     
     return (
         <>
-            <View style={{position: 'absolute', display: 'flex', flex: 1, width: '100%', height: '100%', padding: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(35,35,35,0.9)', zIndex: 50}}>
-                <View style={{width: '100%', alignItems: 'flex-end', paddingVertical: 10, paddingRight: 10, zIndex: 55}}>
-                    <TouchableOpacity onPress={() => {setImageFunction()}}>
-                        <View style={{padding: 1, paddingHorizontal: 2, backgroundColor: '#E8A319', borderRadius: 5}}>
-                            <Ionicons name="close" style={{fontSize: 30, color: 'white'}} />
-                        </View>
-                    </TouchableOpacity>
+            <Modal animationType='slide' transparent={true} statusBarTranslucent={true}>
+                <View style={{position: 'absolute', display: 'flex', flex: 1, width: '100%', height: '100%', padding: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(30,30,30,0.9)', zIndex: 50}}>
+                    <View style={{width: '100%', alignItems: 'flex-end', paddingTop: 25, paddingRight: 10, zIndex: 55}}>
+                        <TouchableOpacity onPress={() => {setImageFunction()}}>
+                            <View style={{padding: 1, paddingHorizontal: 2, backgroundColor: '#E8A319', borderRadius: 5}}>
+                                <Ionicons name="close" style={{fontSize: 30, color: 'white'}} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                    <DisplayImage />
                 </View>
-                <DisplayImage />
-            </View>
+            </Modal>
+            
         </>
     );
 }

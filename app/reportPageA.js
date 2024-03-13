@@ -11,7 +11,8 @@ import { collection, addDoc,getDoc, getDocs, query, where, onSnapshot} from 'fir
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { Circle } from 'react-native-progress';
 
-import SideBar from '../components/SideNav';
+// import SideBar from '../components/SideNav';
+import OpenSideBar from '../components/OpenSideNav';
 
 export default function ReportAut({navigation}) {
     const isFocused = useIsFocused();
@@ -40,6 +41,22 @@ export default function ReportAut({navigation}) {
 
     const [viewAllReports, setViewAllReports] = useState(false);
     const currentDate = new Date().toISOString().split('T')[0];
+
+    useEffect(() => {
+        if(!isFocused) {
+            setOpenSideBar();
+        }
+    });
+
+    function SideNavigation(navigation) {
+        const closeSideNav = async() => {
+            setOpenSideBar();
+        }
+
+        return (
+            <OpenSideBar navigation={navigation} close={closeSideNav} />
+        );
+    }
 
     useEffect(() => {
         const fetchData = async () => {
@@ -139,12 +156,6 @@ export default function ReportAut({navigation}) {
       }, [reportRef])
 
     useEffect(() => {
-        if(!isFocused) {
-            setOpenSideBar();
-        }
-    });
-
-    useEffect(() => {
         const getUsers = async () => {
             const data = await getDocs(usersCollection);
             setUsers(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
@@ -186,20 +197,6 @@ export default function ReportAut({navigation}) {
             setRefreshing(false);
         }, 1000);
     }, []);
-
-    function SideNavigation(navigation) {
-        return (
-            <>
-                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
-                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
-                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                    </TouchableOpacity>
-                    {SideBar(navigation)}
-                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
-                </View>
-            </>
-        );
-    }
 
     function BodyContent() {
         userUploads.map((uploads) => {

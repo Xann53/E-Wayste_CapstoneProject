@@ -14,7 +14,8 @@ import moment from 'moment';
 import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc, onSnapshot} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL,  uploadBytes} from 'firebase/storage';
-import SideBar from '../components/SideNav';
+// import SideBar from '../components/SideNav';
+import OpenSideBar from '../components/OpenSideNav';
 
 export default function NewsfeedAut({navigation}) {
     const isFocused = useIsFocused();
@@ -49,6 +50,21 @@ export default function NewsfeedAut({navigation}) {
     const [isEventsPressed, setIsEventsPressed] = useState(false);
     const [userEvents, setUserEvents] = useState([]);
 
+    useEffect(() => {
+        if(!isFocused) {
+            setOpenSideBar();
+        }
+    });
+
+    function SideNavigation(navigation) {
+        const closeSideNav = async() => {
+            setOpenSideBar();
+        }
+
+        return (
+            <OpenSideBar navigation={navigation} close={closeSideNav} />
+        );
+    }
 
     const handleAllPress = () => {
         setIsAllPressed(true);
@@ -186,12 +202,6 @@ export default function NewsfeedAut({navigation}) {
       fetchReports();
   }, []);
 
-
-    useEffect(() => {
-        if(!isFocused) {
-            setOpenSideBar();
-        }
-    });
 
     useEffect(() => {
             const getUsers = async () => {
@@ -450,20 +460,6 @@ export default function NewsfeedAut({navigation}) {
             console.error('Error picking image: ', error);
         }
         };
-
-    function SideNavigation(navigation) {
-        return (
-            <>
-                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
-                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
-                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                    </TouchableOpacity>
-                    {SideBar(navigation)}
-                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
-                </View>
-            </>
-        );
-    }
 
     function BodyContent() {
         const [isCommentOverlayVisible, setIsCommentOverlayVisible] = useState({});

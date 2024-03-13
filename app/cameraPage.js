@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from 'react-native-uuid';
 import moment from 'moment/moment';
 import * as Location from 'expo-location';
+import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { Camera, CameraType, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +20,8 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { GOOGLE_API_KEY } from '../environments';
 import PushNotif from '../components/PushNotification';
 
+import AddLoc from '../components/AddLocPanel';
+
 export default function CameraOpen({ navigation: {goBack} }) {
     const isFocused = useIsFocused();
     const [hasCameraPermission, setHasCameraPermission] = useState(null);
@@ -28,7 +31,8 @@ export default function CameraOpen({ navigation: {goBack} }) {
     const [locationAdjust, setLocationAdjust] = useState(false);
     const [longitude, setLongitude] = useState(null);
     const [latitude, setLatitude] = useState(null);
-    let searchLongitude, searchLatitude;
+    const [openSearch, setOpenSearch] = useState(false);
+    const [municipality, setMunicipality] = useState();
 
     const [image, setImage] = useState(null);
     const [type, setType] = useState(CameraType.back);
@@ -59,20 +63,7 @@ export default function CameraOpen({ navigation: {goBack} }) {
         };
     }, []);
 
-    const userLocation = async () => {
-        let {status} = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            setErrorMsg('Permission to access location was denied');
-            return;
-        }
-        let currentLocation = await Location.getCurrentPositionAsync({});
-        setLatitude(currentLocation.coords.latitude+"");
-        setLongitude(currentLocation.coords.longitude+"");
-
-        const address = await Location.reverseGeocodeAsync({
-            latitude: currentLocation.coords.latitude,
-            longitude: currentLocation.coords.longitude
-        });
+    const completeLoc = async(address) => {
         let finalAddress = '';
         if(address[0].streetNumber !== null)
             finalAddress = finalAddress + address[0].streetNumber + ', ';
@@ -91,36 +82,38 @@ export default function CameraOpen({ navigation: {goBack} }) {
         if(address[0].country !== null)
             finalAddress = finalAddress + address[0].country;
         setLocation(finalAddress);
-        console.log(finalAddress);
+        console.log(address[0].city);
+        setMunicipality(address[0].city);
+    }
+
+    const userLocation = async () => {
+        let {status} = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            setErrorMsg('Permission to access location was denied');
+            return;
+        }
+        let currentLocation = await Location.getCurrentPositionAsync({});
+        setLatitude(currentLocation.coords.latitude+"");
+        setLongitude(currentLocation.coords.longitude+"");
+
+        const address = await Location.reverseGeocodeAsync({
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude
+        });
+        
+        completeLoc(address);
     }
 
     if (isEnabled) {userLocation();}
 
-    const reverseGeocode = async () => {
+    const reverseGeocode = async (tempLat, tempLon) => {
         try {
             const address = await Location.reverseGeocodeAsync({
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude)
+                latitude: parseFloat(tempLat),
+                longitude: parseFloat(tempLon)
             });
-            let finalAddress = '';
-            if(address[0].streetNumber !== null)
-                finalAddress = finalAddress + address[0].streetNumber + ', ';
-            if(address[0].street !== null)
-                finalAddress = finalAddress + address[0].street + ', ';
-            if(address[0].name !== null)
-                finalAddress = finalAddress + address[0].name + ', ';
-            if(address[0].district !== null)
-                finalAddress = finalAddress + address[0].district + ', ';
-            if(address[0].city !== null)
-                finalAddress = finalAddress + address[0].city + ', ';
-            if(address[0].subregion !== null)
-                finalAddress = finalAddress + address[0].subregion + ', ';
-            if(address[0].region !== null)
-                finalAddress = finalAddress + address[0].region + ' region, ';
-            if(address[0].country !== null)
-                finalAddress = finalAddress + address[0].country;
-            setLocation(finalAddress);
-            console.log(finalAddress);
+            
+            completeLoc(address);
         } catch(e) {console.log(e)}
     }
 
@@ -186,6 +179,7 @@ export default function CameraOpen({ navigation: {goBack} }) {
             userId: userID,
             longitude: longitude,
             latitude: latitude,
+            municipality: municipality
         });
 
         let userFullName;
@@ -232,130 +226,95 @@ export default function CameraOpen({ navigation: {goBack} }) {
                                 ref={cameraRef}
                             />
                             :
-                            <View style={{height: '100%', width: '100%', backgroundColor: 'white'}}>
-                                <View style={{flex: 1, marginTop: 20, alignItems: 'center'}}>
-                                    <View style={{width: '95%', flexDirection: 'row', marginTop: 15, justifyContent: 'space-between'}}>
-                                        {isEnabled ?
-                                            <TextInput
-                                                editable={false}
-                                                value={location}
-                                                style={{
-                                                    height: 40,
-                                                    width: '85.7%',
-                                                    backgroundColor: 'rgb(189,227,124)',
-                                                    borderRadius: 5,
-                                                    color: "rgba(45, 105, 35, 1)",
-                                                    paddingHorizontal: 10,
-                                                    marginBottom: 5
-                                                }}
-                                                placeholder='Set Location'
-                                            />
-                                        :
-                                            <GooglePlacesAutocomplete
-                                                placeholder='Set Location'
-                                                fetchDetails
-                                                enablePoweredByContainer={false}
-                                                onPress={(data, details = null) => {
-                                                    searchLatitude = details.geometry.location.lat;
-                                                    searchLongitude = details.geometry.location.lng;
-                                                    setLatitude(searchLatitude+"");
-                                                    setLongitude(searchLongitude+"");
-                                                    setLocation(data.description);
-                                                }}
-                                                query={{
-                                                    key: GOOGLE_API_KEY,
-                                                    language: 'en',
-                                                }}
-                                                styles={{
-                                                    textInput: {
-                                                        height: 40,
-                                                        fontSize: 14,
-                                                        backgroundColor: 'rgb(189,227,124)',
-                                                        color: "rgba(45, 105, 35, 1)",
-                                                    },
-                                                    listView: {
-                                                        backgroundColor:'#c8c7cc',
-                                                        marginBottom: 5,
-                                                    },
-                                                    row: {
-                                                        backgroundColor: '#DBF3C8',
-                                                        padding: 9,
-                                                        height: 38,
-                                                        marginVertical: 0.01,
-                                                    },
-                                                    description: {
-                                                        fontSize: 12
-                                                    },
-                                                }}
-                                            />
-                                        }
-                                        <TouchableOpacity activeOpacity={0.9} style={{height: 40, width: '13%', borderRadius: 10, overflow: 'hidden', marginLeft: 5}} onPress={() => {{!locationAdjust ? setLocationAdjust(true) : setLocationAdjust(false)}}}>
-                                            {locationAdjust ? 
-                                                <View style={{backgroundColor: 'green', height: '100%', width: '100%'}}></View>
-                                                :
-                                                <View style={{backgroundColor: 'red', height: '100%', width: '100%'}}></View>
-                                            }
-                                        </TouchableOpacity>
-                                    </View>
-                                    {locationAdjust ?
-                                        <View style={{width: '95%', marginBottom: 5, gap: 5}}>
-                                            <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                                                <TextInput
-                                                    value={latitude}
-                                                    inputMode='numeric'
-                                                    style={{
-                                                        height: 40,
-                                                        width: '49.5%',
-                                                        backgroundColor: 'rgb(229, 247, 158)',
-                                                        borderRadius: 5,
-                                                        borderWidth: 0.5,
-                                                        borderColor: "rgb(215,233,217)",
-                                                        color: isEnabled ? '#858585' : "rgba(45, 105, 35, 1)",
-                                                        paddingLeft: 15,
-                                                    }}
-                                                    placeholder='Set Latitude'
-                                                    onChangeText={(e) => {setLatitude(e)}}
-                                                    onSubmitEditing={() => {reverseGeocode()}}
-                                                    editable={isEnabled ? false : true}
-                                                />
-                                                <TextInput
-                                                    value={longitude}
-                                                    inputMode='numeric'
-                                                    style={{
-                                                        height: 40,
-                                                        width: '49.5%',
-                                                        backgroundColor: 'rgb(229, 247, 158)',
-                                                        borderRadius: 5,
-                                                        borderWidth: 0.5,
-                                                        borderColor: "rgb(215,233,217)",
-                                                        color: isEnabled ? '#858585' : "rgba(45, 105, 35, 1)",
-                                                        paddingLeft: 15,
-                                                    }}
-                                                    placeholder='Set Longitude'
-                                                    onChangeText={(e) => {setLongitude(e)}}
-                                                    onSubmitEditing={() => {reverseGeocode()}}
-                                                    editable={isEnabled ? false : true}
-                                                />
-                                            </View>
-                                            <View style={{height: 60, width: '100%', borderRadius: 5, backgroundColor: '#f3f5f0', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', paddingHorizontal: 20}}>
-                                                <Text style={{color: '#454545', marginLeft: 10}}>Set current location</Text>
-                                                <Switch
-                                                    style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1 }] }}
-                                                    trackColor={{false: '#767577', true: 'rgb(189,227,124)'}}
-                                                    thumbColor={isEnabled ? '#6fa663' : '#f4f3f4'}
-                                                    onValueChange={toggleSwitch}
-                                                    value={isEnabled}
-                                                />
-                                            </View>
-                                        </View>
-                                        :
-                                        <></>
-                                    }
-                                    <ScrollView style={{flex: 1, width: '100%'}}>
+                            <View style={{display: 'flex', flex: 1, width: '100%', backgroundColor: 'white'}}>
+                                <ScrollView contentContainerStyle={{ flexGrow: 1 }} style={{marginBottom: 60}}>
                                         <View style={{width: '100%', alignItems: 'center'}}>
+                                            <Text style={{marginTop: 20, marginBottom: 8, fontSize: 20, fontWeight: 900, color: 'green'}}>WASTE REPORT</Text>
+
                                             <View style={{height: 480, width: '95%', padding: 5, backgroundColor: 'rgb(245, 245, 245)', borderRadius: 5, borderWidth: 1, borderColor: 'rgb(235, 235, 235)'}}>
                                                 <Image source={{uri: image.uri}} style={{flex: 1, resizeMode: 'contain'}} />
                                             </View>
+                                           
+                                            <View style={{width: '95%', flexDirection: 'column', marginTop: 15, justifyContent: 'space-between'}}>
+                                                
+                                                <View style={{display: 'flex', flexDirection: 'row', flex: 1, marginBottom: 5, gap: 5}}>
+                                                    <TouchableOpacity activeOpacity={0.7} style={{display: 'flex', flex: 1}} onPress={() => {locationAdjust ? setLocationAdjust(false) : setLocationAdjust(true)}}>
+                                                        <TextInput
+                                                            editable={false}
+                                                            value={location}
+                                                            style={{
+                                                                height: 40,
+                                                                width: '100%',
+                                                                backgroundColor: 'rgb(189,227,124)',
+                                                                borderRadius: 5,
+                                                                color: "rgba(45, 105, 35, 1)",
+                                                                paddingHorizontal: 15
+                                                            }}
+                                                            placeholder='Set Location'
+                                                            selection={{start: 0}}
+                                                        />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity activeOpacity={0.7} style={{display: 'flex', flex: 0.15, backgroundColor: '#DE462A', justifyContent: 'center', alignItems: 'center', borderRadius: 5}} onPress={() => {setLocation(null); setLatitude(null); setLongitude(null); setIsEnabled(false)}}>
+                                                        <Ionicons name='trash' style={{color: 'white', fontSize: 25}} />
+                                                    </TouchableOpacity>
+                                                </View>
+                                                
+                                                {locationAdjust &&
+                                                    <View style={{width: '100%', alignItems: 'center', gap: 5}}>
+
+                                                        <View style={{display: 'flex', flexDirection: 'row', flex: 1, gap: 5}}>
+                                                            <View style={{display: 'flex', flex: 1, height: 50, borderRadius: 5, backgroundColor: '#f3f5f0', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', paddingHorizontal: 20}}>
+                                                                <Text style={{color: '#454545'}}>Set current location</Text>
+                                                                <Switch
+                                                                    style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1 }] }}
+                                                                    trackColor={{false: '#767577', true: 'rgb(189,227,124)'}}
+                                                                    thumbColor={isEnabled ? '#6fa663' : '#f4f3f4'}
+                                                                    onValueChange={toggleSwitch}
+                                                                    value={isEnabled}
+                                                                />
+                                                            </View>
+                                                            <TouchableOpacity activeOpacity={isEnabled ? 1 : 0.7} onPress={() => {!isEnabled && setOpenSearch(true)}} style={{display: 'flex', flex: 0.3, height: 50, borderRadius: 5, backgroundColor: isEnabled ? '#DDC1A2' : 'orange', justifyContent: 'center', alignItems: 'center', flexDirection: 'row'}}>
+                                                                <Text style={{color: isEnabled ? '#EBEBEB' : 'white', fontWeight: 900, fontSize: 15}}>Search</Text>
+                                                            </TouchableOpacity>
+                                                        </View>
+
+                                                        <View style={{width: '100%', height: 300, overflow: 'hidden', borderRadius: 10, borderWidth: 0.5, marginBottom: 10}}>
+                                                            <MapView
+                                                                style={{width: '100%', height: '120%'}}
+                                                                provider={PROVIDER_GOOGLE}
+                                                                initialRegion={{
+                                                                    latitude: 10.3156992,
+                                                                    longitude: 123.88543660000005,
+                                                                    latitudeDelta: 0.0922,
+                                                                    longitudeDelta: 0.0421,
+                                                                }}
+                                                                customMapStyle={mapStyle}
+                                                            >
+                                                                {(latitude !== null && longitude !== null) && 
+                                                                    <Marker
+                                                                        key='Location'
+                                                                        coordinate={{
+                                                                            latitude: parseFloat(latitude),
+                                                                            longitude: parseFloat(longitude)
+                                                                        }}
+                                                                        style={{zIndex: 95}}
+                                                                        draggable
+                                                                        onDragEnd={(e) => {
+                                                                            setLatitude(e.nativeEvent.coordinate.latitude);
+                                                                            setLongitude(e.nativeEvent.coordinate.longitude);
+                                                                            reverseGeocode(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude);
+                                                                        }}
+                                                                    >
+                                                                        <Ionicons name='location' style={{fontSize: 25, color: '#D41818'}} />    
+                                                                    </Marker>
+                                                                }
+                                                            </MapView>
+                                                        </View>
+
+                                                    </View>
+                                                }
+                                            </View>
+
                                             <TextInput
                                                 style={{
                                                     height: 150,
@@ -369,23 +328,23 @@ export default function CameraOpen({ navigation: {goBack} }) {
                                                     paddingRight: 8,
                                                     textAlignVertical: 'top',
                                                     marginTop: 5,
+                                                    marginBottom: 20
                                                 }}
                                                 placeholder='Add Description'
                                                 multiline={true}
                                                 onChangeText={(e) => {setDescription(e)}}
                                             />
                                         </View>
-                                    </ScrollView>
-                                </View>
-                                <View style={{alignItems: 'center', paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 50, backgroundColor: 'rgba(242,190,45,0)', borderTopRightRadius: 10, borderTopLeftRadius: 10}}>
-                                    <View style={{height:45, width: 130, backgroundColor: 'black', borderRadius: 100, overflow: 'hidden'}}>
+                                </ScrollView>
+                                <View style={{display: 'flex', flexDirection: 'row', position: 'absolute', bottom: 0, width: '100%', backgroundColor: 'white', alignItems: 'center', paddingVertical: 10, justifyContent: 'space-between', paddingHorizontal: 50, borderTopRightRadius: 10, borderTopLeftRadius: 10, shadowColor: 'black', shadowOpacity: 1, elevation: 4}}>
+                                    <View style={{height:45, width: 130, backgroundColor: 'black', borderRadius: 100, overflow: 'hidden', shadowColor: 'black', shadowOpacity: 1, elevation: 3}}>
                                         <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.8} onPress={() => {setImage(null)}}>
                                             <View style={{width: '100%', height: '100%', backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
                                                 <Text style={{fontWeight: 900, color: 'white'}}>RETAKE</Text>
                                             </View>
                                         </TouchableOpacity>
                                     </View>
-                                    <View style={{height:45, width: 130, backgroundColor: 'black', borderRadius: 100, overflow: 'hidden'}}>
+                                    <View style={{height:45, width: 130, backgroundColor: 'black', borderRadius: 100, overflow: 'hidden', shadowColor: 'black', shadowOpacity: 1, elevation: 3}}>
                                         <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.8} onPress={() => {uploadImage()}}>
                                             <View style={{width: '100%', height: '100%', backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
                                                 <Text style={{fontWeight: 900, color: 'white'}}>POST</Text>
@@ -431,10 +390,11 @@ export default function CameraOpen({ navigation: {goBack} }) {
                             </View>
                         }
                     </View>
+                    
+                    {openSearch && <AddLoc open={setOpenSearch} lat={setLatitude} lon={setLongitude} locGeocode={reverseGeocode} />}
                 </>
             );
         } else if(!isFocused) {
-            console.log("Camera is not Focused")
             return null;
         }
     }
@@ -447,3 +407,22 @@ const styles = StyleSheet.create({
         backgroundColor: 'black',
     },
 })
+
+const mapStyle = [
+    {
+        elementType: 'labels.icon',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+    {
+        featureType: 'poi.business',
+        stylers: [
+            {
+                visibility: 'off',
+            },
+        ],
+    },
+];

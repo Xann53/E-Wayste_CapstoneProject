@@ -11,6 +11,7 @@ import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import SideBar from '../components/SideNav';
+import OpenSideBar from '../components/OpenSideNav';
 
 
 export default function Notifications({ navigation }) {
@@ -41,6 +42,16 @@ export default function Notifications({ navigation }) {
             setOpenSideBar();
         }
     });
+
+    function SideNavigation(navigation) {
+        const closeSideNav = async() => {
+            setOpenSideBar();
+        }
+
+        return (
+            <OpenSideBar navigation={navigation} close={closeSideNav} />
+        );
+    }
     
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
@@ -65,20 +76,6 @@ export default function Notifications({ navigation }) {
       
         fetchCollectorUsernames();
       }, [collectionInProgress]);
-
-    function SideNavigation(navigation) {
-        return (
-            <>
-                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
-                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
-                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                    </TouchableOpacity>
-                    {SideBar(navigation)}
-                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
-                </View>
-            </>
-        );
-    }
 
     useEffect(() => {
         userRef.onSnapshot(

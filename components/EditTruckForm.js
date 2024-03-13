@@ -1,6 +1,6 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, ScrollView, SafeAreaView, Button, Image } from "react-native";
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, ScrollView, SafeAreaView, Button, Image, Modal } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from '@react-navigation/native';
@@ -176,146 +176,148 @@ export default function EditTruck({ close, truckID, driverFName }) {
 
     return (
         <>
-            <TouchableWithoutFeedback onPress={dismissKeyboard}>
-                <View style={{position: 'absolute', display: 'flex', flex: 1, width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 5}}>
-                    <Text style={{fontSize: 20, fontWeight: 900, color: 'green', marginTop: -100, zIndex: 25, transform:[{translateY: 38}]}}>EDIT TRUCK</Text>
-                    <View style={{display: 'flex', backgroundColor: 'white', width: '80%', height: '65%', borderRadius: 10, zIndex: 5}}>
-                        <View style={{width: '100%', alignItems: 'flex-end', paddingVertical: 10, paddingRight: 10}}>
-                            <TouchableOpacity onPress={() => {clear(); close()}}>
-                                <View style={{padding: 1, paddingHorizontal: 2, backgroundColor: '#D3D3D3', borderRadius: 5}}>
-                                    <Ionicons name="close" style={{fontSize: 20, color: 'white'}} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView contentContainerStyle={{ flexGrow: 1 }} style={{width: '100%', height: '100%'}}>
-                            <TouchableOpacity activeOpacity={1} style={{display: 'flex', alignItems: 'center', padding: 10, gap: 5}}>
-                                <TextInput
-                                    value={plateNo}
-                                    editable={false}
-                                    textAlign="center"
-                                    onFocus={() => {setInputFocus(true)}}
-                                    onBlur={() => {setInputFocus(false)}}
-                                    placeholder="PLATE NUMBER"
-                                    style={{borderRadius: 5, fontSize: 22, fontWeight: '700', padding: 5, paddingHorizontal: 25, width: '100%', color: 'black'}}
-                                />
-                                <View style={{display: 'flex', width: '100%', padding: 10, gap: 15}}>
-                                    <View style={{display: 'flex', width: '100%'}}>
-                                        <Text style={{fontSize: 15, fontWeight: 600}}>Driver:</Text>
-                                        <SelectList
-                                            setSelected={(e) => {setDriverID(e)}}
-                                            data={DriverChoice}
-                                            placeholder={drvrPlaceHolder}
-                                            boxStyles={{
-                                                width: '100%',
-                                                height: 40,
-                                                backgroundColor: "rgb(189,228,124)",
-                                                borderRadius: 5,
-                                                borderWidth: 0,
-                                                paddingLeft: 10,
-                                                paddingVertical: 0,
-                                                alignItems: 'center',
-                                                paddingHorizontal: 15,
-                                            }}
-                                            dropdownStyles={{
-                                                width: '100%',
-                                                backgroundColor: "rgb(231,247,233)",
-                                                marginTop: -10,
-                                                marginBottom: -10,
-                                                borderRadius: 0,
-                                                zIndex: -1,
-                                                borderWidth: 0,
-                                                alignSelf: 'center',
-                                            }}
-                                            search={false}
-                                        />
+            <Modal animationType='fade' transparent={true} statusBarTranslucent={true}>
+                <TouchableWithoutFeedback onPress={dismissKeyboard}>
+                    <View style={{position: 'absolute', display: 'flex', flex: 1, width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 5}}>
+                        <Text style={{fontSize: 20, fontWeight: 900, color: 'green', marginTop: -100, zIndex: 25, transform:[{translateY: 38}]}}>EDIT TRUCK</Text>
+                        <View style={{display: 'flex', backgroundColor: 'white', width: '80%', height: '65%', borderRadius: 10, zIndex: 5}}>
+                            <View style={{width: '100%', alignItems: 'flex-end', paddingVertical: 10, paddingRight: 10}}>
+                                <TouchableOpacity onPress={() => {clear(); close()}}>
+                                    <View style={{padding: 1, paddingHorizontal: 2, backgroundColor: '#D3D3D3', borderRadius: 5}}>
+                                        <Ionicons name="close" style={{fontSize: 20, color: 'white'}} />
                                     </View>
-                                    <View style={{display: 'flex', width: '100%'}}>
-                                        <Text style={{fontSize: 15, fontWeight: 600}}>Collectors:</Text>
-                                        <View style={{display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', gap: 5}}>
-                                            <View style={{display: 'flex', flex: 6}}>
-                                                <SelectList
-                                                    setSelected={(e) => {setColID(e)}}
-                                                    data={CollectorChoice}
-                                                    placeholder="[Select Collector]"
-                                                    boxStyles={{
-                                                        width: '100%',
-                                                        height: 40,
-                                                        backgroundColor: "rgb(189,228,124)",
-                                                        borderRadius: 5,
-                                                        borderWidth: 0,
-                                                        paddingLeft: 10,
-                                                        paddingVertical: 0,
-                                                        alignItems: 'center',
-                                                        paddingHorizontal: 15,
-                                                    }}
-                                                    dropdownStyles={{
-                                                        width: '100%',
-                                                        backgroundColor: "rgb(231,247,233)",
-                                                        marginTop: -10,
-                                                        // marginBottom: -10,
-                                                        borderRadius: 0,
-                                                        zIndex: -1,
-                                                        borderWidth: 0,
-                                                        alignSelf: 'center',
-                                                    }}
-                                                    search={false}
-                                                />
-                                            </View>
-                                            <View style={{display: 'flex', flex: 1, alignItems: 'flex-end'}}>
-                                                <TouchableOpacity onPress={() => {addCol(); setColID('');}} style={{width: '100%', alignItems: 'center', backgroundColor: 'orange', borderRadius: 5, shadowColor: 'black', shadowOpacity: 1, elevation: 5}}>
-                                                    <Text style={{fontSize: 29, fontWeight: 700, color: 'white'}}>+</Text>
-                                                </TouchableOpacity>
-                                            </View>
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView contentContainerStyle={{ flexGrow: 1 }} style={{width: '100%', height: '100%'}}>
+                                <TouchableOpacity activeOpacity={1} style={{display: 'flex', alignItems: 'center', padding: 10, gap: 5}}>
+                                    <TextInput
+                                        value={plateNo}
+                                        editable={false}
+                                        textAlign="center"
+                                        onFocus={() => {setInputFocus(true)}}
+                                        onBlur={() => {setInputFocus(false)}}
+                                        placeholder="PLATE NUMBER"
+                                        style={{borderRadius: 5, fontSize: 22, fontWeight: '700', padding: 5, paddingHorizontal: 25, width: '100%', color: 'black'}}
+                                    />
+                                    <View style={{display: 'flex', width: '100%', padding: 10, gap: 15}}>
+                                        <View style={{display: 'flex', width: '100%'}}>
+                                            <Text style={{fontSize: 15, fontWeight: 600}}>Driver:</Text>
+                                            <SelectList
+                                                setSelected={(e) => {setDriverID(e)}}
+                                                data={DriverChoice}
+                                                placeholder={drvrPlaceHolder}
+                                                boxStyles={{
+                                                    width: '100%',
+                                                    height: 40,
+                                                    backgroundColor: "rgb(189,228,124)",
+                                                    borderRadius: 5,
+                                                    borderWidth: 0,
+                                                    paddingLeft: 10,
+                                                    paddingVertical: 0,
+                                                    alignItems: 'center',
+                                                    paddingHorizontal: 15,
+                                                }}
+                                                dropdownStyles={{
+                                                    width: '100%',
+                                                    backgroundColor: "rgb(231,247,233)",
+                                                    marginTop: -10,
+                                                    marginBottom: -10,
+                                                    borderRadius: 0,
+                                                    zIndex: -1,
+                                                    borderWidth: 0,
+                                                    alignSelf: 'center',
+                                                }}
+                                                search={false}
+                                            />
                                         </View>
-                                        <View style={{display: 'flex', flex: 1, width: '100%', marginTop: 10, gap: 5}}>
-                                            {members.collector.map(col => (
-                                                <View key={col.id} style={{display: 'flex', flex: 1, width: '100%', backgroundColor: 'white', padding: 10, borderRadius: 10, shadowColor: 'black', shadowOpacity: 1, elevation: 1, flexDirection: 'row', alignItems: 'center'}}>
-                                                    <View style={{display: 'flex', flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                                                        <View style={{padding: 10, paddingHorizontal: 11, backgroundColor: '#D3D3D3', borderRadius: 1000}}>
-                                                            <Ionicons name="person" style={{fontSize: 25, color: 'white'}} />
+                                        <View style={{display: 'flex', width: '100%'}}>
+                                            <Text style={{fontSize: 15, fontWeight: 600}}>Collectors:</Text>
+                                            <View style={{display: 'flex', flexDirection: 'row', alignItems: 'flex-start', width: '100%', gap: 5}}>
+                                                <View style={{display: 'flex', flex: 6}}>
+                                                    <SelectList
+                                                        setSelected={(e) => {setColID(e)}}
+                                                        data={CollectorChoice}
+                                                        placeholder="[Select Collector]"
+                                                        boxStyles={{
+                                                            width: '100%',
+                                                            height: 40,
+                                                            backgroundColor: "rgb(189,228,124)",
+                                                            borderRadius: 5,
+                                                            borderWidth: 0,
+                                                            paddingLeft: 10,
+                                                            paddingVertical: 0,
+                                                            alignItems: 'center',
+                                                            paddingHorizontal: 15,
+                                                        }}
+                                                        dropdownStyles={{
+                                                            width: '100%',
+                                                            backgroundColor: "rgb(231,247,233)",
+                                                            marginTop: -10,
+                                                            // marginBottom: -10,
+                                                            borderRadius: 0,
+                                                            zIndex: -1,
+                                                            borderWidth: 0,
+                                                            alignSelf: 'center',
+                                                        }}
+                                                        search={false}
+                                                    />
+                                                </View>
+                                                <View style={{display: 'flex', flex: 1, alignItems: 'flex-end'}}>
+                                                    <TouchableOpacity onPress={() => {addCol(); setColID('');}} style={{width: '100%', alignItems: 'center', backgroundColor: 'orange', borderRadius: 5, shadowColor: 'black', shadowOpacity: 1, elevation: 5}}>
+                                                        <Text style={{fontSize: 29, fontWeight: 700, color: 'white'}}>+</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                            <View style={{display: 'flex', flex: 1, width: '100%', marginTop: 10, gap: 5}}>
+                                                {members.collector.map(col => (
+                                                    <View key={col.id} style={{display: 'flex', flex: 1, width: '100%', backgroundColor: 'white', padding: 10, borderRadius: 10, shadowColor: 'black', shadowOpacity: 1, elevation: 1, flexDirection: 'row', alignItems: 'center'}}>
+                                                        <View style={{display: 'flex', flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <View style={{padding: 10, paddingHorizontal: 11, backgroundColor: '#D3D3D3', borderRadius: 1000}}>
+                                                                <Ionicons name="person" style={{fontSize: 25, color: 'white'}} />
+                                                            </View>
+                                                        </View>
+                                                        <View style={{display: 'flex', flex: 2.2, height: '100%', justifyContent: 'center', paddingHorizontal: 10, overflow: 'hidden'}}>
+                                                            <Text numberOfLines={1} ellipsizeMode='tail' style={{fontSize: 15, fontWeight: 800}}>
+                                                                {users.map((user) => {
+                                                                    if(user.id === col.id) {
+                                                                        return (user.firstName + ' ' + user.lastName);
+                                                                    }
+                                                                })}
+                                                            </Text>
+                                                            <Text numberOfLines={1} ellipsizeMode='tail'>
+                                                                {users.map((user) => {
+                                                                    if(user.id === col.id) {
+                                                                        return (user.username);
+                                                                    }
+                                                                })}
+                                                            </Text>
+                                                        </View>
+                                                        <View style={{display: 'flex', flex: 0.5, height: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                                                            <TouchableOpacity onPress={() => {delCol(col.id)}}>
+                                                                <View style={{padding: 1, paddingHorizontal: 2, backgroundColor: 'orange', borderRadius: 5}}>
+                                                                    <Ionicons name="close" style={{fontSize: 15, color: 'white'}} />
+                                                                </View>
+                                                            </TouchableOpacity>
                                                         </View>
                                                     </View>
-                                                    <View style={{display: 'flex', flex: 2.2, height: '100%', justifyContent: 'center', paddingHorizontal: 10, overflow: 'hidden'}}>
-                                                        <Text numberOfLines={1} ellipsizeMode='tail' style={{fontSize: 15, fontWeight: 800}}>
-                                                            {users.map((user) => {
-                                                                if(user.id === col.id) {
-                                                                    return (user.firstName + ' ' + user.lastName);
-                                                                }
-                                                            })}
-                                                        </Text>
-                                                        <Text numberOfLines={1} ellipsizeMode='tail'>
-                                                            {users.map((user) => {
-                                                                if(user.id === col.id) {
-                                                                    return (user.username);
-                                                                }
-                                                            })}
-                                                        </Text>
-                                                    </View>
-                                                    <View style={{display: 'flex', flex: 0.5, height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                                                        <TouchableOpacity onPress={() => {delCol(col.id)}}>
-                                                            <View style={{padding: 1, paddingHorizontal: 2, backgroundColor: 'orange', borderRadius: 5}}>
-                                                                <Ionicons name="close" style={{fontSize: 15, color: 'white'}} />
-                                                            </View>
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    </View> 
-                                </View>  
-                            </TouchableOpacity>
-                        </ScrollView>
-                        <View style={{width: '100%', alignItems: 'center', paddingVertical: 10}}>
-                            <TouchableOpacity onPress={() => {updateTruck()}}>
-                                <View style={{padding: 5, paddingHorizontal: 15, backgroundColor: 'green', borderRadius: 15}}>
-                                    <Text style={{fontSize: 18, fontWeight: 800, color: 'white'}}>SAVE EDIT</Text>
-                                </View>
-                            </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </View> 
+                                    </View>  
+                                </TouchableOpacity>
+                            </ScrollView>
+                            <View style={{width: '100%', alignItems: 'center', paddingVertical: 10}}>
+                                <TouchableOpacity onPress={() => {updateTruck()}}>
+                                    <View style={{padding: 5, paddingHorizontal: 15, backgroundColor: 'green', borderRadius: 15}}>
+                                        <Text style={{fontSize: 18, fontWeight: 800, color: 'white'}}>SAVE EDIT</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
                         </View>
+                        {!inputFocus && <TouchableOpacity onPress={() => {clear(); close()}} style={{position: 'absolute', width: '100%', height: '100%'}} />}
                     </View>
-                    {!inputFocus && <TouchableOpacity onPress={() => {clear(); close()}} style={{position: 'absolute', width: '100%', height: '100%'}} />}
-                </View>
-            </TouchableWithoutFeedback>
+                </TouchableWithoutFeedback>
+            </Modal>
         </>
     );
 }

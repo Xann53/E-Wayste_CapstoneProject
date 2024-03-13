@@ -14,7 +14,8 @@ import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../environments';
-import SideBar from '../components/SideNav';
+// import SideBar from '../components/SideNav';
+import OpenSideBar from '../components/OpenSideNav';
 
 import PushNotif from '../components/PushNotification';
 import moment from 'moment/moment';
@@ -64,16 +65,12 @@ export default function MapAut({ navigation }) {
     });
 
     function SideNavigation(navigation) {
+        const closeSideNav = async() => {
+            setOpenSideBar();
+        }
+
         return (
-            <>
-                <View style={{position: 'absolute', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'flex-start', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 99}}>
-                    <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 150 }} onPress={() => {setOpenSideBar()}}>
-                        <Ionicons name='arrow-back' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                    </TouchableOpacity>
-                    {SideBar(navigation)}
-                    <TouchableOpacity style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0)', zIndex: -1}} onPress={() => {setOpenSideBar()}} />
-                </View>
-            </>
+            <OpenSideBar navigation={navigation} close={closeSideNav} />
         );
     }
 
