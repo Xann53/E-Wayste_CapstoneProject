@@ -711,40 +711,57 @@ export default function NewsfeedCol({ navigation }) {
             </View>
         );
      }
+
+        function CheckIfReportToday() {
+            const currentDate = new Date().toISOString().split('T')[0];      
+            let temp = false;
+            imageCol.filter(url => {
+                const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
+                if (associatedReport) {
+                    const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+                    if(reportDate.toISOString().split('T')[0] === currentDate) {
+                        temp = true;
+                    }
+                }
+            });
+            return(temp);
+        }
+
         return (
             <>
-                <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }}>
-                    <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
-                    <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)'}} />
-                </TouchableOpacity>
                 {openSideBar}
-        
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }>
                     <SafeAreaView style={styles.container}>
+                        <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }}>
+                            <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+                        </TouchableOpacity>
+                        <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
+                            <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)'}} />
+                        </TouchableOpacity>
                         <View style={{ width: '100%', flexDirection: 'row', top: 11, justifyContent: 'center', paddingTop: 14 }}>
                             <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
                         </View>
                         <Text style={{ position: 'absolute', right: 20, top: 90 }}>
                             <Text style={{ fontWeight: 600 }}> {todayDate}</Text>
                         </Text>
-                        <View style={{ width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50 }}>
-                            <View style={{ flexDirection: 'row', width: '100%' }}>
-                                <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
-                                <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }} onPress={() => navigation.navigate('report')}>
-                                    <Text style={{textDecorationLine: 'underline'}}>
-                                        View all
-                                    </Text>
-                                </TouchableOpacity>
+                        {(CheckIfReportToday()) &&
+                            <View style={{ width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50 }}>
+                                <View style={{ flexDirection: 'row', width: '100%' }}>
+                                    <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
+                                    <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }} onPress={() => navigation.navigate('report')}>
+                                        <Text style={{textDecorationLine: 'underline'}}>
+                                            View all
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <ScrollView horizontal={true}>
+                                    {ViewAllContent()}
+                                </ScrollView>
                             </View>
-                            <ScrollView horizontal={true}>
-                                {ViewAllContent()}
-                            </ScrollView>
-                        </View>
-                        <View>
+                        }
+                        <View style={{marginTop: 20}}>
                             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'flex-start' }}>
                                 <Text style={{ fontSize: 20, fontWeight: 900, color: 'rgb(81,175,91)' }}>NEWSFEED</Text>
                             </View>

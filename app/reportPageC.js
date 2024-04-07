@@ -239,7 +239,21 @@ export default function ReportCol({ navigation }) {
                 </View>
             </View>
         );
-    }           
+    }
+    function CheckIfReportToday() {
+        const currentDate = new Date().toISOString().split('T')[0];      
+        let temp = false;
+        imageCol.filter(url => {
+            const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
+            if (associatedReport) {
+                const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+                if(reportDate.toISOString().split('T')[0] === currentDate) {
+                    temp = true;
+                }
+            }
+        });
+        return(temp);
+    }         
     return (
         <>
             {openSideBar}
@@ -257,11 +271,11 @@ export default function ReportCol({ navigation }) {
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>REPORTS</Text>
                     </View>
                     <Text style={{position: 'absolute', right: 20, top: 80}}>
-                    <Text style={{ fontWeight: 600 }}> {DateToday}</Text>
+                        <Text style={{ fontWeight: 600 }}> {DateToday}</Text>
                     </Text>
                     <View>
-                    <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10,  overflow: 'hidden', marginBottom: 5,
-                     marginTop: 50, shadowColor: '#0D5601', shadowOffset: { width: 0, height: 2,}, shadowOpacity: 0.8, shadowRadius: 3, elevation: 5 }}>
+                        {(CheckIfReportToday()) &&
+                            <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10,  overflow: 'hidden', marginBottom: 5, marginTop: 50, shadowColor: '#0D5601', shadowOffset: { width: 0, height: 2,}, shadowOpacity: 0.8, shadowRadius: 3, elevation: 5 }}>
                                 <View style={{ flexDirection: 'row', width: '100%' }}>
                                     <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
                                     <TouchableOpacity
@@ -269,17 +283,18 @@ export default function ReportCol({ navigation }) {
                                         style={{ position: 'absolute', right: 15, marginTop: 15 }}
                                         onPress={() => setViewAllReports(!viewAllReports)}
                                     >
-                                        <Text style={{ textDecorationLine: 'underline' }}>
-                                            View Details
-                                        </Text>
+                                        <Text style={{ textDecorationLine: 'underline' }}>View Details</Text>
                                     </TouchableOpacity>
                                 </View>
                                 <ScrollView horizontal={true}>
-                                <ViewAllContent viewAllReports={viewAllReports} currentDate={currentDate} />
-                            </ScrollView>
+                                    <ViewAllContent viewAllReports={viewAllReports} currentDate={currentDate} />
+                                </ScrollView>
                             </View>
-                            {BodyContent ()}
+                        }
+                        <View style={{marginTop: !CheckIfReportToday() ? 40 : 0}}>
+                            {BodyContent()}
                         </View>
+                    </View>
                 </SafeAreaView>
             </ScrollView>
         </>

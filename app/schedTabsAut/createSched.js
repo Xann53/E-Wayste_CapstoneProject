@@ -118,7 +118,6 @@ export default function AddSched({navigation}) {
 
         querySnapshot.forEach((doc) => {
           const tempData = doc.data();
-          console.log(tempData.dateTime);
           if(tempData.lguCode === code) {
             tempCollection.push({
               id: doc.id,

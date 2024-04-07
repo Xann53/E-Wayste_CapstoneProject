@@ -100,6 +100,7 @@ export default function TruckInfo({ truckID, setViewTruckFunction, currentPage }
 
         function CollectorList() {
             let tempColID, tempColName;
+            let temp = [];
             trucks.map((truck) => {
                 if(truck.id === truckID) {
                     truck.members.collector.map((col) => {
@@ -107,6 +108,7 @@ export default function TruckInfo({ truckID, setViewTruckFunction, currentPage }
                             if(user.id === col.id) {
                                 tempColID = user.id;
                                 tempColName = user.firstName + ' ' + user.lastName;
+                                temp.push(<Text key={tempColID} style={{backgroundColor: '#DCF3B6', padding: 10, marginBottom: 5, borderRadius: 5, fontSize: 15}}>{tempColName}</Text>);
                             }
                         })
                     })
@@ -114,7 +116,7 @@ export default function TruckInfo({ truckID, setViewTruckFunction, currentPage }
             })
             return (
                 <>
-                    <Text key={tempColID} style={{backgroundColor: '#DCF3B6', padding: 10, marginBottom: 5, borderRadius: 5, fontSize: 15}}>{tempColName}</Text>
+                    {temp}
                 </>
             );
         }
@@ -140,10 +142,12 @@ export default function TruckInfo({ truckID, setViewTruckFunction, currentPage }
                                     fontSize: 16,
                                     // fontWeight: 600,
                                     padding: 5,
-                                    backgroundColor: 'rgb(189,228,124)',
+                                    backgroundColor: '#DCF3B6',
                                     borderRadius: 5,
                                     paddingLeft: 10,
-                                    color: 'black'
+                                    color: 'black',
+                                    borderWidth: 5,
+                                    borderColor: "rgb(179,229,94)"
                                 }}
                             />
                         </View>
@@ -154,7 +158,7 @@ export default function TruckInfo({ truckID, setViewTruckFunction, currentPage }
                             <Text style={{fontSize: 18, fontWeight: 700, color: 'green'}}>Collectors:</Text>
                         </View>
                         <View style={{display: 'flex', flex: 0, width: '100%'}}>
-                            <View style={{width: '100%', height: 150, backgroundColor: "rgb(189,228,124)", borderRadius: 5}}>
+                            <View style={{width: '100%', height: 150, backgroundColor: "rgb(179,229,94)", borderRadius: 5}}>
                                 <ScrollView contentContainerStyle={{ flexGrow: 1 }} style={{width: '100%', height: '100%', padding: 5}}>
                                     <TouchableOpacity activeOpacity={1}>
                                         <CollectorList />
