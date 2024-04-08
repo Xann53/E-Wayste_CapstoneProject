@@ -17,6 +17,7 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
     const requestPullRef = firebase.firestore().collection("ShiftAttendanceRequest");
     const colShiftRef = collection(db, "collectorShift");
     const requestRef = collection(db, "ShiftAttendanceRequest");
+    const colShiftRecordRef = collection(db, "collectorShiftRecord");
     
     const [dataList, setDataList] = useState([]);
     const [truckID, setTruckID] = useState();
@@ -296,6 +297,18 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
             }
         })
 
+        shiftData.map(async(shift) => {
+            if(shift.id === id) {
+                await addDoc(colShiftRecordRef, {
+                    attendees: shift.attendees,
+                    driverId: shift.driverId,
+                    lguCode: shift.lguCode,
+                    shiftStartDateTime: shift.shiftStartDateTime,
+                    truckId: shift.truckId
+                })
+            }
+        })
+
         try {
             const docRef = firebase.firestore().collection('collectorShift').doc(id);
             await docRef.delete();
@@ -414,7 +427,7 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                 <View style={{display: 'flex', flexDirection: 'row', width: '100%'}}>
                                     <View style={{display: 'flex', flex: 1}} />
                                     <View style={{display: 'flex', flex: 10, flexDirection: 'row', justifyContent: 'center'}}>
-                                        <Text style={{fontSize: 18, fontWeight: 900, letterSpacing: 1, color: 'green'}}>ATTENDANCE</Text>
+                                        <Text style={{fontSize: 18, fontWeight: 900, letterSpacing: 1, color: 'green'}}>{!openAttendance ? 'SHIFT MANAGEMENT' : 'ATTENDANCE'}</Text>
                                     </View>
                                     <View style={{display: 'flex', flex: 1, flexDirection: 'row', justifyContent: 'flex-end'}}>
                                         <TouchableOpacity onPress={() => {open(false)}}>
