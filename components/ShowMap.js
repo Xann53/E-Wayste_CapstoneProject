@@ -21,6 +21,7 @@ import Reload from './ReloadMap';
 import DisplayRepInfo from './DisplayRepPinInfo';
 import ChangeStatus from './ChangeStatusMap';
 import MTruckList from './MapTruckList';
+import TaskPanel from './colTaskPanel';
 
 export default function LoadMap({ mapRef, page }) {
     const userRef = firebase.firestore().collection("users");
@@ -37,6 +38,7 @@ export default function LoadMap({ mapRef, page }) {
     const [infoID, setInfoID] = useState();
     const [infoImage, setInfoImage] = useState();
     const [openTruckList, setOpenTruckList] = useState(false);
+    const [openTaskList, setOpenTaskList] = useState(false);
 
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
@@ -47,22 +49,11 @@ export default function LoadMap({ mapRef, page }) {
     const [colInProgress, setColInProgress] = useState();
     const [collectorLocation, setCollectorLocation] = useState([]);
 
-
-
-
-    // const usersCollection = collection(db, "users");
-
-    // let searchLongitude, searchLatitude;
-    // let colStatus;
-    // let userId, description, location, dateTime;
-    // let collectionIDTemp;
-
-    // const [openSideBar, setOpenSideBar] = useState();
-    // const [displayFlag, setDisplayFlag] = useState(false);
-    // const [colMenu, setColMenu] = useState(false);
-
-    // const [routeFlag, setRouteFlag] = useState([]);
-    // const [colID, setColID] = useState();
+    const [currentLat, setCurrentLat] = useState(null);
+    const [currentLon, setCurrentLon] = useState(null);
+    const [origin, setOrigin] = useState({});
+    const [destination, setDestination] = useState({});
+    const [showColMarker, setShowColMarker] = useState(false);
 
     useEffect(() => {
         const onSnapshot = snapshot => {
@@ -141,6 +132,35 @@ export default function LoadMap({ mapRef, page }) {
         ChangeStatus(users, userUploads, id, changeType);
     }
 
+    const trackRoute = async(tempId) => {
+        const {status} = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            setErrorMsg('Permission to access location was denied');
+            return;
+        }
+
+        await Location.watchPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 1000,
+            distanceInterval: 1,
+        },(location) => {
+            setCurrentLat(location.coords.latitude);
+            setCurrentLon(location.coords.longitude);
+            updateLocData(location.coords.latitude, location.coords.longitude, tempId);
+        })
+
+        console.log('is Tracking');
+    }
+
+    const updateLocData = async(latitude, longitude, tempId) => {
+        const colDoc = doc(db, "collectorLocationTrack", tempId);
+        const newFields = {
+            latitude: latitude,
+            longitude: longitude
+        };
+        await updateDoc(colDoc, newFields);
+    }
+
     return (
         <>
             <TouchableOpacity activeOpacity={0.5} onPress={() => { mapType === 'uncollected' ? setMapType('collected') : setMapType('uncollected'); changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
@@ -164,7 +184,7 @@ export default function LoadMap({ mapRef, page }) {
                     </TouchableOpacity>
                 }
 
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {setOpenTaskList(true)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
                         <Ionicons name='clipboard' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
                     </View>
@@ -192,11 +212,26 @@ export default function LoadMap({ mapRef, page }) {
 
                 <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} />
 
+                {(showColMarker && (currentLat !== null && currentLon !== null)) &&
+                    <Marker
+                        key={"My Location"}
+                        coordinate={{
+                            latitude: parseFloat(currentLat),
+                            longitude: parseFloat(currentLon)
+                        }}
+                    >
+                        <Ionicons name='location' style={{fontSize: 35, color: '#D31111'}} />
+                        <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
+                    </Marker>
+                }
+                
             </MapView>
 
             <DisplayRepInfo infoID={infoID} setInfoID={setInfoID} infoImage={infoImage} mapType={mapType} users={users} userUploads={userUploads} changeStatus={changeStatus} page={page} />
 
             {openTruckList && <MTruckList open={setOpenTruckList} collectorLocation={collectorLocation} collectorLoc={collectorLoc} users={users} />}
+        
+            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} />}
         </>
     );   
 }

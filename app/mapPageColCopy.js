@@ -194,77 +194,77 @@ export default function MapCol({ navigation }) {
         //     reload2();
         // }
 
-        const reload = async() => {
-            setState({ coordinates: [] });
-            userUploads.map((pin) => {
-                let imageURL;
-                imageCol.map((url) => {
-                    if(url.includes(pin.associatedImage)) {
-                        imageURL = url;
-                    }
-                })
-                try {
-                    if(mapType === 'uncollected' && pin.status === 'uncollected') {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setState((prevState) => ({
-                            ...prevState,
-                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
-                        }));
-                    } else if(mapType === 'collected' && pin.status === 'collected') {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setState((prevState) => ({
-                            ...prevState,
-                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
-                        }));
-                    }
-                } catch (e) {
-                    console.log(e);
-                }
-            })
-            setInfoID();
-            createLocData();
-        }
+        // const reload = async() => {
+        //     setState({ coordinates: [] });
+        //     userUploads.map((pin) => {
+        //         let imageURL;
+        //         imageCol.map((url) => {
+        //             if(url.includes(pin.associatedImage)) {
+        //                 imageURL = url;
+        //             }
+        //         })
+        //         try {
+        //             if(mapType === 'uncollected' && pin.status === 'uncollected') {
+        //                 const lat = parseFloat(pin.latitude);
+        //                 const long = parseFloat(pin.longitude);
+        //                 setState((prevState) => ({
+        //                     ...prevState,
+        //                     coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+        //                 }));
+        //             } else if(mapType === 'collected' && pin.status === 'collected') {
+        //                 const lat = parseFloat(pin.latitude);
+        //                 const long = parseFloat(pin.longitude);
+        //                 setState((prevState) => ({
+        //                     ...prevState,
+        //                     coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+        //                 }));
+        //             }
+        //         } catch (e) {
+        //             console.log(e);
+        //         }
+        //     })
+        //     setInfoID();
+        //     createLocData();
+        // }
 
-        const reload2 = async() => {
-            let temp;
-            if(mapType === 'collected')
-                temp = 'uncollected';
-            else if(mapType === 'uncollected')
-                temp = 'collected';
+        // const reload2 = async() => {
+        //     let temp;
+        //     if(mapType === 'collected')
+        //         temp = 'uncollected';
+        //     else if(mapType === 'uncollected')
+        //         temp = 'collected';
 
-            setState({ coordinates: [] });
-            userUploads.map((pin) => {
-                let imageURL;
-                imageCol.map((url) => {
-                    if(url.includes(pin.associatedImage)) {
-                        imageURL = url;
-                    }
-                })
-                try {
-                    if(temp === 'uncollected' && pin.status === 'uncollected') {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setState((prevState) => ({
-                            ...prevState,
-                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
-                        }));
-                    } else if(temp === 'collected' && pin.status === 'collected') {
-                        const lat = parseFloat(pin.latitude);
-                        const long = parseFloat(pin.longitude);
-                        setState((prevState) => ({
-                            ...prevState,
-                            coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
-                        }));
-                    }
-                } catch (e) {
-                    console.log(e);
-                }
-            })
-            setInfoID();
-            createLocData();
-        }
+        //     setState({ coordinates: [] });
+        //     userUploads.map((pin) => {
+        //         let imageURL;
+        //         imageCol.map((url) => {
+        //             if(url.includes(pin.associatedImage)) {
+        //                 imageURL = url;
+        //             }
+        //         })
+        //         try {
+        //             if(temp === 'uncollected' && pin.status === 'uncollected') {
+        //                 const lat = parseFloat(pin.latitude);
+        //                 const long = parseFloat(pin.longitude);
+        //                 setState((prevState) => ({
+        //                     ...prevState,
+        //                     coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+        //                 }));
+        //             } else if(temp === 'collected' && pin.status === 'collected') {
+        //                 const lat = parseFloat(pin.latitude);
+        //                 const long = parseFloat(pin.longitude);
+        //                 setState((prevState) => ({
+        //                     ...prevState,
+        //                     coordinates: [...prevState.coordinates, { name: pin.id, latitude: lat, longitude: long, image: imageURL }],
+        //                 }));
+        //             }
+        //         } catch (e) {
+        //             console.log(e);
+        //         }
+        //     })
+        //     setInfoID();
+        //     createLocData();
+        // }
 
         // const createLocData = async() => {
         //     try {
@@ -290,42 +290,42 @@ export default function MapCol({ navigation }) {
         //     }
         // }
 
-        const updateLocData = async(latitude, longitude, tempId) => {
-            const colDoc = doc(db, "collectorLocationTrack", tempId);
-            const newFields = {
-                latitude: latitude,
-                longitude: longitude
-            };
-            await updateDoc(colDoc, newFields);
-        }
+        // const updateLocData = async(latitude, longitude, tempId) => {
+        //     const colDoc = doc(db, "collectorLocationTrack", tempId);
+        //     const newFields = {
+        //         latitude: latitude,
+        //         longitude: longitude
+        //     };
+        //     await updateDoc(colDoc, newFields);
+        // }
 
-        const trackRoute = async() => {
-            const {status} = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
+        // const trackRoute = async() => {
+        //     const {status} = await Location.requestForegroundPermissionsAsync();
+        //     if (status !== 'granted') {
+        //         setErrorMsg('Permission to access location was denied');
+        //         return;
+        //     }
 
-            const userID = await AsyncStorage.getItem('userId');
-            let tempId;
-            collectorLocation.map((colLocation) => {
-                if(colLocation.userId === userID) {
-                    tempId = colLocation.id;
-                }
-            })
+        //     const userID = await AsyncStorage.getItem('userId');
+        //     let tempId;
+        //     collectorLocation.map((colLocation) => {
+        //         if(colLocation.userId === userID) {
+        //             tempId = colLocation.id;
+        //         }
+        //     })
 
-            await Location.watchPositionAsync({
-                accuracy: Location.Accuracy.BestForNavigation,
-                timeInterval: 1000,
-                distanceInterval: 1,
-            },(location) => {
-                setCurrentLat(location.coords.latitude);
-                setCurrentLon(location.coords.longitude);
-                updateLocData(location.coords.latitude, location.coords.longitude, tempId);
-            })
+        //     await Location.watchPositionAsync({
+        //         accuracy: Location.Accuracy.BestForNavigation,
+        //         timeInterval: 1000,
+        //         distanceInterval: 1,
+        //     },(location) => {
+        //         setCurrentLat(location.coords.latitude);
+        //         setCurrentLon(location.coords.longitude);
+        //         updateLocData(location.coords.latitude, location.coords.longitude, tempId);
+        //     })
 
-            console.log('is Tracking');
-        }
+        //     console.log('is Tracking');
+        // }
 
         const quickRoute = async(desLatitude, desLongitude) => {
             (async() => {
@@ -567,7 +567,7 @@ export default function MapCol({ navigation }) {
                         </>
                     } */}
 
-                    {currentLat !== null && currentLon !== null ? 
+                    {/* {currentLat !== null && currentLon !== null ? 
                         <Marker
                             key={"My Location"}
                             coordinate={{
@@ -580,7 +580,7 @@ export default function MapCol({ navigation }) {
                         </Marker>
                         :
                         <></>
-                    }
+                    } */}
                     {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
                         <MapViewDirections
                             origin={origin}

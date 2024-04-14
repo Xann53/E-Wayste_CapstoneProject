@@ -12,7 +12,6 @@ export default function DisplayUserAcc({ accID, setViewAccFunction, setImageFunc
     const [lguCode, setLguCode] = useState();
     const [users, setUsers] = useState([]);
     const [images, setImages] = useState([]);
-    const [imageURI, setImageURI] = useState();
 
     const userRef = firebase.firestore().collection("users");
     const pendingUserRef = firebase.firestore().collection("pendingUsers");
@@ -74,18 +73,15 @@ export default function DisplayUserAcc({ accID, setViewAccFunction, setImageFunc
     }, []);
     
     function AccForm() {
+        let temp = []
         users.map((user) => {
+            let imageURI;
             if(user.id === accID) {
                 try {
                     const uri = images.find((link) => link.includes(user.associatedImage));
-                    setImageURI(uri);
+                    imageURI = uri;
                 } catch(e) {}
-            }
-        });
-        
-        let temp = []
-        users.map((user) => {
-            if(user.id === accID) {
+
                 temp.push(
                     <View style={{display: 'flex', width: '100%', gap: 10}}>
 
@@ -145,11 +141,7 @@ export default function DisplayUserAcc({ accID, setViewAccFunction, setImageFunc
 
                         <TouchableOpacity activeOpacity={0.7} onPress={() => {setImageFunction(user.associatedImage)}}>
                             <View style={{width: '100%', height: 250, backgroundColor: '#D3D3D3', borderRadius: 20, borderWidth: 1, overflow: 'hidden'}}>
-                                {imageURI ?
-                                    <Image source={{ uri: imageURI }} style={{ display: 'flex', flex: 1, width: '100%', resizeMode: 'contain', zIndex: 40 }} />
-                                    :
-                                    <></>
-                                }
+                                {imageURI && <Image source={{ uri: imageURI }} style={{ display: 'flex', flex: 1, width: '100%', resizeMode: 'contain', zIndex: 40 }} />}
                             </View>
                         </TouchableOpacity>
 
