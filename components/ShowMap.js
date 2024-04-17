@@ -54,6 +54,7 @@ export default function LoadMap({ mapRef, page }) {
     const [origin, setOrigin] = useState({});
     const [destination, setDestination] = useState({});
     const [showColMarker, setShowColMarker] = useState(false);
+    const [showDirection, setShowDirection] = useState(false);
 
     useEffect(() => {
         const onSnapshot = snapshot => {
@@ -91,25 +92,6 @@ export default function LoadMap({ mapRef, page }) {
         };
     }, [])
 
-    // useEffect(() => {
-    //     scheduleRef.onSnapshot(
-    //         querySnapshot => {
-    //             const uploads = []
-    //             querySnapshot.forEach((doc) => {
-    //                 const {collectionRoute, type, selectedDate, startTime} = doc.data();
-    //                 uploads.push({
-    //                     id: doc.id,
-    //                     collectionRoute,
-    //                     type,
-    //                     selectedDate,
-    //                     startTime
-    //                 })
-    //             })
-    //             setSchedRoute(uploads)
-    //         }
-    //     )
-    // }, [])
-
     useEffect(() => {
         const getMapData = async() => {
             userMun = await AsyncStorage.getItem('userMunicipality');
@@ -139,26 +121,42 @@ export default function LoadMap({ mapRef, page }) {
             return;
         }
 
-        await Location.watchPositionAsync({
-            accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 1000,
-            distanceInterval: 1,
-        },(location) => {
-            setCurrentLat(location.coords.latitude);
-            setCurrentLon(location.coords.longitude);
-            updateLocData(location.coords.latitude, location.coords.longitude, tempId);
-        })
-
-        console.log('is Tracking');
+        try {
+            await Location.watchPositionAsync({
+                accuracy: Location.Accuracy.BestForNavigation,
+                timeInterval: 1000,
+                distanceInterval: 1,
+            },(location) => {
+                setCurrentLat(location.coords.latitude);
+                setCurrentLon(location.coords.longitude);
+                updateLocData(location.coords.latitude, location.coords.longitude, tempId);
+            })
+        } catch(e) {}
     }
 
     const updateLocData = async(latitude, longitude, tempId) => {
-        const colDoc = doc(db, "collectorLocationTrack", tempId);
-        const newFields = {
+        try {
+            const colDoc = doc(db, "collectorLocationTrack", tempId);
+            const newFields = {
             latitude: latitude,
             longitude: longitude
         };
         await updateDoc(colDoc, newFields);
+        } catch(e) {}
+    }
+// Something new here.
+    const quickRoute = async(desLatitude, desLongitude) => {
+        (async() => {
+            let {status} = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+            let currentLocation = await Location.getCurrentPositionAsync({});
+
+            setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
+            setDestination({latitude: desLatitude, longitude: desLongitude});
+        })();
     }
 
     return (
@@ -190,11 +188,17 @@ export default function LoadMap({ mapRef, page }) {
                     </View>
                 </TouchableOpacity>
 
-                {/* <TouchableOpacity activeOpacity={0.5} onPress={() => {setDisplayFlag(!displayFlag ? true : false); showRoute();}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {quickRoute(destination.latitude, destination.longitude)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                    <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
+                        <Ionicons name='compass' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
                         <Ionicons name='flag' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
                     </View>
-                </TouchableOpacity> */}
+                </TouchableOpacity>
             </View>
 
             <MapView
@@ -224,6 +228,16 @@ export default function LoadMap({ mapRef, page }) {
                         <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
                     </Marker>
                 }
+
+                {(showDirection && (origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined)) &&
+                    <MapViewDirections
+                        origin={origin}
+                        destination={destination}
+                        apikey={GOOGLE_API_KEY }
+                        strokeWidth={4}
+                        strokeColor='#6644ff'
+                    />
+                }
                 
             </MapView>
 
@@ -231,7 +245,7 @@ export default function LoadMap({ mapRef, page }) {
 
             {openTruckList && <MTruckList open={setOpenTruckList} collectorLocation={collectorLocation} collectorLoc={collectorLoc} users={users} />}
         
-            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} />}
+            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} />}
         </>
     );   
 }

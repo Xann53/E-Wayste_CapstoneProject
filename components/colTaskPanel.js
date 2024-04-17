@@ -10,7 +10,7 @@ import { collection, addDoc, getDocs, query, updateDoc, doc, deleteDoc } from 'f
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { returnKeyType } from 'deprecated-react-native-prop-types/DeprecatedTextInputPropTypes';
 
-export default function TaskPanel({ open, trackRoute, setShowColMarker }) {
+export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRoute, setShowDirection }) {
     const userRef = firebase.firestore().collection("users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const schedRef = firebase.firestore().collection("schedule");
@@ -31,7 +31,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker }) {
     const [allActiveTask, setAllActiveTask] = useState([]);
     const [images, setImages] = useState([]);
 
-    const [filter, setFilter] = useState('Collections');
+    const [filter, setFilter] = useState('Reports');
     const [viewInfo, setViewInfo] = useState('');
     const [selectedTaskType, setSelectedTaskType] = useState('');
     const [selectedCol, setSelectedCol] = useState([]);
@@ -205,7 +205,28 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker }) {
             const docRef = firebase.firestore().collection('activeTask').doc(id);
             await docRef.delete();
             setShowColMarker(false);
+            setShowDirection(false);
         } catch(e) {}
+    }
+
+    const setDestination = async(collectionData) => {
+        if(selectedTaskType === 'Collection') {
+            uploadColRoute(collectionData);
+        } else if(selectedTaskType === 'Assignment') {
+            quickRoute(selectedAssign.latitude, selectedAssign.longitude);
+            setShowDirection(true);
+        } else if(selectedTaskType === 'Report') {
+            quickRoute(selectedRep.latitude, selectedRep.longitude);
+            setShowDirection(true);
+        }
+    }
+
+    const uploadColRoute = async(collectionData) => {
+        let templocData = [];
+        collectionData.collectionRoute.coordinates.map((data) => {
+            templocData.push(data);
+        })
+        console.log(templocData);
     }
     
     return(
@@ -227,14 +248,14 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker }) {
                             </View>
                         </View>
                         <View style={{display: 'flex', flexDirection: 'row', width: '100%', marginTop: 15, justifyContent: 'space-evenly', gap: 5, paddingHorizontal: 15}}>
+                            <TouchableOpacity onPress={() => {setFilter('Reports')}} activeOpacity={0.7} disabled={filter === 'Reports' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'Reports' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
+                                    <Text>Reports</Text>
+                            </TouchableOpacity>
                             <TouchableOpacity onPress={() => {setFilter('Collections')}} activeOpacity={0.7} disabled={filter === 'Collections' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'Collections' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
                                     <Text>Collections</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => {setFilter('Assignments')}} activeOpacity={0.7} disabled={filter === 'Assignments' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'Assignments' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
                                     <Text>Assignments</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => {setFilter('Reports')}} activeOpacity={0.7} disabled={filter === 'Reports' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'Reports' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
-                                    <Text>Reports</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={{display: 'flex', flex: 10, width: '100%', marginTop: 10}}>
@@ -455,7 +476,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker }) {
                                             <Text style={{color: 'white', fontWeight: 900}}>END TRACK</Text>
                                         </TouchableOpacity>
                                         :
-                                        <TouchableOpacity disabled={((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) ? true : false} onPress={() => {activateTask()}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                        <TouchableOpacity disabled={((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) ? true : false} onPress={() => {activateTask(); setDestination(selectedCol);}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
                                             {((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
                                             <Text style={{color: 'white', fontWeight: 900}}>TRACK</Text>
                                         </TouchableOpacity>

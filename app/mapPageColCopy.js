@@ -327,21 +327,21 @@ export default function MapCol({ navigation }) {
         //     console.log('is Tracking');
         // }
 
-        const quickRoute = async(desLatitude, desLongitude) => {
-            (async() => {
-                let {status} = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') {
-                    setErrorMsg('Permission to access location was denied');
-                    return;
-                }
-                let currentLocation = await Location.getCurrentPositionAsync({});
+        // const quickRoute = async(desLatitude, desLongitude) => {
+        //     (async() => {
+        //         let {status} = await Location.requestForegroundPermissionsAsync();
+        //         if (status !== 'granted') {
+        //             setErrorMsg('Permission to access location was denied');
+        //             return;
+        //         }
+        //         let currentLocation = await Location.getCurrentPositionAsync({});
 
-                trackRoute();
+        //         trackRoute();
 
-                setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
-                setDestination({latitude: desLatitude, longitude: desLongitude});
-            })();
-        }
+        //         setOrigin({latitude: currentLocation.coords.latitude, longitude: currentLocation.coords.longitude});
+        //         setDestination({latitude: desLatitude, longitude: desLongitude});
+        //     })();
+        // }
 
         const showRoute = async() => {
             setRouteFlag([]);
@@ -581,7 +581,7 @@ export default function MapCol({ navigation }) {
                         :
                         <></>
                     } */}
-                    {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
+                    {/* {(origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined) ?
                         <MapViewDirections
                             origin={origin}
                             destination={destination}
@@ -591,7 +591,7 @@ export default function MapCol({ navigation }) {
                         />
                         :
                         <></>
-                    }
+                    } */}
 
                     {displayFlag ?
                         <>
@@ -601,7 +601,7 @@ export default function MapCol({ navigation }) {
                         <></>
                     }
                 </MapView>
-                {infoID ?
+                {/* {infoID ?
                     <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, height: 140, width: '90%', margin:20,
                      padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 5}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
@@ -662,7 +662,7 @@ export default function MapCol({ navigation }) {
                     </View>
                     :
                     <></>
-                }
+                } */}
                 {colMenu ?
                     <View style={{position: 'absolute', backgroundColor: 'white', zIndex: 99, margin: 20, height: 150, width: '90%', padding: 5, bottom: '10.5%', shadowColor: 'black', borderRadius: 15, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
                         <View style={{width: '100%', height: '100%', display: 'flex', flexDirection: 'row'}}>
