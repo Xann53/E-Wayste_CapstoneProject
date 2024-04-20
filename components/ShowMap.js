@@ -29,8 +29,9 @@ export default function LoadMap({ mapRef, page }) {
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
     const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
-    const colInProgressRef = firebase.firestore().collection("collectionInProgress");
+    const activeRef = firebase.firestore().collection("activeTask");
     const collectorLoc = collection(db, "collectorLocationTrack");
+    const activeRouteRef = firebase.firestore().collection("routeForActiveCollection");
 
     let userMun;
     
@@ -40,14 +41,17 @@ export default function LoadMap({ mapRef, page }) {
     const [openTruckList, setOpenTruckList] = useState(false);
     const [openTaskList, setOpenTaskList] = useState(false);
 
+    const [userID, setUserID] = useState('');
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
     const [state, setState] = useState({ coordinates: [] });
-    const [schedRoute, setSchedRoute] = useState([]);
-    const [track, setTrack] = useState({ coordinates: [] });
-    const [colInProgress, setColInProgress] = useState();
     const [collectorLocation, setCollectorLocation] = useState([]);
+    const [allActiveTask, setAllActiveTask] = useState([]);
+    const [allActiveRoute, setAllActiveRoute] = useState([]);
+    const [allSched, setAllSched] = useState([]);
+    
+    const [track, setTrack] = useState({ coordinates: [] });
 
     const [currentLat, setCurrentLat] = useState(null);
     const [currentLon, setCurrentLon] = useState(null);
@@ -55,6 +59,16 @@ export default function LoadMap({ mapRef, page }) {
     const [destination, setDestination] = useState({});
     const [showColMarker, setShowColMarker] = useState(false);
     const [showDirection, setShowDirection] = useState(false);
+    const [showFlag, setShowFlag] = useState(false);
+    const [showRepPin, setShowRepPin] = useState(true);
+
+    useEffect(() => {
+        const getID = async() => {
+            const temp = await AsyncStorage.getItem('userId');
+            setUserID(temp);
+        }
+        getID();
+    }, [])
 
     useEffect(() => {
         const onSnapshot = snapshot => {
@@ -62,13 +76,9 @@ export default function LoadMap({ mapRef, page }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setUsers(newData);
-
         };
-
         const unsubscribe = userRef.onSnapshot(onSnapshot);
-
         return () => {
             unsubscribe();
         };
@@ -80,13 +90,23 @@ export default function LoadMap({ mapRef, page }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
-            setSchedRoute(newData);
-
+            setAllSched(newData);
         };
-
         const unsubscribe = scheduleRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, [])
 
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllActiveRoute(newData);
+        };
+        const unsubscribe = activeRouteRef.onSnapshot(onSnapshot);
         return () => {
             unsubscribe();
         };
@@ -95,7 +115,7 @@ export default function LoadMap({ mapRef, page }) {
     useEffect(() => {
         const getMapData = async() => {
             userMun = await AsyncStorage.getItem('userMunicipality');
-            LoadData(userMun, reportRef, imageColRef, collectorLocRef, colInProgressRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setColInProgress, setCollectorLocation);
+            LoadData(userMun, reportRef, imageColRef, collectorLocRef, activeRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setAllActiveTask, setCollectorLocation);
         }
         getMapData();
     }, [])
@@ -144,7 +164,7 @@ export default function LoadMap({ mapRef, page }) {
         await updateDoc(colDoc, newFields);
         } catch(e) {}
     }
-// Something new here.
+
     const quickRoute = async(desLatitude, desLongitude) => {
         (async() => {
             let {status} = await Location.requestForegroundPermissionsAsync();
@@ -174,6 +194,12 @@ export default function LoadMap({ mapRef, page }) {
                     <Ionicons name='reload-circle' style={{ fontSize: 35, top: 0, left: 1, color: 'white' }} />
                 </TouchableOpacity>
 
+                <TouchableOpacity activeOpacity={0.5} onPress={() => {showRepPin ? setShowRepPin(false) : setShowRepPin(true); setInfoID()}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                    <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
+                        <Ionicons name='eye' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
+                    </View>
+                </TouchableOpacity>
+
                 {(page === 'Collector') &&
                     <TouchableOpacity activeOpacity={0.5} onPress={() => {setOpenTruckList(true)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                         <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
@@ -194,11 +220,11 @@ export default function LoadMap({ mapRef, page }) {
                     </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                {/* <TouchableOpacity activeOpacity={0.5} onPress={() => {}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
                         <Ionicons name='flag' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
                     </View>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
 
             <MapView
@@ -214,7 +240,7 @@ export default function LoadMap({ mapRef, page }) {
                 customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
             >
 
-                <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} />
+                {showRepPin && <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} />}
 
                 {(showColMarker && (currentLat !== null && currentLon !== null)) &&
                     <Marker
@@ -224,7 +250,7 @@ export default function LoadMap({ mapRef, page }) {
                             longitude: parseFloat(currentLon)
                         }}
                     >
-                        <Ionicons name='location' style={{fontSize: 35, color: '#D31111'}} />
+                        <Ionicons name='location' style={{fontSize: 35, color: '#D31111', zIndex: 99}} />
                         <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
                     </Marker>
                 }
@@ -238,6 +264,36 @@ export default function LoadMap({ mapRef, page }) {
                         strokeColor='#6644ff'
                     />
                 }
+
+                {(showFlag) &&
+                    <>
+                        {allActiveTask.map((task) => {
+                            if(task.userId === userID) {
+                                return(
+                                    allActiveRoute.map((route) => {
+                                        if(route.activeTaskId === task.id) {
+                                            return(
+                                                route.taskRoute.map((loc) => {
+                                                    return(
+                                                        <Marker
+                                                            key={loc.name}
+                                                            coordinate={{
+                                                                latitude: parseFloat(loc.latitude),
+                                                                longitude: parseFloat(loc.longitude)
+                                                            }}
+                                                        >
+                                                            <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin.png')} />
+                                                        </Marker>
+                                                    );
+                                                })
+                                            );
+                                        }
+                                    })
+                                );
+                            }
+                        })}
+                    </>
+                }
                 
             </MapView>
 
@@ -245,7 +301,7 @@ export default function LoadMap({ mapRef, page }) {
 
             {openTruckList && <MTruckList open={setOpenTruckList} collectorLocation={collectorLocation} collectorLoc={collectorLoc} users={users} />}
         
-            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} />}
+            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} setShowFlag={setShowFlag} />}
         </>
     );   
 }

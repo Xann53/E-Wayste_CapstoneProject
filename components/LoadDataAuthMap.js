@@ -2,7 +2,7 @@ import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
-export default function LoadData(userMun, reportRef, imageColRef, collectorLocRef, colInProgressRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setColInProgress, setCollectorLocation) {
+export default function LoadData(userMun, reportRef, imageColRef, collectorLocRef, activeRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setAllActiveTask, setCollectorLocation) {
     
     const loadPin = async() => {
         const onSnapshot = snapshot => {
@@ -113,11 +113,11 @@ export default function LoadData(userMun, reportRef, imageColRef, collectorLocRe
                 ...doc.data(),
             }));
 
-            setColInProgress(newData);
+            setAllActiveTask(newData);
 
         };
 
-        const unsubscribe = colInProgressRef.onSnapshot(onSnapshot);
+        const unsubscribe = activeRef.onSnapshot(onSnapshot);
 
         return () => {
             unsubscribe();

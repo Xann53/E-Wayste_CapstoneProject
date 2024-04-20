@@ -424,45 +424,45 @@ export default function MapCol({ navigation }) {
         //     }
         // }
 
-        const startACol = async() => {
-            const id = await AsyncStorage.getItem('userId');
-            const collectorID = id + '';
-            const collectionID = colID + '';
-            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+        // const startACol = async() => {
+        //     const id = await AsyncStorage.getItem('userId');
+        //     const collectorID = id + '';
+        //     const collectionID = colID + '';
+        //     const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
 
-            if(collectorID !== null && collectionID !== null) {
-                await addDoc(colInProgressRef2, {
-                    collectionID: collectionID,
-                    collectorID: collectorID,
-                    fullDateTime: fullDateTime,
-                });
-            }
+        //     if(collectorID !== null && collectionID !== null) {
+        //         await addDoc(colInProgressRef2, {
+        //             collectionID: collectionID,
+        //             collectorID: collectorID,
+        //             fullDateTime: fullDateTime,
+        //         });
+        //     }
             
-            const title = 'GARBAGE COLLECTION DAY!';
-            const body = 'Scheduled Collection has started';
-            PushNotif(title, body, fullDateTime);
-        }
+        //     const title = 'GARBAGE COLLECTION DAY!';
+        //     const body = 'Scheduled Collection has started';
+        //     PushNotif(title, body, fullDateTime);
+        // }
 
-        const stopACol = async() => {
-            let id
-            colInProgress.map((temp) => {
-                if(temp.collectionID.includes(colID)) {
-                    id = temp.id;
-                }
-            })
+        // const stopACol = async() => {
+        //     let id
+        //     colInProgress.map((temp) => {
+        //         if(temp.collectionID.includes(colID)) {
+        //             id = temp.id;
+        //         }
+        //     })
 
-            try {
-                const docRef = firebase.firestore().collection('collectionInProgress').doc(id);
-                await docRef.delete();
-            } catch(e) {
-                console.log(e);
-            }
+        //     try {
+        //         const docRef = firebase.firestore().collection('collectionInProgress').doc(id);
+        //         await docRef.delete();
+        //     } catch(e) {
+        //         console.log(e);
+        //     }
 
-            const title = 'COLLECTION HAS ENDED';
-            const body = 'Scheduled Collection has Ended';
-            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
-            PushNotif(title, body, fullDateTime);
-        }
+        //     const title = 'COLLECTION HAS ENDED';
+        //     const body = 'Scheduled Collection has Ended';
+        //     const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+        //     PushNotif(title, body, fullDateTime);
+        // }
 
         function menuDisplayRoute() {
             let temp = [];

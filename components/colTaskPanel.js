@@ -10,15 +10,19 @@ import { collection, addDoc, getDocs, query, updateDoc, doc, deleteDoc } from 'f
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { returnKeyType } from 'deprecated-react-native-prop-types/DeprecatedTextInputPropTypes';
 
-export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRoute, setShowDirection }) {
+import PushNotif from './PushNotification';
+
+export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRoute, setShowDirection, setShowFlag }) {
     const userRef = firebase.firestore().collection("users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const schedRef = firebase.firestore().collection("schedule");
     const sihftRef = firebase.firestore().collection("collectorShift");
     const truckRef = firebase.firestore().collection("trucks");
     const activeRef = firebase.firestore().collection("activeTask");
+    const activeRouteRef = firebase.firestore().collection("routeForActiveCollection");
     const postImagesRef = ref(storage, "postImages/");
     const addActiveTaskRef = collection(db, "activeTask");
+    const addRouteForColRef = collection(db, "routeForActiveCollection");
 
     const [userID, setUserID] = useState('');
     const [userMun, setUserMun] = useState('');
@@ -29,6 +33,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
     const [allShift, setAllShift] = useState([]);
     const [allTruck, setAllTruck] = useState([]);
     const [allActiveTask, setAllActiveTask] = useState([]);
+    const [allActiveRoute, setAllActiveRoute] = useState([]);
     const [images, setImages] = useState([]);
 
     const [filter, setFilter] = useState('Reports');
@@ -140,6 +145,20 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
     }, [])
 
     useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllActiveRoute(newData);
+        };
+        const unsubscribe = activeRouteRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, [])
+
+    useEffect(() => {
         listAll(postImagesRef).then((response) => {
             setImages([]);
             response.items.forEach((item) => {
@@ -167,10 +186,14 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
         }
     }
 
-    const activateTask = async() => {
+    const activateTask = async(collectionData) => {
         let taskId, shiftId, trackId;
         if(selectedTaskType === 'Collection') {
             taskId = selectedCol.id;
+            const title = 'GARBAGE COLLECTION DAY!';
+            const body = 'Scheduled Collection has started';
+            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+            PushNotif(title, body, fullDateTime);
         } else if(selectedTaskType === 'Assignment') {
             taskId = selectedAssign.id;
         } else if(selectedTaskType === 'Report') {
@@ -183,7 +206,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
             }
         })
         try {
-            await addDoc(addActiveTaskRef, {
+            const doc = await addDoc(addActiveTaskRef, {
                 taskId: taskId,
                 taskType: selectedTaskType,
                 shiftId: shiftId,
@@ -191,6 +214,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
             });
             setShowColMarker(true);
             trackRoute(trackId);
+            setDestination(collectionData, doc.id);
         } catch(e) {}
     }
 
@@ -201,17 +225,24 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                 id = task.id;
             }
         })
+        if(selectedTaskType === 'Collection') {
+            const title = 'COLLECTION HAS ENDED';
+            const body = 'Scheduled Collection has Ended';
+            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+            PushNotif(title, body, fullDateTime);
+        }
         try {
             const docRef = firebase.firestore().collection('activeTask').doc(id);
             await docRef.delete();
             setShowColMarker(false);
             setShowDirection(false);
+            deleteColRoute(id);
         } catch(e) {}
     }
 
-    const setDestination = async(collectionData) => {
+    const setDestination = async(collectionData, activeTaskId) => {
         if(selectedTaskType === 'Collection') {
-            uploadColRoute(collectionData);
+            uploadColRoute(collectionData, activeTaskId);
         } else if(selectedTaskType === 'Assignment') {
             quickRoute(selectedAssign.latitude, selectedAssign.longitude);
             setShowDirection(true);
@@ -221,12 +252,40 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
         }
     }
 
-    const uploadColRoute = async(collectionData) => {
-        let templocData = [];
+    const uploadColRoute = async(collectionData, activeTaskId) => {
+        let templocData = [], shiftId;
         collectionData.collectionRoute.coordinates.map((data) => {
             templocData.push(data);
         })
-        console.log(templocData);
+        allShift.map((shift) => {
+            if(shift.driverId === userID) {
+                shiftId = shift.id;
+            }
+        })
+        try {
+            await addDoc(addRouteForColRef, {
+                activeTaskId: activeTaskId,
+                taskType: 'Collection',
+                shiftId: shiftId,
+                taskRoute: templocData,
+                userId: userID
+            })
+            setShowFlag(true);
+        } catch(e) {}
+    }
+
+    const deleteColRoute = async(taskId) => {
+        let id;
+        allActiveRoute.map((route) => {
+            if(route.activeTaskId === taskId) {
+                id = route.id;
+            }
+        })
+        try {
+            const docRef = firebase.firestore().collection('routeForActiveCollection').doc(id);
+            await docRef.delete();
+            setShowFlag(false);
+        } catch(e) {}
     }
     
     return(
@@ -476,7 +535,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                                             <Text style={{color: 'white', fontWeight: 900}}>END TRACK</Text>
                                         </TouchableOpacity>
                                         :
-                                        <TouchableOpacity disabled={((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) ? true : false} onPress={() => {activateTask(); setDestination(selectedCol);}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                        <TouchableOpacity disabled={((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) ? true : false} onPress={() => {activateTask(selectedCol)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
                                             {((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
                                             <Text style={{color: 'white', fontWeight: 900}}>TRACK</Text>
                                         </TouchableOpacity>
