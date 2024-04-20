@@ -281,12 +281,39 @@ export default function LoadMap({ mapRef, page }) {
                                                                 latitude: parseFloat(loc.latitude),
                                                                 longitude: parseFloat(loc.longitude)
                                                             }}
+                                                            style={{alignItems: 'center'}}
                                                         >
-                                                            <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin.png')} />
+                                                            <Text style={{fontSize: 18, fontWeight: 900, color: 'green', transform: [{translateY: 26}], zIndex: 99}}>{parseInt(loc.name + 1)}</Text>
+                                                            <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin2.png')} />
                                                         </Marker>
                                                     );
                                                 })
                                             );
+                                        }
+                                    })
+                                );
+                            }
+                        })}
+
+                        {allActiveTask.map((task) => {
+                            if(task.userId === userID) {
+                                return(
+                                    allActiveRoute.map((route) => {
+                                        if(route.activeTaskId === task.id) {
+                                            let temp = [];
+                                            for(let i = 1; i < route.taskRoute.length; i++) {
+                                                temp.push(
+                                                    <MapViewDirections
+                                                        origin={{latitude: parseFloat(route.taskRoute[i-1].latitude), longitude: parseFloat(route.taskRoute[i-1].longitude)}}
+                                                        destination={{latitude: parseFloat(route.taskRoute[i].latitude), longitude: parseFloat(route.taskRoute[i].longitude)}}
+                                                        apikey={GOOGLE_API_KEY }
+                                                        strokeWidth={3}
+                                                        strokeColor='green'
+                                                        key={i}
+                                                    />
+                                                );
+                                            };
+                                            return (<>{temp}</>);
                                         }
                                     })
                                 );
