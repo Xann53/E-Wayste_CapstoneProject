@@ -98,9 +98,14 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Location</Text>
                     <TextInput
-                      style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
+                      style={[
+                        styles.fieldValue,
+                        focusedField === 'location' && styles.focusedField,
+                        { height: Math.max(35, updatedData.location ? 35 + updatedData.location.length / 2 : 35) } // Adjust height based on text length
+                      ]}
                       value={updatedData.location}
                       editable={isEditable}
+                      multiline={true} // Set multiline to true
                       onFocus={() => handleFieldFocus('location')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
@@ -112,12 +117,14 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                     <Text style={styles.fieldName}>Collection Route</Text>
                     {scheduleData.collectionRoute.coordinates[0] && (
                       <Text style={styles.fieldValue}>
-                        <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {scheduleData.collectionRoute.coordinates[0].locationName}
+                        <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
+                        {scheduleData.collectionRoute.coordinates[0].locationName}
                       </Text>
                     )}
                     {scheduleData.collectionRoute.coordinates[1] && (
                       <Text style={styles.fieldValue}>
-                        <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {scheduleData.collectionRoute.coordinates[1].locationName}
+                        <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
+                        {scheduleData.collectionRoute.coordinates[1].locationName}
                       </Text>
                     )}
                   </View>

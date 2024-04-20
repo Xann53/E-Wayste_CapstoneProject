@@ -4,9 +4,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Calendar } from 'react-native-calendars'; 
 import { useIsFocused } from '@react-navigation/native'; 
 import { useState, useEffect, useRef } from 'react'; 
+import { fetchUserId } from '../../components/userService';
 import AsyncStorage from "@react-native-async-storage/async-storage"; 
 import { db } from '../../firebase_config';
-import { collection, addDoc, getDocs, where, query, onSnapshot } from 'firebase/firestore'; 
+import { collection, addDoc, getDocs, where, query, onSnapshot, getDoc,doc } from 'firebase/firestore'; 
 import PushNotif from '../../components/PushNotification';
 
 export default function ScheduleCol({navigation}) {  
@@ -17,25 +18,77 @@ export default function ScheduleCol({navigation}) {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());  
   const [selectedMonthName, setSelectedMonthName] = useState(''); 
   const [viewAllEvents, setViewAllEvents] = useState(false);
+  const [userMunicipality, setUserMunicipality] = useState('');
 
-  useEffect(() => {  
-    const fetchSchedule = () => {  
-      try {  
-        const unsubscribe = onSnapshot(collection(db, 'schedule'), (snapshot) => {  
-          const scheduleData = snapshot.docs.map((doc) => {  
-            const data = doc.data();  
-            data.id = doc.id; // Add the 'id' property with the document ID  
-            return data;  
-          });  
-          setSchedule(scheduleData);  
-        });  
-        return unsubscribe;  
-      } catch (error) {  
-        console.log('Error fetching schedule:', error);  
-      }  
-    };  
-        fetchSchedule();  
-    }, []);  
+  useEffect(() => {
+    const fetchMunicipality = async () => {
+      try {
+        const userId = await fetchUserId();
+        if (userId) {
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            const municipality = userDoc.data().municipality;
+            setUserMunicipality(municipality);
+            console.log('Municipality of the logged-in user:', municipality);
+          } else {
+            console.log('User document not found.');
+          }
+        } else {
+          console.log('User ID not found.');
+        }
+      } catch (error) {
+        console.error('Error fetching municipality:', error);
+      }
+    };
+
+    fetchMunicipality();
+  }, []);
+
+
+  useEffect(() => {
+    fetchSchedule(); 
+  }, [userMunicipality]);
+  
+  const fetchSchedule = () => {
+    try {
+      const unsubscribe = onSnapshot(collection(db, 'schedule'), (snapshot) => {
+        const scheduleData = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          data.id = doc.id;
+          return data;
+        })
+        .filter((schedule) => {
+          const locationIncludesUserMunicipality = schedule.location && schedule.location.includes(userMunicipality);
+          const collectionRouteIncludesUserMunicipality = schedule.collectionRoute && schedule.collectionRoute.coordinates.some(coord => coord.locationName && coord.locationName.includes(userMunicipality));
+          return locationIncludesUserMunicipality || collectionRouteIncludesUserMunicipality;
+        });
+
+        let collectionCount = 0;
+        let eventCount = 0;
+        let assignmentCount = 0;
+  
+        scheduleData.forEach(schedule => {
+          if (schedule.type === 'Collection') {
+            collectionCount++;
+          } else if (schedule.type === 'Event') {
+            eventCount++;
+          } else if (schedule.type === 'Assignment') {
+            assignmentCount++;
+          }
+        });
+  
+        console.log('Collection Count:', collectionCount);
+        console.log('Event Count:', eventCount);
+        console.log('Assignment Count:', assignmentCount);
+  
+        setSchedule(scheduleData);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.log('Error fetching schedule:', error);
+    }
+  };
+   
     const isFocused = useIsFocused();  
     useEffect(() => {  
         if(!isFocused) {  
@@ -130,7 +183,7 @@ export default function ScheduleCol({navigation}) {
               <View style={{width: '95%', height: 40, backgroundColor: 'rgb(230, 230, 230)', overflow: 'hidden', borderRadius: 10, borderWidth: 0.5}}>  
                 <TouchableOpacity activeOpacity={0.5} onPress={() => { setViewSched(true); }}>  
                   <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(247, 245, 243)'}}>  
-                    <Text>View all Events</Text>  
+                    <Text>View all schedules</Text>  
                   </View>  
                 </TouchableOpacity>  
               </View>  
@@ -203,7 +256,7 @@ export default function ScheduleCol({navigation}) {
             <View style={{ width: '95%', height: 40, backgroundColor: 'rgb(230, 230, 230)', overflow: 'hidden', borderRadius: 10, borderWidth: 0.5, marginBottom: 15 }}>
               <TouchableOpacity activeOpacity={0.5} onPress={() => { setViewAllEvents(!viewAllEvents); }}>
                 <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(247, 245, 243)' }}>
-                  <Text>{viewAllEvents ? 'Show less' : 'View all events'}</Text>
+                  <Text>{viewAllEvents ? 'Show less' : 'View all schedules'}</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -246,7 +299,7 @@ export default function ScheduleCol({navigation}) {
                   </View> 
                   <View style={{ flexDirection: 'row', gap: 10 }}> 
                       <View style={{ width: 20, height: 20, backgroundColor: 'rgb(134, 231, 237)' }} /> 
-                      <Text>Special Events</Text> 
+                      <Text>Events</Text> 
                       </View>  
                   <View style={{ flexDirection: 'row', gap: 10 }}>  
                       <View style={{ width: 20, height: 20, backgroundColor: 'rgb(135, 255, 116)'}} />  

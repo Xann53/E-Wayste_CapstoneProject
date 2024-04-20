@@ -8,19 +8,19 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from 'expo-image-picker';
 import { parse } from 'date-fns';
-
 import uuid from 'react-native-uuid';
 import moment from 'moment';
 import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc, onSnapshot} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL,  uploadBytes} from 'firebase/storage';
-// import SideBar from '../components/SideNav';
+
 import OpenSideBar from '../components/OpenSideNav';
 
 export default function NewsfeedAut({navigation}) {
     const isFocused = useIsFocused();
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
+    const [userMunicipality, setUserMunicipality] = useState('');
 
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
@@ -49,6 +49,30 @@ export default function NewsfeedAut({navigation}) {
     const [isAllPressed, setIsAllPressed] = useState(true);
     const [isEventsPressed, setIsEventsPressed] = useState(false);
     const [userEvents, setUserEvents] = useState([]);
+
+    useEffect(() => {
+      const fetchMunicipality = async () => {
+        try {
+          const userId = await fetchUserId();
+          if (userId) {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+              const municipality = userDoc.data().municipality;
+              setUserMunicipality(municipality);
+              console.log('Municipality of the logged-in user:', municipality);
+            } else {
+              console.log('User document not found.');
+            }
+          } else {
+            console.log('User ID not found.');
+          }
+        } catch (error) {
+          console.error('Error fetching municipality:', error);
+        }
+      };
+  
+      fetchMunicipality();
+    }, []);
 
     useEffect(() => {
         if(!isFocused) {
@@ -167,40 +191,37 @@ export default function NewsfeedAut({navigation}) {
             return [];
           }
         };  
-
-    useEffect(() => {
-      const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
-  
-      const fetchReports = async () => {
-          try {
-              // Query for reports today
-              const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
-              const todaySnapshot = await getDocs(todayQuery);
-              const todayReports = [];
-  
-              todaySnapshot.forEach(doc => {
-                  const report = doc.data();
-                  const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
-  
-                  if (reportDate.toISOString().split('T')[0] === currentDate) {
-                      todayReports.push(report);
-                  }
-              });
-  
-              setReportsToday(todayReports.length);
-  
-              // Query for all reports
-              const allReportsQuery = query(collection(db, 'generalUsersReports'));
-              const allReportsSnapshot = await getDocs(allReportsQuery);
-              const totalReportsCount = allReportsSnapshot.size;
-              setTotalReports(totalReportsCount);
-          } catch (error) {
-              console.log('Error fetching reports:', error);
-          }
-      };
-  
-      fetchReports();
-  }, []);
+      
+        useEffect(() => {
+          const currentDate = new Date().toISOString().split('T')[0]; 
+          const fetchReports = async () => {
+              try {
+                  const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
+                  const todaySnapshot = await getDocs(todayQuery);
+                  const todayReports = [];
+      
+                  todaySnapshot.forEach(doc => {
+                      const report = doc.data();
+                      const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+      
+                      if (report.municipality === userMunicipality && reportDate.toISOString().split('T')[0] === currentDate) {
+                          todayReports.push(report);
+                      }
+                  });
+      
+                  setReportsToday(todayReports.length);
+      
+                  const allReportsQuery = query(collection(db, 'generalUsersReports'), where('municipality', '==', userMunicipality));
+                  const allReportsSnapshot = await getDocs(allReportsQuery);
+                  const totalReportsCount = allReportsSnapshot.size;
+                  setTotalReports(totalReportsCount);
+              } catch (error) {
+                  console.log('Error fetching reports:', error);
+              }
+          };
+      
+          fetchReports();
+      }, [userMunicipality]); 
 
 
     useEffect(() => {
