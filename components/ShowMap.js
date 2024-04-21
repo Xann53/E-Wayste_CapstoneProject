@@ -61,6 +61,8 @@ export default function LoadMap({ mapRef, page }) {
     const [showDirection, setShowDirection] = useState(false);
     const [showFlag, setShowFlag] = useState(false);
     const [showRepPin, setShowRepPin] = useState(true);
+    const [showAssignPin, setShowAssignPin] = useState(false);
+    const [assignPinLoc, setAssignPinLoc] = useState({});
 
     useEffect(() => {
         const getID = async() => {
@@ -255,6 +257,21 @@ export default function LoadMap({ mapRef, page }) {
                     </Marker>
                 }
 
+                {(showAssignPin) &&
+                    <>
+                        <Marker
+                            key={'Assignment Pin'}
+                            coordinate={{
+                                latitude: parseFloat(assignPinLoc.latitude),
+                                longitude: parseFloat(assignPinLoc.longitude)
+                            }}
+                            style={{alignItems: 'center'}}
+                        >
+                            <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin.png')} />
+                        </Marker>
+                    </>
+                }
+
                 {(showDirection && (origin.latitude !== undefined && origin.longitude !== undefined) && (destination.latitude !== undefined && destination.longitude !== undefined)) &&
                     <MapViewDirections
                         origin={origin}
@@ -313,7 +330,7 @@ export default function LoadMap({ mapRef, page }) {
                                                     />
                                                 );
                                             };
-                                            return (<>{temp}</>);
+                                            return (temp);
                                         }
                                     })
                                 );
@@ -328,7 +345,7 @@ export default function LoadMap({ mapRef, page }) {
 
             {openTruckList && <MTruckList open={setOpenTruckList} collectorLocation={collectorLocation} collectorLoc={collectorLoc} users={users} />}
         
-            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} setShowFlag={setShowFlag} />}
+            {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} setShowFlag={setShowFlag} setShowAssignPin={setShowAssignPin} setAssignPinLoc={setAssignPinLoc} />}
         </>
     );   
 }

@@ -12,7 +12,7 @@ import { returnKeyType } from 'deprecated-react-native-prop-types/DeprecatedText
 
 import PushNotif from './PushNotification';
 
-export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRoute, setShowDirection, setShowFlag }) {
+export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRoute, setShowDirection, setShowFlag, setShowAssignPin, setAssignPinLoc }) {
     const userRef = firebase.firestore().collection("users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const schedRef = firebase.firestore().collection("schedule");
@@ -237,6 +237,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
             setShowColMarker(false);
             setShowDirection(false);
             deleteColRoute(id);
+            setShowAssignPin(false);
         } catch(e) {}
     }
 
@@ -245,7 +246,9 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
             uploadColRoute(collectionData, activeTaskId);
         } else if(selectedTaskType === 'Assignment') {
             quickRoute(selectedAssign.latitude, selectedAssign.longitude);
+            setAssignPinLoc({latitude: selectedAssign.latitude, longitude: selectedAssign.longitude});
             setShowDirection(true);
+            setShowAssignPin(true);
         } else if(selectedTaskType === 'Report') {
             quickRoute(selectedRep.latitude, selectedRep.longitude);
             setShowDirection(true);
