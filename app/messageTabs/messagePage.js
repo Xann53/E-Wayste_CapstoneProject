@@ -19,7 +19,6 @@ export default function Message({navigation}) {
   const [userMessage, setUserMessage] = useState('');
   const [refreshPage, setRefreshPage] = useState(false);  
 
-
 const auth = getAuth();
 const currentUser = auth.currentUser;
 
@@ -80,7 +79,6 @@ const handleDeleteChat = async () => {
   const chatId = selectedChat.chatId;
 
   try {
-    // Delete messages associated with the chat
     const messagesRef = collection(db, 'messages');
     const messagesQuery = query(messagesRef, where('chatId', '==', chatId));
     const messagesSnapshot = await getDocs(messagesQuery);
@@ -90,8 +88,6 @@ const handleDeleteChat = async () => {
       batch.delete(doc.ref);
     });
     await batch.commit();
-
-    // Delete the chat document from the 'chats' collection
     await deleteDoc(doc(db, 'chats', chatId));
 
     // Update UI state

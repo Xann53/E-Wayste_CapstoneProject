@@ -4,22 +4,19 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 const CommentOverlay = ({ comments, commentText, setCommentText, handlePostComment }) => {
     return (
       <View style={styles.overlayContainer}>
-        {/* Render existing comments */}
         {comments.map((comment, index) => (
             <Text key={index} style={styles.commentText}>
               {comment}
             </Text>
         ))}
 
-        {/* Input for new comment */}
         <TextInput
           placeholder="Add a comment..."
           value={commentText}
           onChangeText={(text) => setCommentText(text)}
           style={styles.commentInput}
         />
-  
-        {/* Button to post the comment */}
+
         <TouchableOpacity onPress={handlePostComment} style={styles.postButton}>
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>

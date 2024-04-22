@@ -16,6 +16,8 @@ export default function ViewMessage({ route, navigation }) {
   const [capturedImage, setCapturedImage] = useState(null);
   const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshPage, setRefreshPage] = useState(false);
+
 
   const authInstance = getAuth();
   const currentUser = authInstance.currentUser;
@@ -42,12 +44,17 @@ export default function ViewMessage({ route, navigation }) {
   };  
 
   const formatTimestamp = (timestamp) => {
-    return timestamp ? new Date(timestamp.seconds * 1000).toLocaleString() : '';
+    if (timestamp && timestamp.seconds) {
+      return new Date(timestamp.seconds * 1000).toLocaleTimeString();
+    } else {
+      return ''; 
+    }
   };
+  
 
   const renderItem = ({ item }) => {
     const isUserSender = item.senderId === currentUser.uid;
-
+  
     return (
       <View
         style={[
@@ -62,10 +69,13 @@ export default function ViewMessage({ route, navigation }) {
         ) : (
           <Text style={styles.messageText}>{item.text}</Text>
         )}
-        <Text style={styles.timestampText}>{formatTimestamp(item.timestamp)}</Text>
+        <Text style={styles.timestampText}>
+          {item.timestamp ? formatTimestamp(item.timestamp) : ''}
+        </Text>
       </View>
     );
   };
+  
 
   const fetchChatDetails = async () => {
     if (chatId) { 

@@ -13,6 +13,7 @@ export default function NewMessage({ navigation }) {
     const [openSideBar, setOpenSideBar] = React.useState();
     const [searchText, setSearchText] = useState('');
     const [users, setUsers] = useState([]);
+    const [refreshPage, setRefreshPage] = useState(false);
   
     const isFocused = useIsFocused();
     useEffect(() => {

@@ -8,19 +8,18 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from 'expo-image-picker';
 import { parse } from 'date-fns';
+
 import uuid from 'react-native-uuid';
 import moment from 'moment';
 import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, getDoc, query, where, deleteDoc, doc, updateDoc, setDoc, onSnapshot} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL,  uploadBytes} from 'firebase/storage';
-
 import OpenSideBar from '../components/OpenSideNav';
 
 export default function NewsfeedAut({navigation}) {
     const isFocused = useIsFocused();
     const [refreshing, setRefreshing] = React.useState(false);
     const [openSideBar, setOpenSideBar] = React.useState();
-    const [userMunicipality, setUserMunicipality] = useState('');
 
     const [users, setUsers] = useState([]);
     const [userUploads, setUserUploads] = useState([]);
@@ -49,29 +48,18 @@ export default function NewsfeedAut({navigation}) {
     const [isAllPressed, setIsAllPressed] = useState(true);
     const [isEventsPressed, setIsEventsPressed] = useState(false);
     const [userEvents, setUserEvents] = useState([]);
+    const [userMunicipality, setUserMunicipality] = useState('');
 
     useEffect(() => {
-      const fetchMunicipality = async () => {
-        try {
-          const userId = await fetchUserId();
-          if (userId) {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            if (userDoc.exists()) {
-              const municipality = userDoc.data().municipality;
-              setUserMunicipality(municipality);
-              console.log('Municipality of the logged-in user:', municipality);
-            } else {
-              console.log('User document not found.');
+        const retrieveUserData = async () => {
+            try {
+                const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                setUserMunicipality(userMunicipality);
+            } catch (error) {
+                console.error('Error retrieving user municipality:', error);
             }
-          } else {
-            console.log('User ID not found.');
-          }
-        } catch (error) {
-          console.error('Error fetching municipality:', error);
-        }
-      };
-  
-      fetchMunicipality();
+        };
+        retrieveUserData();
     }, []);
 
     useEffect(() => {
@@ -84,10 +72,7 @@ export default function NewsfeedAut({navigation}) {
         const closeSideNav = async() => {
             setOpenSideBar();
         }
-
-        return (
-            <OpenSideBar navigation={navigation} close={closeSideNav} />
-        );
+        return ( <OpenSideBar navigation={navigation} close={closeSideNav} /> );
     }
 
     const handleAllPress = () => {
@@ -110,66 +95,59 @@ export default function NewsfeedAut({navigation}) {
      .format('YYYY/MM/DD hh:mm:ss a');
 
      const formatTimestamp = (timestamp) => {
-        // Assuming timestamp is in the format 'yyyy/MM/dd hh:mm:ss a'
         const formattedDate = moment(timestamp, 'YYYY/MM/DD hh:mm:ss a').format('YYYY/MM/DD hh:mm:ss a');
         return formattedDate;
     }; 
 
     useEffect(() => {
-      const fetchEvents = () => {
-        try {
-          const eventsRef = collection(db, 'schedule');
-    
-          // Subscribe to changes and listen for real-time updates
-          const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
-            const events = querySnapshot.docs.map((doc) => {
-              const eventData = doc.data();
-              if (eventData.type === 'Event') {
-                return {
-                  id: doc.id,
-                  description: eventData.description,
-                  location: eventData.location,
-                  startTime: eventData.startTime,
-                  selectedDate: eventData.selectedDate,
-                  title: eventData.title,
-                  userId: eventData.userID,
-                  timestamp: eventData.dateTimeUploaded,
-                };
-              }
-              return null; // Ignore non-event documents
-            }).filter(event => event !== null);
-    
-            // Sort events in ascending order based on timestamp
-            events.sort((a, b) => {
-              const timestampA = new Date(a.timestamp).getTime();
-              const timestampB = new Date(b.timestamp).getTime();
-              return timestampB - timestampA;
-            });
-    
-            // Fetch user information for each event
-            const userIds = events.map(event => event.userId);
-            const eventUsers = await getUsersByIds(userIds);
-    
-            const enrichedEvents = events.map((event, index) => ({
-              ...event,
-              userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
-            }));
-    
-            setUserEvents(enrichedEvents);
-          });
-    
-          // Store the unsubscribe function to clean up the subscription when the component unmounts
-          return () => unsubscribe();
-        } catch (error) {
-          console.error('Error fetching events: ', error);
-        }
+      const fetchEvents = async () => {
+          try {
+              const eventsRef = collection(db, 'schedule');
+              const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
+                  const events = querySnapshot.docs.map((doc) => {
+                      const eventData = doc.data();
+                      if (eventData.type === 'Event') {
+                          return {
+                              id: doc.id,
+                              description: eventData.description,
+                              location: eventData.location,
+                              startTime: eventData.startTime,
+                              selectedDate: eventData.selectedDate,
+                              title: eventData.title,
+                              userId: eventData.userID,
+                              timestamp: eventData.dateTimeUploaded,
+                          };
+                      }
+                      return null;
+                  }).filter(event => event !== null);
+  
+                  events.sort((a, b) => {
+                      const timestampA = new Date(a.timestamp).getTime();
+                      const timestampB = new Date(b.timestamp).getTime();
+                      return timestampB - timestampA;
+                  });
+  
+                  const userIds = events.map(event => event.userId);
+                  const eventUsers = await getUsersByIds(userIds);
+  
+                  const enrichedEvents = events.map((event, index) => ({
+                      ...event,
+                      userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
+                  }));
+  
+                  const filteredEvents = enrichedEvents.filter(event => event.location.includes(userMunicipality));
+                  setUserEvents(filteredEvents);
+              });
+  
+              return () => unsubscribe();
+          } catch (error) {
+              console.error('Error fetching events: ', error);
+          }
       };
-    
-      // Fetch events when the component mounts
       fetchEvents();
-    }, []);
+  }, [userMunicipality]);
         
-        const getUsersByIds = async (userIds) => {
+      const getUsersByIds = async (userIds) => {
           try {
         
             // Filter out undefined values from the userIds array
@@ -191,12 +169,16 @@ export default function NewsfeedAut({navigation}) {
             return [];
           }
         };  
-      
+
         useEffect(() => {
-          const currentDate = new Date().toISOString().split('T')[0]; 
+          const currentDate = new Date().toISOString().split('T')[0];       
           const fetchReports = async () => {
               try {
-                  const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
+                  const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                  const todayQuery = query(collection(db, 'generalUsersReports'), 
+                      where('dateTime', '>=', currentDate),
+                      where('municipality', '==', userMunicipality)
+                  );
                   const todaySnapshot = await getDocs(todayQuery);
                   const todayReports = [];
       
@@ -204,7 +186,7 @@ export default function NewsfeedAut({navigation}) {
                       const report = doc.data();
                       const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
       
-                      if (report.municipality === userMunicipality && reportDate.toISOString().split('T')[0] === currentDate) {
+                      if (reportDate.toISOString().split('T')[0] === currentDate) {
                           todayReports.push(report);
                       }
                   });
@@ -221,8 +203,8 @@ export default function NewsfeedAut({navigation}) {
           };
       
           fetchReports();
-      }, [userMunicipality]); 
-
+      }, []);
+      
 
     useEffect(() => {
             const getUsers = async () => {
@@ -240,12 +222,13 @@ export default function NewsfeedAut({navigation}) {
                 querySnapshot => {
                     const uploads = []
                     querySnapshot.forEach((doc) => {
-                        const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                        const {associatedImage, dateTime, description,municipality, location, status, userId} = doc.data();
                         uploads.push({
                             id: doc.id,
                             associatedImage,
                             dateTime,
                             description,
+                            municipality,
                             location,
                             status,
                             userId
@@ -506,77 +489,74 @@ export default function NewsfeedAut({navigation}) {
         };
 
         const handlePostComment = async (postId, commentText) => {
-            try {
-                if (!commentText || commentText.trim() === '') {
-                    console.log('Comment cannot be empty.');
-                    return;
-                }
-        
-                const user = auth.currentUser;
-        
-                if (!user) {
-                    console.error('User not authenticated.');
-                    return;
-                }
-        
-                // Fetch the user ID
-                const currentUserId = await fetchUserId();
-        
-                if (!currentUserId) {
-                    console.error('Error fetching user ID.');
-                    return;
-                }
-        
-                // Get the current username
-                const currentUser = users.find((u) => u.id === currentUserId);
-        
-                if (!currentUser) {
-                    console.error('Current user not found:', currentUserId);
-                    console.log('All users:', users);
-                    return;
-                }
-        
-                const currentUsername = currentUser?.username || 'Unknown User';
-        
-                // Prepare the comment data
-                const commentData = {
-                    postId: postId,
-                    userId: currentUserId,
-                    username: currentUsername,
-                    content: commentText,
-                    timestamp: fullDateTime,
-                };
-        
-                // Add the comment to the 'comments' collection
-                await addDoc(collection(db, 'comments'), commentData);
-        
-                // Fetch the updated comments for the current post
-                const commentsRef = collection(db, 'comments');
-                const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
-                const postCommentsSnapshot = await getDocs(postCommentsQuery);
-                const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data().content);
-        
-                // Update the local state to display the updated comments
-                setPostComments((prevComments) => ({
-                    ...prevComments,
-                    [postId]: commentsData,
-                }));
-        
-                // Clear the commentText state
-                setCommentText('');
-            } catch (error) {
-                console.error('Error posting comment: ', error);
-            }
-        };
+          try {
+              if (!commentText || commentText.trim() === '') {
+                  console.log('Comment cannot be empty.');
+                  return;
+              }
+      
+              const user = auth.currentUser;
+      
+              if (!user) {
+                  console.error('User not authenticated.');
+                  return;
+              }
+              const currentUserId = await fetchUserId();
+      
+              if (!currentUserId) {
+                  console.error('Error fetching user ID.');
+                  return;
+              }
+      
+              // Get the current username
+              const currentUser = users.find((u) => u.id === currentUserId);
+      
+              if (!currentUser) {
+                  console.error('Current user not found:', currentUserId);
+                  console.log('All users:', users);
+                  return;
+              }
+      
+              const currentUsername = currentUser?.username || 'Unknown User';
+      
+              const commentData = {
+                  postId: postId,
+                  userId: currentUserId,
+                  username: currentUsername,
+                  content: commentText,
+                  timestamp: fullDateTime,
+              };
+      
+              await addDoc(collection(db, 'comments'), commentData);
+      
+              const commentsRef = collection(db, 'comments');
+              const postCommentsQuery = query(commentsRef, where('postId', '==', postId));
+              const postCommentsSnapshot = await getDocs(postCommentsQuery);
+              const commentsData = postCommentsSnapshot.docs.map((doc) => doc.data());
+      
+              setPostComments((prevComments) => ({
+                  ...prevComments,
+                  [postId]: commentsData,
+              }));
+      
+              setCommentText('');
+          } catch (error) {
+              console.error('Error posting comment: ', error);
+          }
+      };
+      
 
         let temp = [];
+        const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
+
         if(isAllPressed){
-        userUploads.map((uploads) => {
+      filteredUploads.map((uploads) => {
             var valueToPush = {};
             valueToPush["id"] = uploads.id;
             valueToPush["imageLink"] = uploads.associatedImage;
             valueToPush["dateTime"] = uploads.dateTime;
             valueToPush["description"] = uploads.description;
+            valueToPush["municipality"] = uploads.municipality;
             valueToPush["location"] = uploads.location;
             valueToPush["status"] = uploads.status;
             valueToPush["userId"] = uploads.userId;
@@ -593,7 +573,7 @@ export default function NewsfeedAut({navigation}) {
                 return 0;
             });
         });
-    
+        
             userFeedUploads.map((FeedUploads) => {
                 var valueFeedToPush = {};
                 valueFeedToPush["id"] = FeedUploads.id;
@@ -619,7 +599,8 @@ export default function NewsfeedAut({navigation}) {
                 const user = users.find((user) => user.id === userId);
                 return user ? `${user.firstName} ${user.lastName}` : `User (${userId})`;
             };
-        
+
+            
             uploadCollection.map((post,postFeed, index) => {
                 let imageURL;
                 if (post.imageLink) {

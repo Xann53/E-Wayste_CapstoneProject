@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput } from 
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { db } from '../../firebase_config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 export default function ViewSchedDetailsCol({ navigation, route }) {
   const { scheduleId } = route.params;
@@ -14,14 +14,23 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
 
   useEffect(() => {
     const fetchSchedule = async () => {
-      const scheduleRef = doc(db, 'schedule', scheduleId);
-      const scheduleSnapshot = await getDoc(scheduleRef);
-      const scheduleData = scheduleSnapshot.data();
-      setScheduleData(scheduleData);
-      setUpdatedData(scheduleData);
+        const scheduleRef = doc(db, 'schedule', scheduleId);
+        const unsubscribe = onSnapshot(scheduleRef, (doc) => {
+            if (doc.exists()) {
+                const scheduleData = doc.data();
+                setScheduleData(scheduleData);
+                setUpdatedData(scheduleData);
+            } else {
+                setScheduleData(null);
+                setUpdatedData({});
+            }
+        });
+        return () => unsubscribe();
     };
+
     fetchSchedule();
   }, [scheduleId]);
+
 
   const handleFieldFocus = (fieldName) => {
     setFocusedField(fieldName);
@@ -94,6 +103,19 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                     />
                   </View>
                 )}
+                {scheduleData.assignedTruck && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Assigned Truck</Text>
+                        <TextInput
+                          style={[styles.fieldValue, focusedField === 'assignedTruck' && styles.focusedField]}
+                          value={updatedData.assignedTruck}
+                          onFocus={() => setModalVisible(true)}
+                          editable={isEditable}
+                          onBlur={handleFieldBlur}
+                          onChangeText={(text) => setUpdatedData({ ...updatedData, assignedTruck: text })}
+                        />
+                      </View>
+                  )}
                 {scheduleData.location && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Location</Text>
@@ -113,21 +135,15 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                   </View>
                 )}
                 {scheduleData.type && scheduleData.type === 'Collection' && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Collection Route</Text>
-                    {scheduleData.collectionRoute.coordinates[0] && (
-                      <Text style={styles.fieldValue}>
-                        <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
-                        {scheduleData.collectionRoute.coordinates[0].locationName}
-                      </Text>
-                    )}
-                    {scheduleData.collectionRoute.coordinates[1] && (
-                      <Text style={styles.fieldValue}>
-                        <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
-                        {scheduleData.collectionRoute.coordinates[1].locationName}
-                      </Text>
-                    )}
-                  </View>
+                    <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Collection Route</Text>
+                        {scheduleData.collectionRoute.coordinates.map((coordinate, index) => (
+                            <Text key={index} style={styles.fieldValue}>
+                                <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
+                                {coordinate.locationName}
+                            </Text>
+                        ))}
+                    </View>
                 )}
                 {scheduleData.selectedDate && (
                   <View style={styles.fieldContainer}>
@@ -142,19 +158,17 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                     />
                   </View>
                 )}
-                {scheduleData.startTime && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Time</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
-                      value={updatedData.startTime}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('startTime')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, startTime: text })}
-                    />
-                  </View>
-                )}
+                <View style={[styles.fieldContainer, { marginBottom: 80 }]}>
+                  <Text style={styles.fieldName}>Time</Text>
+                  <TextInput
+                    style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
+                    value={updatedData.startTime}
+                    editable={isEditable}
+                    onFocus={() => handleFieldFocus('startTime')}
+                    onBlur={handleFieldBlur}
+                    onChangeText={(text) => setUpdatedData({ ...updatedData, startTime: text })}
+                  />
+                </View>
                 {scheduleData.assignLocation && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Assigned Location</Text>
@@ -165,19 +179,6 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                       onFocus={() => handleFieldFocus('assignLocation')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, assignLocation: text })}
-                    />
-                  </View>
-                )}
-                {scheduleData.assignCollector && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Assigned Collector</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'assignCollector' && styles.focusedField]}
-                      value={updatedData.assignCollector}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('assignCollector')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, assignCollector: text })}
                     />
                   </View>
                 )}
