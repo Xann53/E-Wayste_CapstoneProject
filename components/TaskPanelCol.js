@@ -448,6 +448,14 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                                                                                         <Text style={{fontSize: 13}}>{sched.longitude}</Text>
                                                                                     </View>
                                                                                 </View>
+                                                                                <View style={{display: 'flex', flex: 1, flexDirection: 'row', gap: 5, alignItems: 'center'}}>
+                                                                                    <View style={{display: 'flex', flex: 1, alignItems: 'flex-end'}}>
+                                                                                        <Text style={{fontSize: 13}}>Status</Text>
+                                                                                    </View>
+                                                                                    <View style={{display: 'flex', flex: 2, backgroundColor: '#FFDC95', padding: 5, borderRadius: 5, overflow: 'hidden'}}>
+                                                                                        <Text style={{fontSize: 13}}>{sched.status}</Text>
+                                                                                    </View>
+                                                                                </View>
                                                                             </View>
                                                                         }
                                                                     </View>

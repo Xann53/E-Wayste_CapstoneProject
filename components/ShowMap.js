@@ -21,7 +21,8 @@ import Reload from './ReloadMap';
 import DisplayRepInfo from './DisplayRepPinInfo';
 import ChangeStatus from './ChangeStatusMap';
 import MTruckList from './MapTruckList';
-import TaskPanel from './colTaskPanel';
+import TaskPanel from './TaskPanelCol';
+import TaskView from './TaskPanelView';
 
 export default function LoadMap({ mapRef, page }) {
     const userRef = firebase.firestore().collection("users");
@@ -40,6 +41,7 @@ export default function LoadMap({ mapRef, page }) {
     const [infoImage, setInfoImage] = useState();
     const [openTruckList, setOpenTruckList] = useState(false);
     const [openTaskList, setOpenTaskList] = useState(false);
+    const [openTaskListView, setOpenTaskListView] = useState(false);
 
     const [userID, setUserID] = useState('');
     const [users, setUsers] = useState([]);
@@ -181,6 +183,27 @@ export default function LoadMap({ mapRef, page }) {
         })();
     }
 
+    const endAssignment = async(taskId) => {
+        const assignDoc = doc(db, 'schedule', taskId);
+        await updateDoc(assignDoc, {
+            status: 'Collected'
+        });
+
+        let id;
+        allActiveTask.map((task) => {
+            if(task.taskId === taskId) {
+                id = task.id;
+            }
+        })
+        try {
+            const docRef = firebase.firestore().collection('activeTask').doc(id);
+            await docRef.delete();
+            setShowColMarker(false);
+            setShowDirection(false);
+            setShowAssignPin(false);
+        } catch(e) {}
+    }
+
     return (
         <>
             <TouchableOpacity activeOpacity={0.5} onPress={() => { mapType === 'uncollected' ? setMapType('collected') : setMapType('uncollected'); changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
@@ -210,17 +233,29 @@ export default function LoadMap({ mapRef, page }) {
                     </TouchableOpacity>
                 }
 
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {setOpenTaskList(true)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
-                    <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
-                        <Ionicons name='clipboard' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
-                    </View>
-                </TouchableOpacity>
+                {(page === 'Collector') &&
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setOpenTaskList(true)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                        <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
+                            <Ionicons name='clipboard' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
+                        </View>
+                    </TouchableOpacity>
+                }
 
-                <TouchableOpacity activeOpacity={0.5} onPress={() => {quickRoute(destination.latitude, destination.longitude)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
-                    <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
-                        <Ionicons name='compass' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
-                    </View>
-                </TouchableOpacity>
+                {(page !== 'Collector') &&
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setOpenTaskListView(true)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                        <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
+                            <Ionicons name='clipboard' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
+                        </View>
+                    </TouchableOpacity>
+                }
+
+                {(page === 'Collector') &&
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {quickRoute(destination.latitude, destination.longitude)}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                        <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
+                            <Ionicons name='compass' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
+                        </View>
+                    </TouchableOpacity>
+                }
 
                 {/* <TouchableOpacity activeOpacity={0.5} onPress={() => {}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
                     <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
@@ -341,11 +376,29 @@ export default function LoadMap({ mapRef, page }) {
                 
             </MapView>
 
+            {allActiveTask.map((task) => {
+                if(task.taskType === 'Assignment' && task.userId === userID) {
+                    return (
+                        allSched.map((sched) => {
+                            if(sched.id === task.taskId && sched.status === 'Uncollected') {
+                                return (
+                                    <TouchableOpacity key={sched.id} onPress={() => {endAssignment(sched.id)}} activeOpacity={0.7} style={{position: 'absolute', backgroundColor: '#5E8E00', zIndex: 30, margin: 20, padding: 12, paddingHorizontal: 30, bottom: '10.5%', shadowColor: 'black', borderRadius: 100, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
+                                        <Text style={{color: 'white', fontWeight: 800}}>FINISH ASSIGNMENT</Text>
+                                    </TouchableOpacity>
+                                );
+                            }
+                        })
+                    );
+                }
+            })}
+
             <DisplayRepInfo infoID={infoID} setInfoID={setInfoID} infoImage={infoImage} mapType={mapType} users={users} userUploads={userUploads} changeStatus={changeStatus} page={page} />
 
             {openTruckList && <MTruckList open={setOpenTruckList} collectorLocation={collectorLocation} collectorLoc={collectorLoc} users={users} />}
         
             {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} setShowFlag={setShowFlag} setShowAssignPin={setShowAssignPin} setAssignPinLoc={setAssignPinLoc} />}
+
+            {openTaskListView && <TaskView open={setOpenTaskListView} />}
         </>
     );   
 }

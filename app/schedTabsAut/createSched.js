@@ -217,7 +217,8 @@ export default function AddSched({navigation}) {
                     collectionRoute: { coordinates: [] },
                     latitude: latitude,
                     longitude: longitude,
-                    dateTimeUploaded: fullDateTime
+                    dateTimeUploaded: fullDateTime,
+                    status: 'Uncollected'
                 });
 
                 let userFullName;
