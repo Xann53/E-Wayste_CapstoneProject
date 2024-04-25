@@ -180,16 +180,17 @@ export default function AddSched({navigation}) {
                     scheduleID: scheduleID, 
                     type: selectType,
                     description: description,
-                    location: '',
+                    // location: '',
                     startTime: start,
-                    title: '',
+                    // title: '',
                     userID: id,
                     assignedTruck: assignedTruck,
                     selectedDate: selectedDate,
                     collectionRoute: route,
-                    latitude: '',
-                    longitude: '',
-                    dateTimeUploaded: fullDateTime
+                    // latitude: '',
+                    // longitude: '',
+                    dateTimeUploaded: fullDateTime,
+                    collectionRecord: []
                 });
 
                 let userFullName;
@@ -210,15 +211,18 @@ export default function AddSched({navigation}) {
                     description: description,
                     location: location,
                     startTime: start,
-                    title: '',
+                    // title: '',
                     userID: id,
                     assignedTruck: assignedTruck,
                     selectedDate: selectedDate,
-                    collectionRoute: { coordinates: [] },
+                    // collectionRoute: { coordinates: [] },
                     latitude: latitude,
                     longitude: longitude,
                     dateTimeUploaded: fullDateTime,
-                    status: 'Uncollected'
+                    collectionRecord: {
+                        status: 'uncollected',
+                        dateTimeCollected: ''
+                    }
                 });
 
                 let userFullName;
@@ -241,9 +245,9 @@ export default function AddSched({navigation}) {
                     startTime: start,
                     title: newTitle,
                     userID: id,
-                    assignedTruck: '',
+                    // assignedTruck: '',
                     selectedDate: selectedDate,
-                    collectionRoute: { coordinates: [] },
+                    // collectionRoute: { coordinates: [] },
                     latitude: latitude,
                     longitude: longitude,
                     dateTimeUploaded: fullDateTime

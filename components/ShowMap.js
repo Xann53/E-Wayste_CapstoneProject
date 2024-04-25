@@ -184,9 +184,13 @@ export default function LoadMap({ mapRef, page }) {
     }
 
     const endAssignment = async(taskId) => {
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:MM:SS');
         const assignDoc = doc(db, 'schedule', taskId);
         await updateDoc(assignDoc, {
-            status: 'Collected'
+            collectionRecord: {
+                status: 'collected',
+                dateTimeCollected: fullDateTime
+            }
         });
 
         let id;
@@ -380,7 +384,7 @@ export default function LoadMap({ mapRef, page }) {
                 if(task.taskType === 'Assignment' && task.userId === userID) {
                     return (
                         allSched.map((sched) => {
-                            if(sched.id === task.taskId && sched.status === 'Uncollected') {
+                            if(sched.id === task.taskId && sched.collectionRecord.status === 'uncollected') {
                                 return (
                                     <TouchableOpacity key={sched.id} onPress={() => {endAssignment(sched.id)}} activeOpacity={0.7} style={{position: 'absolute', backgroundColor: '#5E8E00', zIndex: 30, margin: 20, padding: 12, paddingHorizontal: 30, bottom: '10.5%', shadowColor: 'black', borderRadius: 100, shadowOffset:{width: 3, height: 3}, shadowOpacity: 1, shadowRadius: 4, elevation: 4}}>
                                         <Text style={{color: 'white', fontWeight: 800}}>FINISH ASSIGNMENT</Text>

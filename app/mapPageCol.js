@@ -21,45 +21,10 @@ import PushNotif from '../components/PushNotification';
 import LoadMap from '../components/ShowMap';
 
 export default function MapCol({ navigation }) {
-    const usersCollection = collection(db, "users");
-    const reportRef = firebase.firestore().collection("generalUsersReports");
-    const collectorLocRef = firebase.firestore().collection("collectorLocationTrack");
-    const scheduleRef = firebase.firestore().collection("schedule");
-    const imageColRef = ref(storage, "postImages/");
-    const colInProgressRef = firebase.firestore().collection("collectionInProgress");
-    const collectorLoc = collection(db, "collectorLocationTrack");
-    const colInProgressRef2 = collection(db, "collectionInProgress");
-
     let searchLongitude, searchLatitude;
-    let colStatus;
-    let userId, description, location, dateTime;
-    let collectionIDTemp;
-    
     const isFocused = useIsFocused();
     const mapRef = useRef(null);
-
-    const [currentLat, setCurrentLat] = useState(null);
-    const [currentLon, setCurrentLon] = useState(null);
-    const [origin, setOrigin] = useState({});
-    const [destination, setDestination] = useState({});
-
     const [openSideBar, setOpenSideBar] = useState();
-    const [infoID, setInfoID] = useState();
-    const [infoImage, setInfoImage] = useState();
-    const [mapType, setMapType] = useState('uncollected');
-    const [displayFlag, setDisplayFlag] = useState(false);
-    const [colMenu, setColMenu] = useState(false);
-
-    const [users, setUsers] = useState([]);
-    const [userUploads, setUserUploads] = useState([]);
-    const [imageCol, setImageCol] = useState([]);
-    const [schedRoute, setSchedRoute] = useState([]);
-    const [state, setState] = useState({ coordinates: [] });
-    const [track, setTrack] = useState({ coordinates: [] });
-    const [routeFlag, setRouteFlag] = useState([]);
-    const [colID, setColID] = useState();
-    const [colInProgress, setColInProgress] = useState();
-    const [collectorLocation, setCollectorLocation] = useState([]);
 
     useEffect(() => {
         if(!isFocused) {
@@ -92,7 +57,7 @@ export default function MapCol({ navigation }) {
         <>
             {isFocused ?
                 <>
-                    <View style={{position: 'absolute', zIndex: 99, width: '100%', paddingTop: 30, flexDirection: 'row', paddingHorizontal: 20}}>
+                    <View style={{position: 'absolute', zIndex: 99, width: '100%', paddingTop: 20, flexDirection: 'row', paddingHorizontal: 20}}>
                         <TouchableOpacity style={{ zIndex: 99, marginRight: '2%', height: 42, justifyContent: 'center', alignItems: 'center', borderRadius: 100 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
                             <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(70,149,78)' }} />
                         </TouchableOpacity>
@@ -139,7 +104,7 @@ export default function MapCol({ navigation }) {
                     </View>
                     {openSideBar}
                     <View>
-                        <View style={{height: 80, backgroundColor: 'rgba(126, 185, 73, 1)', borderBottomLeftRadius: 10, borderBottomRightRadius: 10, zIndex: 90, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4}} />
+                        <View style={{height: 70, backgroundColor: 'rgba(126, 185, 73, 1)', borderBottomLeftRadius: 10, borderBottomRightRadius: 10, zIndex: 90, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4}} />
                         <View style={{display: 'flex', height: '91%', justifyContent: 'center', alignItems: 'center', top: -10}}>
                             <LoadMap mapRef={mapRef} page={'Collector'} />
                         </View>
