@@ -33,6 +33,8 @@ export default function LoadMap({ mapRef, page }) {
     const activeRef = firebase.firestore().collection("activeTask");
     const collectorLoc = collection(db, "collectorLocationTrack");
     const activeRouteRef = firebase.firestore().collection("routeForActiveCollection");
+    const sihftRef = firebase.firestore().collection("collectorShift");
+    const colLocationRef = firebase.firestore().collection("collectorLocationTrack");
 
     let userMun;
     
@@ -52,6 +54,8 @@ export default function LoadMap({ mapRef, page }) {
     const [allActiveTask, setAllActiveTask] = useState([]);
     const [allActiveRoute, setAllActiveRoute] = useState([]);
     const [allSched, setAllSched] = useState([]);
+    const [allShift, setAllShift] = useState([]);
+    const [allColLocation, setAllColLocation] = useState([]);
     
     const [track, setTrack] = useState({ coordinates: [] });
 
@@ -65,6 +69,9 @@ export default function LoadMap({ mapRef, page }) {
     const [showRepPin, setShowRepPin] = useState(true);
     const [showAssignPin, setShowAssignPin] = useState(false);
     const [assignPinLoc, setAssignPinLoc] = useState({});
+
+    const [viewTrack, setViewTrack] = useState(false);
+    const [taskToTrack, setTaskToTrack] = useState({});
 
     useEffect(() => {
         const getID = async() => {
@@ -111,6 +118,34 @@ export default function LoadMap({ mapRef, page }) {
             setAllActiveRoute(newData);
         };
         const unsubscribe = activeRouteRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, [])
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllShift(newData);
+        };
+        const unsubscribe = sihftRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, [])
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllColLocation(newData);
+        };
+        const unsubscribe = colLocationRef.onSnapshot(onSnapshot);
         return () => {
             unsubscribe();
         };
@@ -261,11 +296,13 @@ export default function LoadMap({ mapRef, page }) {
                     </TouchableOpacity>
                 }
 
-                {/* <TouchableOpacity activeOpacity={0.5} onPress={() => {}} style={{height: 40, width: 40, backgroundColor: 'orange', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
-                    <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
-                        <Ionicons name='flag' style={{ fontSize: 18, top: 0, left: 1, color: 'orange' }} />
-                    </View>
-                </TouchableOpacity> */}
+                {(page !== 'Collector' && viewTrack) && 
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setViewTrack(false); setTaskToTrack({})}} style={{height: 40, width: 40, backgroundColor: '#DE462A', justifyContent: 'center', alignItems: 'center', borderRadius: 100, shadowColor: 'black', shadowOffset:{width: 3, height: 3}, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4,}}>
+                        <View style={{height: 29, width: 29, borderRadius: 100, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center'}}>
+                            <Ionicons name='eye-off' style={{ fontSize: 18, top: 0, left: 1, color: '#DE462A' }} />
+                        </View>
+                    </TouchableOpacity>
+                }
             </View>
 
             <MapView
@@ -280,8 +317,8 @@ export default function LoadMap({ mapRef, page }) {
                 }}
                 customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
             >
-
-                {showRepPin && <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} />}
+{/* ========================================================================================================================================================================================================================================================================================================================================================================================================================================== */}
+                {showRepPin && <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} viewTrack={viewTrack} taskToTrack={taskToTrack} />}
 
                 {(showColMarker && (currentLat !== null && currentLon !== null)) &&
                     <Marker
@@ -377,7 +414,108 @@ export default function LoadMap({ mapRef, page }) {
                         })}
                     </>
                 }
-                
+
+                {viewTrack &&
+                    allShift.map((shift) => {
+                        if(shift.id === taskToTrack.shiftId) {
+                            return(
+                                allColLocation.map((track) => {
+                                    if(track.id === shift.trackId) {
+                                        return(
+                                            <Marker
+                                                key={"Truck Location"}
+                                                coordinate={{
+                                                    latitude: parseFloat(track.latitude),
+                                                    longitude: parseFloat(track.longitude)
+                                                }}
+                                                style={{zIndex: 99}}
+                                            >
+                                                <Image source={require('../assets/garbage-truck.png')} style={{width: 45, height: 45, resizeMode: 'contain', bottom: -5}} />
+                                            </Marker>
+                                        );
+                                    }
+                                })
+                            );
+                        }
+                    })
+                }
+
+                {(viewTrack && taskToTrack.taskType === 'Assignment') &&
+                    allSched.map((sched) => {
+                        if(sched.id === taskToTrack.taskId) {
+                            return(
+                                <Marker
+                                    key={'Assignment Pin'}
+                                    coordinate={{
+                                        latitude: parseFloat(sched.latitude),
+                                        longitude: parseFloat(sched.longitude)
+                                    }}
+                                    style={{alignItems: 'center'}}
+                                >
+                                    <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin.png')} />
+                                </Marker>
+                            );
+                        }
+                    })
+                }
+
+                {(viewTrack && taskToTrack.taskType === 'Collection') &&
+                    <>
+                        {allActiveTask.map((task) => {
+                            if(task.taskId === taskToTrack.taskId) {
+                                return(
+                                    allActiveRoute.map((route) => {
+                                        if(route.activeTaskId === task.id) {
+                                            return(
+                                                route.taskRoute.map((loc) => {
+                                                    return(
+                                                        <Marker
+                                                            key={loc.name}
+                                                            coordinate={{
+                                                                latitude: parseFloat(loc.latitude),
+                                                                longitude: parseFloat(loc.longitude)
+                                                            }}
+                                                            style={{alignItems: 'center'}}
+                                                        >
+                                                            <Text style={{fontSize: 18, fontWeight: 900, color: 'green', transform: [{translateY: 26}], zIndex: 99}}>{parseInt(loc.name + 1)}</Text>
+                                                            <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin2.png')} />
+                                                        </Marker>
+                                                    );
+                                                })
+                                            );
+                                        }
+                                    })
+                                );
+                            }
+                        })}
+
+                        {allActiveTask.map((task) => {
+                            if(task.taskId === taskToTrack.taskId) {
+                                return(
+                                    allActiveRoute.map((route) => {
+                                        if(route.activeTaskId === task.id) {
+                                            let temp = [];
+                                            for(let i = 1; i < route.taskRoute.length; i++) {
+                                                temp.push(
+                                                    <MapViewDirections
+                                                        origin={{latitude: parseFloat(route.taskRoute[i-1].latitude), longitude: parseFloat(route.taskRoute[i-1].longitude)}}
+                                                        destination={{latitude: parseFloat(route.taskRoute[i].latitude), longitude: parseFloat(route.taskRoute[i].longitude)}}
+                                                        apikey={GOOGLE_API_KEY }
+                                                        strokeWidth={3}
+                                                        strokeColor='green'
+                                                        key={i}
+                                                    />
+                                                );
+                                            };
+                                            return (temp);
+                                        }
+                                    })
+                                );
+                            }
+                        })}
+                    </>
+                }
+{/* ========================================================================================================================================================================================================================================================================================================================================================================================================================================== */}
             </MapView>
 
             {allActiveTask.map((task) => {
@@ -402,7 +540,7 @@ export default function LoadMap({ mapRef, page }) {
         
             {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} setShowFlag={setShowFlag} setShowAssignPin={setShowAssignPin} setAssignPinLoc={setAssignPinLoc} />}
 
-            {openTaskListView && <TaskView open={setOpenTaskListView} />}
+            {openTaskListView && <TaskView open={setOpenTaskListView} setViewTrack={setViewTrack} setTaskToTrack={setTaskToTrack} />}
         </>
     );   
 }

@@ -190,7 +190,8 @@ export default function AddSched({navigation}) {
                     // latitude: '',
                     // longitude: '',
                     dateTimeUploaded: fullDateTime,
-                    collectionRecord: []
+                    collectionRecord: [],
+                    visibility: 'enable'
                 });
 
                 let userFullName;

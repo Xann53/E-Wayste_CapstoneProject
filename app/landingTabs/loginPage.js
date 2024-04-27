@@ -208,11 +208,11 @@ export default function Login({navigation}) {
           </View>
         </View>
         <View  style={styles.divide}>
-          <View style={styles.divideLine} />
-          <Text style={styles.divLineTxt}>or log in with</Text>
+          {/* <View style={styles.divideLine} />
+          <Text style={styles.divLineTxt}>or log in with</Text> */}
         </View>
         <View style={styles.containerBtn}>
-          <View style={styles.button3}>
+          {/* <View style={styles.button3}>
             <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5}>
               <Text style={styles.buttonTxt3}>
                 <Text style={styles.googleBlue}>G</Text>
@@ -223,7 +223,7 @@ export default function Login({navigation}) {
                 <Text style={styles.googleRed}>E</Text>
               </Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
           <View style={styles.button1}>
             <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5} onPress={() => { SignIn() }}>
               <Text style={styles.buttonTxt1}>

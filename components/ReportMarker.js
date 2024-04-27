@@ -14,31 +14,62 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { GOOGLE_API_KEY } from '../environments';
 import MapViewDirections from 'react-native-maps-directions';
 
-export default function RepMarker({ mapType, state, setInfoID, setInfoImage }) {
-    return (
+export default function RepMarker({ mapType, state, setInfoID, setInfoImage, viewTrack, taskToTrack }) {
+    return ((
         <>
             {mapType === 'uncollected' ?
                 <>
-                    {state.coordinates.map(marker => (
-                        <Marker
-                            key={marker.name}
-                            coordinate={{
-                                latitude: parseFloat(marker.latitude),
-                                longitude: parseFloat(marker.longitude)
-                            }}
-                            onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
-                            style={{zIndex: 100, alignItems: 'center'}}
-                        >
-                            <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
-                            <Callout>
-                                <View style={{width: 80, height: 80}}>
-                                    <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
-                                        <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
-                                    </Text>
-                                </View>
-                            </Callout>
-                        </Marker>
-                    ))}
+                    {!viewTrack ?
+                        <>
+                            {state.coordinates.map(marker => (
+                                <Marker
+                                    key={marker.name}
+                                    coordinate={{
+                                        latitude: parseFloat(marker.latitude),
+                                        longitude: parseFloat(marker.longitude)
+                                    }}
+                                    onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                    style={{zIndex: 100, alignItems: 'center'}}
+                                >
+                                    <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
+                                    <Callout>
+                                        <View style={{width: 80, height: 80}}>
+                                            <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                                <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                            </Text>
+                                        </View>
+                                    </Callout>
+                                </Marker>
+                            ))}
+                        </>
+                        :
+                        <>
+                            {state.coordinates.map((marker) => {
+                                if(taskToTrack.taskType === 'Report' && taskToTrack.taskId === marker.name) {
+                                    return (
+                                        <Marker
+                                            key={marker.name}
+                                            coordinate={{
+                                                latitude: parseFloat(marker.latitude),
+                                                longitude: parseFloat(marker.longitude)
+                                            }}
+                                            onPress={() => {setInfoID(marker.name); setInfoImage(marker.image)}}
+                                            style={{zIndex: 100, alignItems: 'center'}}
+                                        >
+                                            <Ionicons name='location' style={{fontSize: 30, color: '#F76811'}} />
+                                            <Callout>
+                                                <View style={{width: 80, height: 80}}>
+                                                    <Text style={{position: 'absolute', top: -35, paddingBottom: 40}}>
+                                                        <Image style={{width: 80, height: 80}} source={{uri: marker.image}} />
+                                                    </Text>
+                                                </View>
+                                            </Callout>
+                                        </Marker>
+                                    );
+                                }
+                            })}
+                        </>
+                    }
                 </>
                 :
                 <>
@@ -65,5 +96,5 @@ export default function RepMarker({ mapType, state, setInfoID, setInfoImage }) {
                 </>
             }
         </>
-    );
+    ));
 }

@@ -10,7 +10,9 @@ import { collection, addDoc, getDocs, query, updateDoc, doc, deleteDoc } from 'f
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { returnKeyType } from 'deprecated-react-native-prop-types/DeprecatedTextInputPropTypes';
 
-export default function TaskView({ open }) {
+import PushNotif from './PushNotification';
+
+export default function TaskView({ open, setViewTrack, setTaskToTrack }) {
     const userRef = firebase.firestore().collection("users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const schedRef = firebase.firestore().collection("schedule");
@@ -43,7 +45,7 @@ export default function TaskView({ open }) {
     const [selectedAssign, setSelectedAssign] = useState({});
     const [selectedRep, setSelectedRep] = useState({});
 
-    let isDriver = false, isActive = false, isActiveId = '';
+    let showViewBtn = false, visibility;
 
     useEffect(() => {
         const getID = async() => {
@@ -188,7 +190,58 @@ export default function TaskView({ open }) {
         }
     }
 
-    return(
+    const taskToTrack = async() => {
+        allActiveTask.map((task) => {
+            if(selectedAssign.id === task.taskId || selectedCol.id === task.taskId || selectedRep.id === task.taskId) {
+                setTaskToTrack({
+                    shiftId: task.shiftId,
+                    taskId: task.taskId,
+                    taskType: task.taskType
+                });
+            }
+        })
+    }
+
+    const changeVisibility = async(visibility, id) => {
+        const collectDoc = doc(db, 'schedule', id);
+        await updateDoc(collectDoc, {
+            visibility: visibility
+        });
+    }
+
+    const delayNotif = async(id) => {
+        const title = 'COLLECTION HAS BEEN DELAYED!';
+        let body = 'Scheduled Collection has been delayed for the route:\n';
+        allSched.map((sched) => {
+            if(sched.id === id) {
+                sched.collectionRoute.coordinates.map((coord) => {
+                    body = body + '\t- ' +coord.locationName + '\n';
+                })
+            }
+        });
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+        PushNotif(title, body, fullDateTime);
+    }
+
+    const activateViewBtn = async() => {
+        allActiveTask.map((task) => {
+            if(selectedAssign.id === task.taskId || selectedCol.id === task.taskId || selectedRep.id === task.taskId) {
+                showViewBtn = true;
+            }
+        })
+    }
+
+    const viewVisibility = async() => {
+        allSched.map((sched) => {
+            if(sched.id === selectedCol.id && sched.visibility === 'enable') {
+                visibility = 'disable';
+            } else if(sched.id === selectedCol.id && sched.visibility === 'disable') {
+                visibility = 'enable';
+            }
+        })
+    }
+
+    return(activateViewBtn(), viewVisibility(), (
         <>
             <Modal animationType='fade' visible={true} transparent={true} statusBarTranslucent={true}>
                 <View style={{display: 'flex', flexDirection: 'row', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.65)'}}>
@@ -294,6 +347,14 @@ export default function TaskView({ open }) {
                                                                                         </View>
                                                                                     );
                                                                                 })}
+                                                                                <View style={{display: 'flex', flex: 1, flexDirection: 'row', gap: 5, alignItems: 'center'}}>
+                                                                                    <View style={{display: 'flex', flex: 1.2, alignItems: 'flex-end'}}>
+                                                                                        <Text style={{fontSize: 13}}>Visibility</Text>
+                                                                                    </View>
+                                                                                    <View style={{display: 'flex', flex: 2, backgroundColor: '#FFDC95', padding: 5, borderRadius: 5, overflow: 'hidden'}}>
+                                                                                        <Text style={{fontSize: 13}}>{sched.visibility}</Text>
+                                                                                    </View>
+                                                                                </View>
                                                                             </View>
                                                                         }
                                                                         {(viewInfo === sched.id && currentlyActive) && 
@@ -609,26 +670,43 @@ export default function TaskView({ open }) {
                             </ScrollView>
                         </View>
                         <View style={{display: 'flex', flex: 0.6, marginTop: 10, justifyContent: 'center', alignItems: 'center'}}>
-                            {/* {isDriver &&
+                            {userType === 'Residents / General Users' &&
                                 <>
-                                    {(selectedCol.id === isActiveId || selectedAssign.id === isActiveId || selectedRep.id === isActiveId) ? 
-                                        <TouchableOpacity onPress={() => {deactivateTask(isActiveId)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                            <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>END TRACK</Text>
-                                        </TouchableOpacity>
-                                        :
-                                        <TouchableOpacity disabled={((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) ? true : false} onPress={() => {activateTask(selectedCol)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                            {((selectedCol.id === undefined && selectedAssign.id === undefined && selectedRep.id === undefined) || isActive) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
-                                            <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>TRACK</Text>
+                                    {((selectedCol.id !== undefined || selectedAssign.id !== undefined || selectedRep.id !== undefined) && showViewBtn) &&
+                                        <TouchableOpacity onPress={() => {setViewTrack(true); taskToTrack(); open(false)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                            <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>VIEW</Text>
                                         </TouchableOpacity>
                                     }
                                 </>
-                            } */}
-                            {userType === 'Residents / General Users' &&
+                            }
+                            {(userType === 'LGU / Waste Management Head' && selectedTaskType === 'Collection') &&
                                 <>
-                                    {(selectedCol.id !== undefined || selectedAssign.id !== undefined || selectedRep.id !== undefined) &&
-                                        <TouchableOpacity onPress={() => {}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                            <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>VIEW</Text>
-                                        </TouchableOpacity>
+                                    {showViewBtn ?
+                                        <View style={{display: 'flex', flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5}}>
+                                            {(selectedCol.id !== undefined || selectedAssign.id !== undefined || selectedRep.id !== undefined) &&
+                                                <TouchableOpacity onPress={() => {setViewTrack(true); taskToTrack(); open(false)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>VIEW</Text>
+                                                </TouchableOpacity>
+                                            }
+                                            {(selectedCol.id !== undefined || selectedAssign.id !== undefined || selectedRep.id !== undefined) &&
+                                                <TouchableOpacity onPress={() => {delayNotif(selectedCol.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'orange', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>DELAY</Text>
+                                                </TouchableOpacity>
+                                            }
+                                        </View>
+                                        :
+                                        <View style={{display: 'flex', flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5}}>
+                                            {(selectedCol.id !== undefined || selectedAssign.id !== undefined || selectedRep.id !== undefined) &&
+                                                <TouchableOpacity onPress={() => {changeVisibility(visibility, selectedCol.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: visibility === 'disable' ? '#DE462A' : '#49B28E', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>{visibility.toUpperCase()}</Text>
+                                                </TouchableOpacity>
+                                            }
+                                            {(selectedCol.id !== undefined || selectedAssign.id !== undefined || selectedRep.id !== undefined) &&
+                                                <TouchableOpacity onPress={() => {delayNotif(selectedCol.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, width: '60%', alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'orange', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>DELAY</Text>
+                                                </TouchableOpacity>
+                                            }
+                                        </View>
                                     }
                                 </>
                             }
@@ -638,5 +716,5 @@ export default function TaskView({ open }) {
                 </View>
             </Modal>
         </>
-    );
+    ));
 }

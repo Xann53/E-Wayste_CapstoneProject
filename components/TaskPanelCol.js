@@ -190,8 +190,16 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
         let taskId, shiftId, trackId;
         if(selectedTaskType === 'Collection') {
             taskId = selectedCol.id;
-            const title = 'GARBAGE COLLECTION DAY!';
-            const body = 'Scheduled Collection has started';
+
+            const title = 'GARBAGE COLLECTION HAS STARTED!';
+            let body = 'Scheduled Collection has started for the route:\n';
+            allSched.map((sched) => {
+                if(sched.id === selectedCol.id) {
+                    sched.collectionRoute.coordinates.map((coord) => {
+                        body = body + '\t- ' +coord.locationName + '\n';
+                    })
+                }
+            });
             const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
             PushNotif(title, body, fullDateTime);
         } else if(selectedTaskType === 'Assignment') {
@@ -226,9 +234,16 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
             }
         })
         if(selectedTaskType === 'Collection') {
-            const title = 'COLLECTION HAS ENDED';
-            const body = 'Scheduled Collection has Ended';
-            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:MM:SS');
+            const title = 'GARBAGE COLLECTION HAS ENDED!';
+            let body = 'Scheduled Collection has ended for the route:\n';
+            allSched.map((sched) => {
+                if(sched.id === selectedCol.id) {
+                    sched.collectionRoute.coordinates.map((coord) => {
+                        body = body + '\t- ' +coord.locationName + '\n';
+                    })
+                }
+            });
+            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
             PushNotif(title, body, fullDateTime);
 
             let record = [];
@@ -359,7 +374,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                                                                 currentlyActive = true;
                                                             }
                                                         })
-                                                        if(sched.userID === user.id && user.lguCode === userLguCode && sched.type === 'Collection' && sched.assignedTruck === plateNo) {
+                                                        if(sched.userID === user.id && user.lguCode === userLguCode && sched.type === 'Collection' && sched.assignedTruck === plateNo && sched.visibility === 'enable') {
                                                             return(
                                                                 <TouchableOpacity key={sched.id} onPress={() => {selectedCol.id !== sched.id ? selectTask(sched, 'Collection') : selectTask([], 'Collection')}}>
                                                                     <View style={{display: 'flex', width: '100%', padding: 10, backgroundColor: 'white', borderRadius: 5, gap: 15, borderWidth: selectedCol.id === sched.id ? 3 : 0, borderColor: 'orange'}}>
