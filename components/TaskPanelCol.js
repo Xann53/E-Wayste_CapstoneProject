@@ -376,7 +376,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                                                         })
                                                         if(sched.userID === user.id && user.lguCode === userLguCode && sched.type === 'Collection' && sched.assignedTruck === plateNo && sched.visibility === 'enable') {
                                                             return(
-                                                                <TouchableOpacity key={sched.id} onPress={() => {selectedCol.id !== sched.id ? selectTask(sched, 'Collection') : selectTask([], 'Collection')}}>
+                                                                <TouchableOpacity activeOpacity={0.7} key={sched.id} onPress={() => {selectedCol.id !== sched.id ? selectTask(sched, 'Collection') : selectTask([], 'Collection')}}>
                                                                     <View style={{display: 'flex', width: '100%', padding: 10, backgroundColor: 'white', borderRadius: 5, gap: 15, borderWidth: selectedCol.id === sched.id ? 3 : 0, borderColor: 'orange'}}>
                                                                         <View style={{display: 'flex', flexDirection: 'row'}}>
                                                                             <View style={{display: 'flex', flex: 4, justifyContent: 'center', overflow: 'hidden'}}>
@@ -449,7 +449,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                                                         })
                                                         if(sched.userID === user.id && user.lguCode === userLguCode && sched.type === 'Assignment' && sched.assignedTruck === plateNo) {
                                                             return(
-                                                                <TouchableOpacity key={sched.id} onPress={() => {selectedAssign.id !== sched.id ? selectTask(sched, 'Assignment') : selectTask([], 'Assignment')}}>
+                                                                <TouchableOpacity activeOpacity={0.7} key={sched.id} onPress={() => {selectedAssign.id !== sched.id ? selectTask(sched, 'Assignment') : selectTask([], 'Assignment')}}>
                                                                     <View style={{display: 'flex', width: '100%', padding: 10, backgroundColor: 'white', borderRadius: 5, gap: 15, borderWidth: selectedAssign.id === sched.id ? 3 : 0, borderColor: 'orange'}}>
                                                                         <View style={{display: 'flex', flexDirection: 'row'}}>
                                                                             <View style={{display: 'flex', flex: 4, justifyContent: 'center', overflow: 'hidden'}}>
@@ -535,7 +535,7 @@ export default function TaskPanel({ open, trackRoute, setShowColMarker, quickRou
                                                         }
                                                     })
                                                     return(
-                                                        <TouchableOpacity key={report.id} onPress={() => {selectedRep.id !== report.id ? selectTask(report, 'Report') : selectTask([], 'Report')}}>
+                                                        <TouchableOpacity activeOpacity={0.7} key={report.id} onPress={() => {selectedRep.id !== report.id ? selectTask(report, 'Report') : selectTask([], 'Report')}}>
                                                             <View style={{display: 'flex', width: '100%', padding: 10, backgroundColor: 'white', borderRadius: 5, gap: 15, borderWidth: selectedRep.id === report.id ? 3 : 0, borderColor: 'orange'}}>
                                                                 <View style={{display: 'flex', flexDirection: 'row'}}>
                                                                     <View style={{display: 'flex', flex: 1, height: 200, justifyContent: 'center', overflow: 'hidden', borderRadius: 10}}>
