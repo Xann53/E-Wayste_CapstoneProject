@@ -23,6 +23,7 @@ import ChangeStatus from './ChangeStatusMap';
 import MTruckList from './MapTruckList';
 import TaskPanel from './TaskPanelCol';
 import TaskView from './TaskPanelView';
+import PushNotif from './PushNotification';
 
 export default function LoadMap({ mapRef, page }) {
     const userRef = firebase.firestore().collection("users");
@@ -72,6 +73,10 @@ export default function LoadMap({ mapRef, page }) {
 
     const [viewTrack, setViewTrack] = useState(false);
     const [taskToTrack, setTaskToTrack] = useState({});
+
+    let tempDistance = [];
+    const [viewDistance, setViewDistance] = useState();
+    const [doneNotif, setDoneNotif] = useState([]);
 
     useEffect(() => {
         const getID = async() => {
@@ -243,6 +248,50 @@ export default function LoadMap({ mapRef, page }) {
         } catch(e) {}
     }
 
+    const calculateDistance = (colLat, colLon) => {
+        {allActiveTask.map((task) => {
+            if(task.taskId === taskToTrack.taskId) {
+                allActiveRoute.map((route) => {
+                    if(route.activeTaskId === task.id) {
+                        route.taskRoute.map((loc) => {
+                            const lat1 = colLat, lon1 = colLon, lat2 = loc.latitude, lon2 = loc.longitude, id = loc.name;
+                            const toRadian = angle => (Math.PI / 180) * angle;
+                            const R = 6371.01; // Earth's radius in kilometers
+                            const dLat = toRadian(lat2 - lat1);
+                            const dLon = toRadian(lon2 - lon1);
+                            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                      Math.cos(toRadian(lat1)) * Math.cos(toRadian(lat2)) *
+                                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                            const d = R * c;
+
+                            tempDistance.push({
+                                id: id,
+                                distance: d.toFixed(2)
+                            });
+
+
+                            let tempDone = false;
+                            const tempCompare = d.toFixed(2);
+                            doneNotif.map((temp) => {
+                                if(temp === id) {
+                                    tempDone = true
+                                }
+                            })
+                            if(tempCompare <= 0.50 && !tempDone) {
+                                const title = 'NOTIFICATION!';
+                                const body = 'Truck is near ' + loc.locationName;
+                                const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+                                PushNotif(title, body, fullDateTime);
+                                setDoneNotif([...doneNotif, id]);
+                            }
+                        })
+                    }
+                })
+            }
+        })}
+    };
+
     return (
         <>
             <TouchableOpacity activeOpacity={0.5} onPress={() => { mapType === 'uncollected' ? setMapType('collected') : setMapType('uncollected'); changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
@@ -316,6 +365,7 @@ export default function LoadMap({ mapRef, page }) {
                     longitudeDelta: 0.0421,
                 }}
                 customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
+                // showsUserLocation
             >
 {/* ========================================================================================================================================================================================================================================================================================================================================================================================================================================== */}
                 {showRepPin && <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} viewTrack={viewTrack} taskToTrack={taskToTrack} />}
@@ -431,6 +481,7 @@ export default function LoadMap({ mapRef, page }) {
                                                 style={{zIndex: 99}}
                                             >
                                                 <Image source={require('../assets/garbage-truck.png')} style={{width: 45, height: 45, resizeMode: 'contain', bottom: -5}} />
+                                                {calculateDistance(parseFloat(track.latitude), parseFloat(track.longitude))}
                                             </Marker>
                                         );
                                     }
@@ -476,7 +527,17 @@ export default function LoadMap({ mapRef, page }) {
                                                                 longitude: parseFloat(loc.longitude)
                                                             }}
                                                             style={{alignItems: 'center'}}
+                                                            onPress={() => {viewDistance !== loc.name ? setViewDistance(loc.name) : setViewDistance()}}
                                                         >
+                                                            {viewDistance === loc.name &&
+                                                                tempDistance.map((data) => {
+                                                                    if(data.id === loc.name) {
+                                                                        return (
+                                                                            <Text key={loc.name} style={{fontWeight: 500, fontSize: 12, color: '#F76811', transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 20}}>{data.distance} km away</Text>
+                                                                        );
+                                                                    }
+                                                                })
+                                                            }
                                                             <Text style={{fontSize: 18, fontWeight: 900, color: 'green', transform: [{translateY: 26}], zIndex: 99}}>{parseInt(loc.name + 1)}</Text>
                                                             <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin2.png')} />
                                                         </Marker>
