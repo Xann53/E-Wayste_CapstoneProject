@@ -250,7 +250,7 @@ export default function LoadMap({ mapRef, page }) {
 
     const calculateDistance = (colLat, colLon) => {
         {allActiveTask.map((task) => {
-            if(task.taskId === taskToTrack.taskId) {
+            if(task.userId === userID) {
                 allActiveRoute.map((route) => {
                     if(route.activeTaskId === task.id) {
                         route.taskRoute.map((loc) => {
@@ -279,7 +279,7 @@ export default function LoadMap({ mapRef, page }) {
                                 }
                             })
                             if(tempCompare <= 0.50 && !tempDone) {
-                                const title = 'NOTIFICATION!';
+                                const title = 'HEADS UP!';
                                 const body = 'Truck is near ' + loc.locationName;
                                 const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
                                 PushNotif(title, body, fullDateTime);
@@ -380,6 +380,7 @@ export default function LoadMap({ mapRef, page }) {
                     >
                         <Ionicons name='location' style={{fontSize: 35, color: '#D31111', zIndex: 99}} />
                         <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
+                        {calculateDistance(parseFloat(currentLat), parseFloat(currentLon))}
                     </Marker>
                 }
 
@@ -481,7 +482,6 @@ export default function LoadMap({ mapRef, page }) {
                                                 style={{zIndex: 99}}
                                             >
                                                 <Image source={require('../assets/garbage-truck.png')} style={{width: 45, height: 45, resizeMode: 'contain', bottom: -5}} />
-                                                {calculateDistance(parseFloat(track.latitude), parseFloat(track.longitude))}
                                             </Marker>
                                         );
                                     }
