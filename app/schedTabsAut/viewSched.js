@@ -334,32 +334,40 @@ export default function ViewSchedDetails({ navigation, route }) {
     <>
       <View style={{ position: "absolute", height: "100%", width: "100%", justifyContent: "flex-start", alignItems: "center", zIndex: 10, backgroundColor: "rgba(0, 0, 0, 0.85)" }}>
         <View style={{ position: "absolute", width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", top: 30, paddingHorizontal: 20, zIndex: 10 }}>
-          <TouchableOpacity onPress={() => { resetEdit(); navigation.navigate('mainSched'); }}>
-            <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179, 229, 94)" }} />
-          </TouchableOpacity>
+          {!isEditable &&
+                <TouchableOpacity onPress={() => { resetEdit(); navigation.navigate('mainSched'); }}>
+                    <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgba(126,185,73,1)" }} />
+                </TouchableOpacity>
+          }
           {!isEditable ? (
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity onPress={handleEdit}>
-                <Ionicons name="pencil" style={{ fontSize: 25, color: "rgb(179, 229, 94)", marginRight: 10 }} />
+                <Ionicons name="pencil" style={{ fontSize: 25, color: "rgba(126,185,73,1)", marginRight: 10 }} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDelete}>
-                <Ionicons name="trash" style={{ fontSize: 25, color: "rgb(179, 229, 94)" }} />
+                <Ionicons name="trash" style={{ fontSize: 25, color: "rgba(126,185,73,1)" }} />
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={() => {
-              handleUpdate();
-              if(updatedData.type === "Collection") {
-                updateRoute();
-              }
-            }}>
-              <Ionicons name="checkmark" style={{ fontSize: 35, color: "rgb(179, 229, 94)"}} />
-            </TouchableOpacity>
+            <View style={{display: 'flex', flex: 1, flexDirection: 'row', gap: 5, justifyContent: 'flex-end'}}>
+                <TouchableOpacity onPress={() => {
+                    handleUpdate();
+                    if(updatedData.type === "Collection") {
+                        updateRoute();
+                    }
+                }}>
+                    <Ionicons name="checkmark" style={{ fontSize: 35, color: "rgba(126,185,73,1)"}} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => {setIsEditable(false)}}>
+                    <Ionicons name="close-outline" style={{ fontSize: 35, color: '#DE462A'}} />
+                </TouchableOpacity>
+            </View>
+            
           )}
         </View>
         <View style={{ width: "100%", height: "100%", backgroundColor: "#ffffff" }}>
-          <ScrollView style={{ width: "100%" }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90, }}>
-            <Text style={{ marginBottom: 5, fontSize: 25, fontWeight: 'bold', color: '#0D5601', width: '100%', paddingLeft: 25 }}>SCHEDULE DETAILS</Text>
+          <ScrollView style={{ width: "100%", marginBottom: 60 }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90}}>
+            <Text style={{ marginBottom: 5, fontSize: 25, fontWeight: 'bold', color: '#0D5601', width: '100%', paddingLeft: 25 }}>{!isEditable ? 'SCHEDULE DETAILS' : 'EDIT SCHEDULE DETAILS'}</Text>
             {scheduleData && (
               <>
                 {scheduleData.type && (
@@ -421,32 +429,30 @@ export default function ViewSchedDetails({ navigation, route }) {
                     {scheduleData.collectionRoute && (
                       <View style={styles.fieldContainer}>
                         <Text style={styles.fieldName}>Collection Route</Text>
-                        {isEditable ? (
+                        {isEditable ?
                           // Display TextInput for editing
-                          <>{CollectionRoute()}</>
-                        ) : (
-                          // Display locationName values with "from" and "to" labels in different colors
-                          <>
-                            {schedRoute.map((temp) => {
-                              if(temp.collectionRoute.coordinates[0] !== undefined && temp.id.includes(scheduleId)) {
-                                from = temp.collectionRoute.coordinates[0].locationName + '';
-                              }
-                              if(temp.collectionRoute.coordinates[1] !== undefined && temp.id.includes(scheduleId)) {
-                                to = temp.collectionRoute.coordinates[1].locationName + '';
-                              }
-                            })}
-                            {from && (
-                              <Text style={styles.fieldValue}>
-                                <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {from}
-                              </Text>
-                            )}
-                            {to && (
-                              <Text style={styles.fieldValue}>
-                                <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {to}
-                              </Text>
-                            )}
-                          </>
-                        )}
+                          <>{CollectionRoute()}</> 
+                        : 
+                            <>
+                                {schedRoute.map((sched) => {
+                                    if(sched.id === scheduleId && sched.type === 'Collection') {
+                                        return(
+                                            <View key={sched.id} style={{width: 310, gap: 10, paddingTop: 10, paddingLeft: 20}}>
+                                                {
+                                                    sched.collectionRoute.coordinates.map((coord) => {
+                                                        return(
+                                                            <View key={coord.name} style={{backgroundColor: '#B8FEE6', borderRadius: 5, padding: 8}}>
+                                                                <Text>{coord.locationName}</Text>
+                                                            </View>
+                                                        );
+                                                    })
+                                                }
+                                            </View>
+                                        );
+                                    }
+                                })}
+                            </>
+                        }
                       </View>
                     )}
                     {/* Date and Time fields */}
@@ -742,13 +748,12 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgb(215,233,217)',
     color: 'rgba(45, 105, 35, 1)',
-    paddingLeft: 10,
-    paddingRight: 10,
+    paddingHorizontal: 10,
+    padding: 8,
     fontSize: 16,
     marginTop: 5,
     width: 310,
-    height: 35,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   focusedField: {
     borderColor: 'rgba(17, 152, 18, 1)',
