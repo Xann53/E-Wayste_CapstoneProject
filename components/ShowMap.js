@@ -248,7 +248,7 @@ export default function LoadMap({ mapRef, page }) {
         } catch(e) {}
     }
 
-    const calculateDistance = (colLat, colLon) => {
+    const calculateDistanceColSide = (colLat, colLon) => {
         {allActiveTask.map((task) => {
             if(task.userId === userID) {
                 allActiveRoute.map((route) => {
@@ -269,7 +269,6 @@ export default function LoadMap({ mapRef, page }) {
                                 id: id,
                                 distance: d.toFixed(2)
                             });
-
 
                             let tempDone = false;
                             const tempCompare = d.toFixed(2);
@@ -292,7 +291,54 @@ export default function LoadMap({ mapRef, page }) {
         })}
     };
 
+    const calculateDistance = (colLat, colLon) => {
+        {allActiveTask.map((task) => {
+            if(task.taskId === taskToTrack.taskId) {
+                allActiveRoute.map((route) => {
+                    if(route.activeTaskId === task.id) {
+                        route.taskRoute.map((loc) => {
+                            const lat1 = colLat, lon1 = colLon, lat2 = loc.latitude, lon2 = loc.longitude, id = loc.name;
+                            const toRadian = angle => (Math.PI / 180) * angle;
+                            const R = 6371.01; // Earth's radius in kilometers
+                            const dLat = toRadian(lat2 - lat1);
+                            const dLon = toRadian(lon2 - lon1);
+                            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                      Math.cos(toRadian(lat1)) * Math.cos(toRadian(lat2)) *
+                                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                            const d = R * c;
+
+                            tempDistance.push({
+                                id: id,
+                                distance: d.toFixed(2)
+                            });
+                        })
+                    }
+                })
+            }
+        })}
+    };
+
     return (
+        allShift.map((shift) => {
+            if(shift.driverId === userID) {
+                collectorLocation.map((track) => {
+                    if(track.id === shift.trackId) {
+                        calculateDistanceColSide(track.latitude, track.longitude);
+                    }
+                })
+            }
+        }),
+        allShift.map((shift) => {
+            if(shift.id === taskToTrack.shiftId) {
+                collectorLocation.map((track) => {
+                    if(track.id === shift.trackId) {
+                        calculateDistance(track.latitude, track.longitude);
+                    }
+                })
+            }
+        }),
+    (
         <>
             <TouchableOpacity activeOpacity={0.5} onPress={() => { mapType === 'uncollected' ? setMapType('collected') : setMapType('uncollected'); changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
                 {mapType === 'uncollected' ?
@@ -380,7 +426,6 @@ export default function LoadMap({ mapRef, page }) {
                     >
                         <Ionicons name='location' style={{fontSize: 35, color: '#D31111', zIndex: 99}} />
                         <Ionicons name='location' style={{fontSize: 40, color: '#FFFFFF', zIndex: -1, position: 'absolute', transform: [{translateX: -2.5}, {translateY: -2.5}]}} />
-                        {calculateDistance(parseFloat(currentLat), parseFloat(currentLon))}
                     </Marker>
                 }
 
@@ -426,7 +471,20 @@ export default function LoadMap({ mapRef, page }) {
                                                                 longitude: parseFloat(loc.longitude)
                                                             }}
                                                             style={{alignItems: 'center'}}
+                                                            onPress={() => {viewDistance !== loc.name ? setViewDistance(loc.name) : setViewDistance()}}
                                                         >
+                                                            {viewDistance === loc.name &&
+                                                                tempDistance.map((data) => {
+                                                                    if(data.id === loc.name) {
+                                                                        return (
+                                                                            <View key={loc.name} style={{transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 10, alignItems: 'center', maxWidth: 300}}>
+                                                                                <Text numberOfLines={1} style={{fontWeight: 500, fontSize: 12, color: 'green'}}>{loc.locationName}</Text>
+                                                                                <Text style={{fontWeight: 500, fontSize: 12, color: '#F76811'}}>{data.distance} km away</Text>
+                                                                            </View>
+                                                                        );
+                                                                    }
+                                                                })
+                                                            }
                                                             <Text style={{fontSize: 18, fontWeight: 900, color: 'green', transform: [{translateY: 26}], zIndex: 99}}>{parseInt(loc.name + 1)}</Text>
                                                             <Image style={{width: 45, height: 45, resizeMode: 'contain'}} source={require('../assets/collection-pin2.png')} />
                                                         </Marker>
@@ -533,7 +591,11 @@ export default function LoadMap({ mapRef, page }) {
                                                                 tempDistance.map((data) => {
                                                                     if(data.id === loc.name) {
                                                                         return (
-                                                                            <Text key={loc.name} style={{fontWeight: 500, fontSize: 12, color: '#F76811', transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 20}}>{data.distance} km away</Text>
+                                                                            // <Text key={loc.name} style={{fontWeight: 500, fontSize: 12, color: '#F76811', transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 20}}>{data.distance} km away</Text>
+                                                                            <View key={loc.name} style={{transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 10, alignItems: 'center', maxWidth: 300}}>
+                                                                                <Text numberOfLines={1} style={{fontWeight: 500, fontSize: 12, color: 'green'}}>{loc.locationName}</Text>
+                                                                                <Text style={{fontWeight: 500, fontSize: 12, color: '#F76811'}}>{data.distance} km away</Text>
+                                                                            </View>
                                                                         );
                                                                     }
                                                                 })
@@ -603,7 +665,7 @@ export default function LoadMap({ mapRef, page }) {
 
             {openTaskListView && <TaskView open={setOpenTaskListView} setViewTrack={setViewTrack} setTaskToTrack={setTaskToTrack} />}
         </>
-    );   
+    ));   
 }
 
 const mapStyle = [

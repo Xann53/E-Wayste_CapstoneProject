@@ -5,12 +5,15 @@ import { db, firebase } from '../../firebase_config';
 import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, } from 'firebase/firestore';
 import DatePicker from 'react-native-datepicker';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../../environments';
 import * as Location from 'expo-location';
+
+import TruckList from '../../components/SchedTruckList';
 
 export default function ViewSchedDetails({ navigation, route }) {
   const { scheduleId } = route.params;
@@ -27,6 +30,7 @@ export default function ViewSchedDetails({ navigation, route }) {
   const [collectorList, setCollectorList] = useState([]);
   const [assignCollector, setAssignCollector]= useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [truckList, setTruckList] = useState([]);
 
   const [selectColRoute, setSelectColRoute] = useState(false);
   let routeLongitude, routeLatitude, routeLocName;
@@ -69,35 +73,55 @@ export default function ViewSchedDetails({ navigation, route }) {
   }, [scheduleId]);
 
   const getGarbageCollectors = async () => {
-    const usersCollection = collection(db, 'users');
-    const querySnapshot = await getDocs(usersCollection);
+    const truckCollection = collection(db, 'trucks');
+    const querySnapshot = await getDocs(truckCollection);
   
-    const collectorList = [];
+    const tempCollection = [];
+    const code = await AsyncStorage.getItem('userLguCode');
+
     querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      if (userData.accountType === 'Garbage Collector') {
-        collectorList.push({
+      const tempData = doc.data();
+      if(tempData.lguCode === code) {
+        tempCollection.push({
           id: doc.id,
-          name: userData.username,
+          dateTime: tempData.dateTime,
+          driverID: tempData.driverID,
+          lguCode: tempData.lguCode,
+          lguID: tempData.lguID,
+          members: tempData.members,
+          plateNo: tempData.plateNo
         });
       }
     });
   
-    return collectorList;
-  };
+    return tempCollection;
+};
 
-  useEffect(() => {
+useEffect(() => {
     // Fetch garbage collectors when component mounts
     const fetchCollectors = async () => {
-      const collectors = await getGarbageCollectors();
-      setCollectorList(collectors);
+        const collectors = await getGarbageCollectors();
+        setTruckList(collectors);
     };
     fetchCollectors();
-  }, []);
+}, []);
+
+// const closeTruckModal = async() => {
+//     setModalVisible(false);
+// }
+
+// const handleSelectCollector = (collectorName) => {
+//     setAssignedTruck(collectorName);
+//     closeTruckModal();
+// };
+
+  const closeTruckModal = async() => {
+    setModalVisible(false);
+  }
 
   const handleSelectCollector = (collectorName) => {
-    setAssignCollector(collectorName);
-    setModalVisible(false);
+      setAssignCollector(collectorName);
+      closeTruckModal();
   };
 
   const handleEdit = () => {
@@ -422,6 +446,22 @@ export default function ViewSchedDetails({ navigation, route }) {
                     )}
                   </View>
                 )}
+
+                {updatedData.type === 'Collection' &&
+                  <>
+                    <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Truck Assigned</Text>
+                        {isEditable ?
+                          <>
+                            <Text style={styles.fieldValue} onFocus={() => setModalVisible(true)}>{updatedData.assignedTruck}</Text>
+                            {(modalVisible === true) && <TruckList close={closeTruckModal} dataList={truckList} selected={handleSelectCollector} />}
+                          </>
+                          :
+                          <Text style={styles.fieldValue}>{updatedData.assignedTruck}</Text>
+                        }
+                    </View>
+                  </>
+                }
                 
                 {/* Collection-specific fields */}
                 {updatedData.type === 'Collection' && (
@@ -534,7 +574,7 @@ export default function ViewSchedDetails({ navigation, route }) {
                         )}
                       </View>
                     )}
-                    {scheduleData.assignCollector && (
+                    {/* {scheduleData.assignCollector && (
                       <View style={styles.fieldContainer}>
                         <Text style={styles.fieldName}>Assigned Collector</Text>
                         <TextInput
@@ -546,7 +586,7 @@ export default function ViewSchedDetails({ navigation, route }) {
                           onChangeText={(text) => setUpdatedData({ ...updatedData, assignCollector: text })}
                         />
                       </View>
-                    )}
+                    )} */}
                   </>
                 )}
                 {/* Event-specific fields */}
