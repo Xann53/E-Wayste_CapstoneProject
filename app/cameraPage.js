@@ -179,7 +179,8 @@ export default function CameraOpen({ navigation: {goBack} }) {
             userId: userID,
             longitude: longitude,
             latitude: latitude,
-            municipality: municipality
+            municipality: municipality,
+            dateTimeCollected: ''
         });
 
         let userFullName;

@@ -134,64 +134,70 @@ const handleUserSelect = async (selectedEmail) => {
 
 
 useEffect(() => {
-  const unsubscribeChats = currentUser
-    ? onSnapshot(
-        collection(db, 'chats'),
-        async (querySnapshot) => {
-          const allChats = [];
+  const unsubscribeChats = currentUser ? onSnapshot(
+    collection(db, 'chats'),
+    async (querySnapshot) => {
+      const allChats = [];
+      for (const doc of querySnapshot.docs) {
+        const userData = doc.data();
+        if (userData && userData.users && userData.users.includes(currentUser.email)) {
+          const messagesRef = collection(db, 'messages');
+          const q = query(messagesRef, where('chatId', '==', doc.id), orderBy('timestamp', 'desc'), limit(1));
+          const messagesSnapshot = await getDocs(q);
+          if (!messagesSnapshot.empty) {
+            const lastMessageData = messagesSnapshot.docs[0]?.data();
+            const lastMessageTimestamp = lastMessageData?.timestamp?.toDate();
+            let lastMessageText = lastMessageData?.imageUrl ? 'Photo attached' : lastMessageData?.text || '';
 
-          for (const doc of querySnapshot.docs) {
-            const userData = doc.data();
-
-            if (userData && userData.users && userData.users.includes(currentUser.email)) {
-              const messagesRef = collection(db, 'messages');
-              const q = query(messagesRef, where('chatId', '==', doc.id), orderBy('timestamp', 'desc'), limit(1));
-              const messagesSnapshot = await getDocs(q);
-
-              if (!messagesSnapshot.empty) {
-                const lastMessageData = messagesSnapshot.docs[0]?.data();
-                const lastMessageTimestamp = lastMessageData?.timestamp?.toDate();
-
-                let lastMessageText = lastMessageData?.imageUrl ? 'Photo attached' : lastMessageData?.text || '';
-
-                allChats.push({
-                  chatId: doc.id,
-                  otherParticipantEmail: userData.users.find((email) => email !== currentUser.email),
-                  lastMessage: lastMessageText,
-                  timestamp: lastMessageTimestamp,
-                });
-              }
+            // Fetch receiver's full name
+            const otherParticipantEmail = userData.users.find((email) => email !== currentUser.email);
+            const userRef = collection(db, 'users');
+            const userQuery = query(userRef, where('email', '==', otherParticipantEmail));
+            const userDocs = await getDocs(userQuery);
+            let receiverUsername = otherParticipantEmail; // Default to email if full name not found
+            if (!userDocs.empty) {
+              const userData = userDocs.docs[0].data();
+              receiverUsername = `${userData.firstName} ${userData.lastName}`;
             }
-          }
 
-          allChats.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          setChatSummaries(allChats);
-        },
-        (error) => {
-          console.error('Error fetching chats:', error);
+            allChats.push({
+              chatId: doc.id,
+              otherParticipantEmail: otherParticipantEmail,
+              receiverUsername: receiverUsername,
+              lastMessage: lastMessageText,
+              timestamp: lastMessageTimestamp,
+            });
+          }
         }
-      )
-    : undefined;
+      }
+      allChats.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setChatSummaries(allChats);
+    },
+    (error) => {
+      console.error('Error fetching chats:', error);
+    }
+  ) : undefined;
 
   return () => {
     if (unsubscribeChats) {
       unsubscribeChats();
     }
   };
-}, [currentUser, refreshPage, chatSummaries]);
+}, [currentUser, refreshPage]);
+
 
 
 const renderItem = ({ item }) => (
   <TouchableOpacity
     style={[styles.itemContainer, styles.itemShadow]}
-    onPress={() => navigation.navigate('chatView', { chatId: item.chatId, receiverEmail: item.otherParticipantEmail })}
+    onPress={() => navigation.navigate('chatView', { chatId: item.chatId, receiverEmail: item.receiverUsername})}
     onLongPress={() => handleLongPress(item)} 
   >
     <View style={[styles.avatarContainer, styles.itemShadow]}>
       <Icon name="user" size={25} color="#05652D" />
     </View>
     <View style={styles.textAndTimestampContainer}>
-      <Text style={styles.emailText}>{item.otherParticipantEmail}</Text>
+      <Text style={styles.emailText}>{item.receiverUsername}</Text>
       <Text style={styles.lastMessageText} numberOfLines={1} ellipsizeMode="tail">{item.lastMessage}</Text>
       <Text style={styles.timestampText}>{item.timestamp.toLocaleTimeString()}</Text>
     </View>

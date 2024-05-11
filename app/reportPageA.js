@@ -7,11 +7,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parse } from 'date-fns';
 
 import { db, auth, storage, firebase } from '../firebase_config';
-import { collection, addDoc,getDoc, getDocs, query, where, onSnapshot} from 'firebase/firestore';
+import { collection, addDoc,getDoc, doc,getDocs, query, where, onSnapshot} from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { Circle } from 'react-native-progress';
-
-// import SideBar from '../components/SideNav';
+import { fetchUserId } from '../components/userService';
 import OpenSideBar from '../components/OpenSideNav';
 
 export default function ReportAut({navigation}) {
@@ -23,22 +22,17 @@ export default function ReportAut({navigation}) {
     const [userUploads, setUserUploads] = useState([]);
     const [imageCol, setImageCol] = useState([]);
     let uploadCollection = [];
-
     const usersCollection = collection(db, "users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
-
     const [reportsToday, setReportsToday] = useState(0);
     const [totalReports, setTotalReports] = useState(0);
-
     const [collectedCount, setCollectedCount] = useState(0);
     const [uncollectedCount, setUncollectedCount] = useState(0);
-   
     const [circleSize, setCircleSize] = useState(100); 
     const [circleThickness, setCircleThickness] = useState(10); 
-    const [progress1, setProgress1] = useState(0); // Initialize progress1
+    const [progress1, setProgress1] = useState(0); 
     const [progress2, setProgress2] = useState(0);
-
     const [viewAllReports, setViewAllReports] = useState(false);
     const currentDate = new Date().toISOString().split('T')[0];
 
@@ -59,101 +53,187 @@ export default function ReportAut({navigation}) {
     }
 
     useEffect(() => {
-        const fetchData = async () => {
-          const reportsCollection = collection(db, "generalUsersReports");
-          const collectedQuery = query(reportsCollection, where("status", "==", "collected"));
-          const uncollectedQuery = query(reportsCollection, where("status", "==", "uncollected"));
-          const collectedSnapshot = await getDocs(collectedQuery);
-          const uncollectedSnapshot = await getDocs(uncollectedQuery);
-          setProgress1(collectedSnapshot.size);
-          setProgress2(uncollectedSnapshot.size);
+        const fetchMunicipality = async () => {
+            try {
+                const userId = await fetchUserId();
+    
+                if (userId) {
+                    const userDoc = await getDoc(doc(db, 'users', userId));
+                    
+                    if (userDoc.exists()) {
+                        const municipality = userDoc.data().municipality;
+                        console.log('Municipality of the logged-in user:', municipality);
+                    } else {
+                        console.log('User document not found.');
+                    }
+                } else {
+                    console.log('User ID not found.');
+                }
+            } catch (error) {
+                console.error('Error fetching municipality:', error);
+            }
         };
     
-        fetchData();
-      }, []);
-  
-    useEffect(() => {
-      const fetchData = async () => {
-        const reportsCollection = collection(db, 'generalUsersReports');
-        const collectedQuery = query(reportsCollection, where('status', '==', 'collected'));
-        const uncollectedQuery = query(reportsCollection, where('status', '==', 'uncollected'));
-  
-        const collectedSnapshot = await getDocs(collectedQuery);
-        const uncollectedSnapshot = await getDocs(uncollectedQuery);
-  
-        setCollectedCount(collectedSnapshot.size);
-        setUncollectedCount(uncollectedSnapshot.size);
-      };
-  
-      fetchData();
+        fetchMunicipality();
     }, []);
 
     useEffect(() => {
-        const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
-    
+        const fetchData = async () => {
+            const reportsCollection = collection(db, "generalUsersReports");
+            const collectedQuery = query(reportsCollection, where("status", "==", "collected"));
+            const uncollectedQuery = query(reportsCollection, where("status", "==", "uncollected"));
+
+            const collectedUnsubscribe = onSnapshot(collectedQuery, (snapshot) => {
+                const size = snapshot.size;
+                setProgress1(size);
+            });
+            const uncollectedUnsubscribe = onSnapshot(uncollectedQuery, (snapshot) => {
+                const size = snapshot.size;
+                setProgress2(size);
+            });
+            return () => {
+                collectedUnsubscribe();
+                uncollectedUnsubscribe();
+            };
+        };
+        fetchData();
+    }, []);
+  
+      useEffect(() => {
         const fetchReports = async () => {
             try {
-                // Query for reports today
-                const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
-                const todaySnapshot = await getDocs(todayQuery);
-                const todayReports = [];
+                const userId = await fetchUserId();
+                if (userId) {
+                    const userDoc = await getDoc(doc(db, 'users', userId));
+                    if (userDoc.exists()) {
+                        const municipality = userDoc.data().municipality;
     
-                todaySnapshot.forEach(doc => {
-                    const report = doc.data();
-                    const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+                        const collectedQuery = query(collection(db, 'generalUsersReports'),
+                            where('municipality', '==', municipality),
+                            where('status', '==', 'collected')
+                        );
+                        const collectedSnapshot = await getDocs(collectedQuery);
+                        const collectedCount = collectedSnapshot.size;
+                        setCollectedCount(collectedCount);
     
-                    if (reportDate.toISOString().split('T')[0] === currentDate) {
-                        todayReports.push(report);
+                        const uncollectedQuery = query(collection(db, 'generalUsersReports'),
+                            where('municipality', '==', municipality),
+                            where('status', '==', 'uncollected')
+                        );
+                        const uncollectedSnapshot = await getDocs(uncollectedQuery);
+                        const uncollectedCount = uncollectedSnapshot.size;
+                        setUncollectedCount(uncollectedCount);
+
+                        const totalReports = collectedCount + uncollectedCount;
+                        const collectedPercentage = (collectedCount / totalReports) * 100;
+                        const uncollectedPercentage = (uncollectedCount / totalReports) * 100;
+                        setProgress1(collectedPercentage);
+                        setProgress2(uncollectedPercentage);
+                    } else {
+                        console.log('User document not found.');
                     }
-                });
+                } else {
+                    console.log('User ID not found.');
+                }
+            } catch (error) {
+                console.log('Error fetching reports:', error);
+            }
+        };
+        fetchReports();
+    }, []);
+
+    const retrieveUserData = async () => {
+        try {
+            const userId = await AsyncStorage.getItem('userId');
+            const userType = await AsyncStorage.getItem('userType');
+            const userFName = await AsyncStorage.getItem('userFName');
+            const userLName = await AsyncStorage.getItem('userLName');
+            const userUName = await AsyncStorage.getItem('userUName');
+            const userEmail = await AsyncStorage.getItem('userEmail');
+            const userProvince = await AsyncStorage.getItem('userProvince');
+            const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+            const userBarangay = await AsyncStorage.getItem('userBarangay');
+            const userContact = await AsyncStorage.getItem('userContact');
+            const userLguCode = await AsyncStorage.getItem('userLguCode');
+            
+            // Concatenate user data
+            const userDataString = `${userId}, ${userType}, ${userFName}, ${userLName}, ${userUName}, ${userEmail}, ${userProvince}, ${userMunicipality}, ${userBarangay}, ${userContact}, ${userLguCode}`;
     
-                setReportsToday(todayReports.length);
+            // Log the concatenated user data
+            console.log('User Data:', userDataString);
+        } catch (error) {
+            console.error('Error retrieving user data:', error);
+        }
+    };
     
-                // Query for all reports
-                const allReportsQuery = query(collection(db, 'generalUsersReports'));
-                const allReportsSnapshot = await getDocs(allReportsQuery);
-                const totalReportsCount = allReportsSnapshot.size;
-                setTotalReports(totalReportsCount);
+    useEffect(() => {
+        retrieveUserData();
+    }, []);
+
+    const [userMunicipality, setUserMunicipality] = useState('');
+        
+    useEffect(() => {
+        const retrieveUserData = async () => {
+            try {
+                // Retrieve user municipality from AsyncStorage
+                const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                setUserMunicipality(userMunicipality);
+            } catch (error) {
+                console.error('Error retrieving user municipality:', error);
+            }
+        };
+
+        retrieveUserData();
+    }, []);
+    
+
+    useEffect(() => {
+        const currentDate = new Date().toISOString().split('T')[0]; 
+        const fetchReports = async () => {
+            try {
+                const userId = await fetchUserId();
+                if (userId) {
+                    const userDoc = await getDoc(doc(db, 'users', userId));
+                    if (userDoc.exists()) {
+                        const municipality = userDoc.data().municipality;
+    
+                        const todayQuery = query(collection(db, 'generalUsersReports'), 
+                            where('dateTime', '>=', currentDate),
+                            where('municipality', '==', municipality) 
+                        );
+                        const todaySnapshot = await getDocs(todayQuery);
+                        const todayReports = [];
+            
+                        todaySnapshot.forEach(doc => {
+                            const report = doc.data();
+                            const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+            
+                            if (reportDate.toISOString().split('T')[0] === currentDate) {
+                                todayReports.push(report);
+                            }
+                        });
+            
+                        setReportsToday(todayReports.length);
+            
+                        const allReportsQuery = query(collection(db, 'generalUsersReports'), 
+                            where('municipality', '==', municipality) 
+                        );
+                        const allReportsSnapshot = await getDocs(allReportsQuery);
+                        const totalReportsCount = allReportsSnapshot.size;
+                        setTotalReports(totalReportsCount);
+                    } else {
+                        console.log('User document not found.');
+                    }
+                } else {
+                    console.log('User ID not found.');
+                }
             } catch (error) {
                 console.log('Error fetching reports:', error);
             }
         };
     
         fetchReports();
-    }, []);
-
-    useEffect(() => {
-        const reportsCollection = collection(db, "generalUsersReports");
-        const setupCollectedListener = () => {
-          const collectedQuery = query(reportsCollection, where('status', '==', 'collected'));
-    
-          const unsubscribe = onSnapshot(collectedQuery, (collectedSnapshot) => {
-            setCollectedCount(collectedSnapshot.size);
-            setProgress1(collectedSnapshot.size);
-          });
-    
-          return unsubscribe;
-        };
-
-        const setupUncollectedListener = () => {
-          const uncollectedQuery = query(reportsCollection, where('status', '==', 'uncollected'));
-    
-          const unsubscribe = onSnapshot(uncollectedQuery, (uncollectedSnapshot) => {
-            setUncollectedCount(uncollectedSnapshot.size);
-            setProgress2(uncollectedSnapshot.size);
-          });
-    
-          return unsubscribe;
-        };
-    
-        const collectedListener = setupCollectedListener();
-        const uncollectedListener = setupUncollectedListener();
-    
-        return () => {
-          collectedListener();
-          uncollectedListener();
-        };
-      }, [reportRef])
+    }, [currentDate]);
 
     useEffect(() => {
         const getUsers = async () => {
@@ -166,12 +246,13 @@ export default function ReportAut({navigation}) {
             querySnapshot => {
                 const uploads = []
                 querySnapshot.forEach((doc) => {
-                    const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                    const {associatedImage, dateTime, description,municipality, location, status, userId} = doc.data();
                     uploads.push({
                         id: doc.id,
                         associatedImage,
                         dateTime,
                         description,
+                        municipality,
                         location,
                         status,
                         userId
@@ -205,6 +286,7 @@ export default function ReportAut({navigation}) {
             valueToPush["imageLink"] = uploads.associatedImage;
             valueToPush["dateTime"] = uploads.dateTime;
             valueToPush["description"] = uploads.description;
+            valueToPush["municipality"] = uploads.municipality;
             valueToPush["location"] = uploads.location;
             valueToPush["status"] = uploads.status;
             valueToPush["userId"] = uploads.userId;
@@ -216,9 +298,11 @@ export default function ReportAut({navigation}) {
                 return 0;
             });
         })
+        const filteredUploads = uploadCollection.filter(upload => upload.municipality === userMunicipality);
+
 
         let temp = [];
-        uploadCollection.map((post) => {
+        filteredUploads.map((post) => {
             if (post.status === 'collected') {
                 return;
             }
@@ -232,10 +316,9 @@ export default function ReportAut({navigation}) {
 
             temp.push(
                 <View style={[styles.contentButton, styles.contentGap]}>
-                    <TouchableOpacity activeOpacity={0.5}>
+                    <View activeOpacity={0.5}>
                         <View style={styles.contentButtonFront}>
                             <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)'}}>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', fontWeight:'bold', paddingBottom: 5}}>REPORTS DETAILS </Text>
                             <Text style={{ fontSize: 13 }}>
                             <Text style={{ fontWeight: 'bold' }}>Reported By:</Text> {users.map((user) => {if(post.userId === user.id) {return user.username;}})} </Text>
                             <Text style={{ fontSize: 13 }}>
@@ -245,7 +328,6 @@ export default function ReportAut({navigation}) {
                             <Text style={{ fontSize: 13 }}>
                             <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
                                 <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5,  justifyContent: 'flex-start', alignItems: 'flex-start'}}>
-                                    {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
                                     {imageURL ? (
                                             <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
                                         ) : (
@@ -254,7 +336,7 @@ export default function ReportAut({navigation}) {
                                     </View>   
                             </SafeAreaView>
                         </View>
-                    </TouchableOpacity>
+                    </View>
                 </View>
             );
             return null;
@@ -278,45 +360,40 @@ export default function ReportAut({navigation}) {
         const [selectedReport, setSelectedReport] = useState(null);
         const currentDate = new Date().toISOString().split('T')[0];
     
-        // Filter reports based on the current date
+        const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
         const reportsToShow = viewAllReports
-        ? userUploads.filter(report => report && report.dateTime && report.dateTime.includes(currentDate))
-        : userUploads.filter(report => {
+        ? filteredUploads.filter(report => report && report.dateTime && report.dateTime.includes(currentDate))
+        : filteredUploads.filter(report => {
             const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
             const reportDateString = reportDate.toISOString().split('T')[0];
             return reportDateString === currentDate;
         });
     
-        // Create a list of image components
         const imageList = viewAllReports && imageCol
-            .filter(url => userUploads.some(report => {
+            .filter(url => filteredUploads.some(report => {
                 const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
                 const reportDateString = reportDate.toISOString().split('T')[0];
                 
                 return report && report.dateTime && reportDateString === currentDate && url.includes(report.associatedImage);
             }))
             .map((url, index) => (
-                <TouchableOpacity key={index} activeOpacity={0.5}>
-                    <View style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
-                        <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10 }} />
-                    </View>
-                </TouchableOpacity>
+                <View key={index} style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
+                    <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10 }} />
+                </View>
             ));
     
-        // Create a list of report components for the current date
         const reportList = reportsToShow.map(uploads => (
-            <TouchableOpacity key={uploads.id} activeOpacity={0.5} onPress={() => setSelectedReport(uploads)}>
+            <View key={uploads.id} activeOpacity={0.5} onPress={() => setSelectedReport(uploads)}>
                 <View style={{ width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 5, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 1, elevation: 5 }}>
                     <View style={{ width: '100%', backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', color: 'rgba(113, 112, 108, 1)' }}>
                         <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', paddingBottom: 5 }}>REPORTS DETAILS </Text>
-                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontSize: 12 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Reported By:</Text> {users.map((user) => { if (uploads.userId === user.id) { return user.username; } })} </Text>
-                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontSize: 12 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {uploads.dateTime} </Text>
-                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontSize: 12 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Location</Text> {uploads.location} </Text>
-                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontSize: 12 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {uploads.status} </Text>
                             <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5, justifyContent: 'flex-start', alignItems: 'flex-start', borderBottomEndRadius: 10 }}>
                                 {imageCol && imageCol.length > 0 && (
@@ -328,24 +405,17 @@ export default function ReportAut({navigation}) {
                         </SafeAreaView>
                     </View>
                 </View>
-            </TouchableOpacity>
+            </View>
         ));
 
         return (
             <View>
                 <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
-                    {/* Display the list of images */}
                     {imageList}
                 </View>
                 <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
-                    {/* Display the list of reports for the current date */}
                     {reportList}
                 </View>
-    
-                {selectedReport && (
-                    // Render your details component based on the selected report
-                    <DetailsComponent report={selectedReport} onClose={() => setSelectedReport(null)} />
-                )}
             </View>
         );
     }           
@@ -353,35 +423,35 @@ export default function ReportAut({navigation}) {
     function HeaderContent() {
         return (
             <>
-                <Text style={{fontSize: 18, fontWeight: 700, color:'rgb(55,55,55)', textAlign: 'center'}}>REPORT ANNALYTICS</Text> 
+                <Text style={{fontSize: 18, fontWeight: 700, color:'rgb(55,55,55)', textAlign: 'center'}}>REPORT SUMMARY</Text> 
                 <View style={{flexDirection: 'row', gap: 5, top: 3}}>
                     <View style={{alignItems: 'center'}}>
-                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>REPORTS TODAY</Text>
+                        <Text style={{fontSize: 12, fontWeight: 'bold', color:'rgb(55,55,55)', marginBottom: 5}}>REPORTS TODAY</Text>
                         <View style={styles.headerCntr}>
-                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{reportsToday}</Text>
+                            <Text style={{fontSize: 24, fontWeight: 700, color:'rgb(55,55,55)'}}>{reportsToday}</Text>
                             <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
                         </View>
                     </View>
                     <View style={{alignItems: 'center'}}>
-                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5}}>TOTAL REPORT</Text>
+                        <Text style={{fontSize: 12, fontWeight: 'bold', color:'rgb(55,55,55)', marginBottom: 5}}>TOTAL REPORT</Text>
                         <View style={styles.headerCntr}>
-                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{totalReports}</Text>
+                            <Text style={{fontSize: 24, fontWeight: 700, color:'rgb(55,55,55)'}}>{totalReports}</Text>
                             <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
                         </View>
                     </View>
                </View>
                 <View style={{flexDirection: 'row', gap: 5, top: 3}}>
                     <View style={{alignItems: 'center'}}>
-                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5, paddingTop: 5}}>UNCOLLECTED GARBAGE</Text>
+                        <Text style={{fontSize: 12, fontWeight: 'bold', color:'rgb(55,55,55)', marginBottom: 5, paddingTop: 5}}>UNCOLLECTED</Text>
                         <View style={styles.headerCntr}>
-                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{uncollectedCount}</Text>
+                            <Text style={{fontSize: 24, fontWeight: 700, color:'rgb(55,55,55)'}}>{uncollectedCount}</Text>
                             <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
                         </View>
                     </View>
                     <View style={{alignItems: 'center'}}>
-                        <Text style={{fontSize: 10, fontWeight: 500, color:'rgb(55,55,55)', marginBottom: 5, paddingTop: 5}}>COLLECTED GARBAGE</Text>
+                        <Text style={{fontSize: 12, fontWeight: 'bold', color:'rgb(55,55,55)', marginBottom: 5, paddingTop: 5}}>COLLECTED</Text>
                         <View style={styles.headerCntr}>
-                            <Text style={{fontSize: 20, fontWeight: 700, color:'rgb(55,55,55)'}}>{collectedCount}</Text>
+                            <Text style={{fontSize: 24, fontWeight: 700, color:'rgb(55,55,55)'}}>{collectedCount}</Text>
                             <Text style={{fontSize: 10, fontWeight: 700, color:'rgb(55,55,55)'}}>Garbages</Text>
                         </View>
                     </View>
@@ -394,13 +464,6 @@ export default function ReportAut({navigation}) {
 
     return (
         <>
-            {/*<View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}>
-                <TouchableOpacity activeOpacity={0.5}>
-                    <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
-                        <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(81,175,91)', top: -3, right: -0.9 }} />
-                    </View>
-                </TouchableOpacity>
-            </View>*/}
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }>
@@ -429,8 +492,6 @@ export default function ReportAut({navigation}) {
                     </View>
                     <SafeAreaView style={styles.body}>
                         <View style={styles.chartContainer}>
-                    {/* Outer Circle */}
-                    {/* Progress Circle 1 */}
                     <View style ={styles.outerCircle}>
                             <Circle
                                 size={circleSize}
@@ -440,9 +501,9 @@ export default function ReportAut({navigation}) {
                                 color="green"
                                 unfilledColor="white"
                                 thickness={circleThickness}
-                            /><Text style={{ marginTop: -circleSize / 2 + circleThickness * 3, fontSize: 12, fontWeight: 'bold', color: 'rgb(55,55,55)' }}>
-                             {progress1}%</Text>
-                            
+                            /><Text style={{ marginTop: -circleSize / 2.3 + circleThickness * 3, fontSize: 12, fontWeight: 'bold', color: 'rgb(55,55,55)' }}>
+                            {(progress1).toFixed(2)}% {/* Use toFixed(2) to display only two decimal places */}
+                            </Text>
                      </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
                                 <View style={styles.headerCntrCol}>
@@ -468,12 +529,12 @@ export default function ReportAut({navigation}) {
                                 unfilledColor="#FAF9F6"
                                 thickness={circleThickness}
                             />
-                           <Text style={{ marginTop: -circleSize / 2 + circleThickness * 3, fontSize: 12, fontWeight: 'bold', color: 'rgb(55,55,55)' }}>
-                             {progress2}%</Text>
+                           <Text style={{ marginTop: -circleSize / 2.3 + circleThickness * 3, fontSize: 12, fontWeight: 'bold', color: 'rgb(55,55,55)' }}>
+                            {(progress2).toFixed(2)}% </Text>
                         </View>
-              </View>
+                        </View>
                         <View style={{alignItems: 'center'}}>
-                            <Text style={{fontSize: 23, fontWeight: 700, color: 'rgba(113, 112, 108, 1)', marginBottom: 10}}>REPORTS</Text>
+                            <Text style={{fontSize: 23, fontWeight: 700, color: '#0D5601', padding: 5}}>REPORTS</Text>
                         </View>
                         <View>
                         <View style={{ width: 315, backgroundColor: '#ffffff', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
@@ -607,7 +668,7 @@ const styles = StyleSheet.create({
     chartContainer: {
         width: 300,
         alignItems: 'center',
-        padding: 15,
+        padding: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#E6E6E6',
         backgroundColor: '#F5F5DC',

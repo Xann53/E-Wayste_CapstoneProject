@@ -42,8 +42,19 @@ export default function ViewMessage({ route, navigation }) {
   };  
 
   const formatTimestamp = (timestamp) => {
-    return timestamp ? new Date(timestamp.seconds * 1000).toLocaleString() : '';
+    if (!timestamp) return '';
+  
+    const date = new Date(timestamp.seconds * 1000);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is zero-based
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   };
+  
 
   const renderItem = ({ item }) => {
     const isUserSender = item.senderId === currentUser.uid;
@@ -87,9 +98,12 @@ export default function ViewMessage({ route, navigation }) {
   
           userDocs.forEach((doc) => {
             const userData = doc.data();
-            const receiverUsername = userData.username;
-            setReceiverUsername(receiverUsername);
+            const receiverFirstName = userData.firstName;
+            const receiverLastName = userData.lastName;
+            const fullName = receiverFirstName + ' ' + receiverLastName;
+            setReceiverUsername(fullName);
           });
+          
   
           if (userDocs.empty) {
             console.log('No user document found for email:', otherParticipantEmail);
@@ -101,35 +115,6 @@ export default function ViewMessage({ route, navigation }) {
     }
   };
   
-
-  const handleImagePress = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-  
-      if (!result.canceled) {
-        const selectedImage = result.assets[0];
-        console.log('Image URI:', selectedImage.uri);
-        if (chatId) {
-          await addDoc(messagesRef, {
-            chatId,
-            senderId: currentUser.uid,
-            senderEmail: currentUser.email,
-            imageUrl: selectedImage.uri,
-            timestamp: serverTimestamp(),
-          });
-        }
-      } else {
-        console.log('Image picker was cancelled');
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-    }
-  };
 
 useEffect(() => {
   if (chatId) {
@@ -190,7 +175,7 @@ useEffect(() => {
               <Ionicons name='arrow-back' style={{ fontSize: 35, color: '#BDE47C', top: 2 }} />
             </TouchableOpacity>
             <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1, marginRight: 40 }}>Chats</Text>
-            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1 }}>{receiverEmail}</Text>
+            <Text style={{ fontSize: 14, fontWeight: 600, color: '#ffffff', top: 1 }}>{receiverUsername}</Text>
           </View>
         </View>
       </View>

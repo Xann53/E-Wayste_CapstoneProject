@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView, RefreshControl, Image } from 'react-native'; 
 import Ionicons from 'react-native-vector-icons/Ionicons'; 
 import { Calendar } from 'react-native-calendars'; 
-import { useIsFocused } from '@react-navigation/native'; 
+import { useIsFocused } from '@react-navigation/native';
 import { db } from '../../firebase_config';
+import { fetchUserId } from '../../components/userService';
 import { parse } from 'date-fns';
-import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc} from 'firebase/firestore';
 import OpenSideBar from '../../components/OpenSideNav';
 
 export default function ScheduleAut({ navigation }) {
@@ -18,13 +19,36 @@ export default function ScheduleAut({ navigation }) {
   const [reportsToday, setReportsToday] = useState(0);
   const [totalReports, setTotalReports] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [userMunicipality, setUserMunicipality] = useState('');
 
   useEffect(() => {
-    const currentDate = new Date().toISOString().split('T')[0]; // Get the current date
+    const fetchMunicipality = async () => {
+      try {
+        const userId = await fetchUserId();
+        if (userId) {
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          if (userDoc.exists()) {
+            const municipality = userDoc.data().municipality;
+            setUserMunicipality(municipality);
+            console.log('Municipality of the logged-in user:', municipality);
+          } else {
+            console.log('User document not found.');
+          }
+        } else {
+          console.log('User ID not found.');
+        }
+      } catch (error) {
+        console.error('Error fetching municipality:', error);
+      }
+    };
 
+    fetchMunicipality();
+  }, []);
+
+  useEffect(() => {
+    const currentDate = new Date().toISOString().split('T')[0]; 
     const fetchReports = async () => {
         try {
-            // Query for reports today
             const todayQuery = query(collection(db, 'generalUsersReports'), where('dateTime', '>=', currentDate));
             const todaySnapshot = await getDocs(todayQuery);
             const todayReports = [];
@@ -33,15 +57,14 @@ export default function ScheduleAut({ navigation }) {
                 const report = doc.data();
                 const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
 
-                if (reportDate.toISOString().split('T')[0] === currentDate) {
+                if (report.municipality === userMunicipality && reportDate.toISOString().split('T')[0] === currentDate) {
                     todayReports.push(report);
                 }
             });
 
             setReportsToday(todayReports.length);
 
-            // Query for all reports
-            const allReportsQuery = query(collection(db, 'generalUsersReports'));
+            const allReportsQuery = query(collection(db, 'generalUsersReports'), where('municipality', '==', userMunicipality));
             const allReportsSnapshot = await getDocs(allReportsQuery);
             const totalReportsCount = allReportsSnapshot.size;
             setTotalReports(totalReportsCount);
@@ -51,31 +74,54 @@ export default function ScheduleAut({ navigation }) {
     };
 
     fetchReports();
-  }, []);
+}, [userMunicipality]); 
 
-  useEffect(() => { 
-    const unsubscribe = fetchSchedule(); 
-    return () => { 
-      unsubscribe(); 
-    }; 
-  }, []); 
 
-  const fetchSchedule = () => { 
-    try { 
-      const unsubscribe = onSnapshot(collection(db, 'schedule'), (snapshot) => { 
-        const scheduleData = snapshot.docs.map((doc) => { 
-          const data = doc.data(); 
-          data.id = doc.id; 
-          return data; 
-        }); 
-        setSchedule(scheduleData); 
-      }); 
-      return unsubscribe; 
-    } catch (error) { 
-      console.log('Error fetching schedule:', error); 
-    } 
+  useEffect(() => {
+    fetchSchedule(); 
+  }, [userMunicipality]);
+  
+  const fetchSchedule = () => {
+    try {
+      const unsubscribe = onSnapshot(collection(db, 'schedule'), (snapshot) => {
+        const scheduleData = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          data.id = doc.id;
+          return data;
+        })
+        .filter((schedule) => {
+          const locationIncludesUserMunicipality = schedule.location && schedule.location.includes(userMunicipality);
+          const collectionRouteIncludesUserMunicipality = schedule.collectionRoute && schedule.collectionRoute.coordinates.some(coord => coord.locationName && coord.locationName.includes(userMunicipality));
+          return locationIncludesUserMunicipality || collectionRouteIncludesUserMunicipality;
+        });
+
+        let collectionCount = 0;
+        let eventCount = 0;
+        let assignmentCount = 0;
+  
+        scheduleData.forEach(schedule => {
+          if (schedule.type === 'Collection') {
+            collectionCount++;
+          } else if (schedule.type === 'Event') {
+            eventCount++;
+          } else if (schedule.type === 'Assignment') {
+            assignmentCount++;
+          }
+        });
+  
+        console.log('Collection Count:', collectionCount);
+        console.log('Event Count:', eventCount);
+        console.log('Assignment Count:', assignmentCount);
+  
+        setSchedule(scheduleData);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.log('Error fetching schedule:', error);
+    }
   };
-
+  
+  
   useEffect(() => {
       if(!isFocused) {
           setOpenSideBar();
@@ -86,7 +132,6 @@ export default function ScheduleAut({ navigation }) {
       const closeSideNav = async() => {
           setOpenSideBar();
       }
-
       return (
           <OpenSideBar navigation={navigation} close={closeSideNav} />
       );
@@ -146,7 +191,7 @@ export default function ScheduleAut({ navigation }) {
                   backgroundColor: 'rgb(247, 245, 243)', 
                 }} 
               > 
-                <Text>View all Events</Text> 
+                <Text>View all Schedules</Text> 
               </View> 
             </TouchableOpacity> 
           </View> 
@@ -160,7 +205,6 @@ export default function ScheduleAut({ navigation }) {
       return new Date(a.selectedDate) - new Date(b.selectedDate);
     });
 
-    // Filter the scheduleData to only include events from the selected month
     const filteredScheduleData = sortedScheduleData.filter((event) => {
       const eventMonth = new Date(event.selectedDate).getMonth();
       return eventMonth === selectedMonth;
@@ -261,7 +305,7 @@ export default function ScheduleAut({ navigation }) {
   } 
 
   const onMonthChange = (month) => {
-    setSelectedMonth(month.month - 1); // month.month is 0-indexed, so subtract 1 to get the correct month value
+    setSelectedMonth(month.month - 1); 
   };
 
   function HeaderContent() {
@@ -341,7 +385,7 @@ export default function ScheduleAut({ navigation }) {
                 </View> 
                 <View style={{ flexDirection: 'row', gap: 10 }}> 
                   <View style={{ width: 20, height: 20, backgroundColor: 'rgb(72, 229, 239)' }} /> 
-                  <Text>Special Events</Text> 
+                  <Text>Events</Text> 
                 </View> 
                 <View style={{ flexDirection: 'row', gap: 10 }}> 
                   <View style={{ width: 20, height: 20, backgroundColor: 'rgb(135, 255, 116)' }} /> 
@@ -357,6 +401,7 @@ export default function ScheduleAut({ navigation }) {
     </> 
   ); 
 } 
+
 const styles = StyleSheet.create({ 
   container: { 
     flex: 1, 
@@ -423,4 +468,3 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
   }, 
 }); 
-

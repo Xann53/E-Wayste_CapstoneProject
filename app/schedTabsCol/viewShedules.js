@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput } from 
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { db } from '../../firebase_config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 export default function ViewSchedDetailsCol({ navigation, route }) {
   const { scheduleId } = route.params;
@@ -14,14 +14,23 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
 
   useEffect(() => {
     const fetchSchedule = async () => {
-      const scheduleRef = doc(db, 'schedule', scheduleId);
-      const scheduleSnapshot = await getDoc(scheduleRef);
-      const scheduleData = scheduleSnapshot.data();
-      setScheduleData(scheduleData);
-      setUpdatedData(scheduleData);
+        const scheduleRef = doc(db, 'schedule', scheduleId);
+        const unsubscribe = onSnapshot(scheduleRef, (doc) => {
+            if (doc.exists()) {
+                const scheduleData = doc.data();
+                setScheduleData(scheduleData);
+                setUpdatedData(scheduleData);
+            } else {
+                setScheduleData(null);
+                setUpdatedData({});
+            }
+        });
+        return () => unsubscribe();
     };
+
     fetchSchedule();
   }, [scheduleId]);
+
 
   const handleFieldFocus = (fieldName) => {
     setFocusedField(fieldName);
@@ -71,9 +80,14 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Title</Text>
                     <TextInput
-                      style={[styles.fieldValue, focusedField === 'title' && styles.focusedField]}
+                      style={[
+                        styles.fieldValue,
+                        focusedField === 'title' && styles.focusedField,
+                        { height: Math.max(35, updatedData.title ? 35 + updatedData.title.length / 2 : 35) } // Adjust height based on text length
+                      ]}
                       value={updatedData.title}
                       editable={isEditable}
+                      multiline={true} // Set multiline to true
                       onFocus={() => handleFieldFocus('title')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, title: text })}
@@ -84,23 +98,44 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Description</Text>
                     <TextInput
-                      style={[styles.fieldValue, focusedField === 'description' && styles.focusedField]}
+                      style={[
+                        styles.fieldValue,
+                        focusedField === 'description' && styles.focusedField,
+                        { height: Math.max(35, updatedData.description ? 35 + updatedData.description.length / 2 : 35) } // Adjust height based on text length
+                      ]}
                       value={updatedData.description}
                       editable={isEditable}
-                      multiline={true}
-                      onFocus={() => handleFieldFocus('description')}
+                      multiline={true} // Set multiline to true
+                      onFocus={() => handleFieldFocus('title')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, description: text })}
                     />
                   </View>
                 )}
+                {scheduleData.assignedTruck && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Assigned Truck</Text>
+                        <TextInput
+                          style={[styles.fieldValue, focusedField === 'assignedTruck' && styles.focusedField]}
+                          value={updatedData.assignedTruck}
+                          onFocus={() => setModalVisible(true)}
+                          editable={isEditable}
+                          onBlur={handleFieldBlur}
+                          onChangeText={(text) => setUpdatedData({ ...updatedData, assignedTruck: text })}
+                        />
+                      </View>
+                  )}
                 {scheduleData.location && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Location</Text>
                     <TextInput
-                      style={[styles.fieldValue, focusedField === 'location' && styles.focusedField]}
+                      style={[
+                        styles.fieldValue,
+                        focusedField === 'location' && styles.focusedField,
+                        { height: Math.max(35, updatedData.location ? 35 + updatedData.location.length / 2 : 35) } // Adjust height based on text length
+                      ]}
                       value={updatedData.location}
-                      editable={isEditable}
+                      multiline={true} 
                       onFocus={() => handleFieldFocus('location')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
@@ -108,19 +143,17 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                   </View>
                 )}
                 {scheduleData.type && scheduleData.type === 'Collection' && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Collection Route</Text>
-                    {scheduleData.collectionRoute.coordinates[0] && (
-                      <Text style={styles.fieldValue}>
-                        <Text style={{ color: 'red', fontWeight: 'bold' }}>From:</Text> {scheduleData.collectionRoute.coordinates[0].locationName}
-                      </Text>
-                    )}
-                    {scheduleData.collectionRoute.coordinates[1] && (
-                      <Text style={styles.fieldValue}>
-                        <Text style={{ color: 'red', fontWeight: 'bold' }}>To:</Text> {scheduleData.collectionRoute.coordinates[1].locationName}
-                      </Text>
-                    )}
-                  </View>
+                    <ScrollView style={styles.scrollContainer}>
+                        <View style={styles.fieldContainer}>
+                            <Text style={styles.fieldName}>Collection Route</Text>
+                            {scheduleData.collectionRoute.coordinates.map((coordinate, index) => (
+                                <Text key={index} style={styles.container}>
+                                    <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
+                                    {coordinate.locationName}
+                                </Text>
+                            ))}
+                        </View>
+                    </ScrollView>
                 )}
                 {scheduleData.selectedDate && (
                   <View style={styles.fieldContainer}>
@@ -135,19 +168,17 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                     />
                   </View>
                 )}
-                {scheduleData.startTime && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Time</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
-                      value={updatedData.startTime}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('startTime')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, startTime: text })}
-                    />
-                  </View>
-                )}
+                <View style={[styles.fieldContainer, { marginBottom: 80 }]}>
+                  <Text style={styles.fieldName}>Time</Text>
+                  <TextInput
+                    style={[styles.fieldValue, focusedField === 'startTime' && styles.focusedField]}
+                    value={updatedData.startTime}
+                    editable={isEditable}
+                    onFocus={() => handleFieldFocus('startTime')}
+                    onBlur={handleFieldBlur}
+                    onChangeText={(text) => setUpdatedData({ ...updatedData, startTime: text })}
+                  />
+                </View>
                 {scheduleData.assignLocation && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Assigned Location</Text>
@@ -158,19 +189,6 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                       onFocus={() => handleFieldFocus('assignLocation')}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, assignLocation: text })}
-                    />
-                  </View>
-                )}
-                {scheduleData.assignCollector && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldName}>Assigned Collector</Text>
-                    <TextInput
-                      style={[styles.fieldValue, focusedField === 'assignCollector' && styles.focusedField]}
-                      value={updatedData.assignCollector}
-                      editable={isEditable}
-                      onFocus={() => handleFieldFocus('assignCollector')}
-                      onBlur={handleFieldBlur}
-                      onChangeText={(text) => setUpdatedData({ ...updatedData, assignCollector: text })}
                     />
                   </View>
                 )}
@@ -212,5 +230,18 @@ const styles = StyleSheet.create({
     marginTop: 5,
     width: 310,
     height: 35,
+  },
+  container: {
+    backgroundColor: 'rgb(231,247,233)',
+    borderRadius: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgb(215,233,217)',
+    color: 'rgba(45, 105, 35, 1)',
+    paddingLeft: 10,
+    paddingRight: 10,
+    fontSize: 16,
+    marginTop: 5,
+    width: 310,
+    minHeight: 25,
   },
 });

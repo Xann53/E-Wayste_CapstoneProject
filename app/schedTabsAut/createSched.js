@@ -109,6 +109,32 @@ export default function AddSched({navigation}) {
         setLongitude();
     }
 
+    const getAddressFromCoordinates = async (latitude, longitude) => {
+        try {
+          const address = await Location.reverseGeocodeAsync({
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+          });
+    
+          let finalAddress = '';
+    
+          if (address[0].streetNumber !== null) finalAddress += address[0].streetNumber + ', ';
+          if (address[0].street !== null) finalAddress += address[0].street + ', ';
+          if (address[0].name !== null) finalAddress += address[0].name + ', ';
+          if (address[0].district !== null) finalAddress += address[0].district + ', ';
+          if (address[0].city !== null) finalAddress += address[0].city + ', ';
+          if (address[0].subregion !== null) finalAddress += address[0].subregion + ', ';
+          if (address[0].region !== null) finalAddress += address[0].region + ' region, ';
+          if (address[0].country !== null) finalAddress += address[0].country;
+    
+          return finalAddress;
+        } catch (error) {
+          console.error('Error fetching address:', error);
+          return null;
+        }
+      };
+    
+
     const getGarbageCollectors = async () => {
         const truckCollection = collection(db, 'trucks');
         const querySnapshot = await getDocs(truckCollection);
