@@ -155,6 +155,8 @@ export default function Registration1({ navigation }) {
     };
     
     const createUser = async (accountType, firstName, lastName, username, email) => {
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss a');
+
         const account = await addDoc(usersCollection, {
             accountType: accountType,
             firstName: firstName,
@@ -164,7 +166,8 @@ export default function Registration1({ navigation }) {
             province: province,
             municipality: municipality,
             barangay: barangay,
-            contactNo: contactNo
+            contactNo: contactNo,
+            dateTime: fullDateTime
         });
         await AsyncStorage.clear();
         await signOut(auth);

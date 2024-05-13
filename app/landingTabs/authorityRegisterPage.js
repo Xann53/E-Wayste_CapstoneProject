@@ -213,6 +213,7 @@ export default function Registration3({ navigation }) {
         const imageName = imageURI.substring(imageURI.lastIndexOf('/') + 1);
         const finalImageName = uuid.v1() + imageName;
         const imageDestination = 'userWorkID/' + finalImageName;
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss a');
         
         const response = await fetch(imageURI);
         const blob = await response.blob();
@@ -232,7 +233,8 @@ export default function Registration3({ navigation }) {
             municipality: municipality,
             barangay: barangay,
             contactNo: contactNo,
-            associatedImage: finalImageName
+            associatedImage: finalImageName,
+            dateTime: fullDateTime
         });
         await AsyncStorage.clear();
         setImage(null);
