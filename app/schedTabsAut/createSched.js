@@ -109,32 +109,6 @@ export default function AddSched({navigation}) {
         setLongitude();
     }
 
-    const getAddressFromCoordinates = async (latitude, longitude) => {
-        try {
-          const address = await Location.reverseGeocodeAsync({
-            latitude: parseFloat(latitude),
-            longitude: parseFloat(longitude),
-          });
-    
-          let finalAddress = '';
-    
-          if (address[0].streetNumber !== null) finalAddress += address[0].streetNumber + ', ';
-          if (address[0].street !== null) finalAddress += address[0].street + ', ';
-          if (address[0].name !== null) finalAddress += address[0].name + ', ';
-          if (address[0].district !== null) finalAddress += address[0].district + ', ';
-          if (address[0].city !== null) finalAddress += address[0].city + ', ';
-          if (address[0].subregion !== null) finalAddress += address[0].subregion + ', ';
-          if (address[0].region !== null) finalAddress += address[0].region + ' region, ';
-          if (address[0].country !== null) finalAddress += address[0].country;
-    
-          return finalAddress;
-        } catch (error) {
-          console.error('Error fetching address:', error);
-          return null;
-        }
-      };
-    
-
     const getGarbageCollectors = async () => {
         const truckCollection = collection(db, 'trucks');
         const querySnapshot = await getDocs(truckCollection);
@@ -206,16 +180,18 @@ export default function AddSched({navigation}) {
                     scheduleID: scheduleID, 
                     type: selectType,
                     description: description,
-                    location: '',
+                    // location: '',
                     startTime: start,
-                    title: '',
+                    // title: '',
                     userID: id,
                     assignedTruck: assignedTruck,
                     selectedDate: selectedDate,
                     collectionRoute: route,
-                    latitude: '',
-                    longitude: '',
-                    dateTimeUploaded: fullDateTime
+                    // latitude: '',
+                    // longitude: '',
+                    dateTimeUploaded: fullDateTime,
+                    collectionRecord: [],
+                    visibility: 'enable'
                 });
 
                 let userFullName;
@@ -236,15 +212,18 @@ export default function AddSched({navigation}) {
                     description: description,
                     location: location,
                     startTime: start,
-                    title: '',
+                    // title: '',
                     userID: id,
                     assignedTruck: assignedTruck,
                     selectedDate: selectedDate,
-                    collectionRoute: { coordinates: [] },
+                    // collectionRoute: { coordinates: [] },
                     latitude: latitude,
                     longitude: longitude,
                     dateTimeUploaded: fullDateTime,
-                    status: 'Uncollected'
+                    collectionRecord: {
+                        status: 'uncollected',
+                        dateTimeCollected: ''
+                    }
                 });
 
                 let userFullName;
@@ -267,9 +246,9 @@ export default function AddSched({navigation}) {
                     startTime: start,
                     title: newTitle,
                     userID: id,
-                    assignedTruck: '',
+                    // assignedTruck: '',
                     selectedDate: selectedDate,
-                    collectionRoute: { coordinates: [] },
+                    // collectionRoute: { coordinates: [] },
                     latitude: latitude,
                     longitude: longitude,
                     dateTimeUploaded: fullDateTime

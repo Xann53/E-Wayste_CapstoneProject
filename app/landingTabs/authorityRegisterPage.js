@@ -113,13 +113,10 @@ export default function Registration3({ navigation }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setUsers(newData);
-
         };
 
         const unsubscribe = usersRef.onSnapshot(onSnapshot);
-
         return () => {
             unsubscribe();
         };
@@ -199,9 +196,9 @@ export default function Registration3({ navigation }) {
             username: username,
             email: email,
             password: password,
-            province: province,
-            municipality: municipality,
-            barangay: barangay,
+            province: provincesData.find(p => p.code === province)?.name || "", 
+            municipality: municipalitiesData.find(m => m.code === municipality)?.name || "", 
+            barangay: barangaysData.find(b => b.code === barangay)?.name || "", 
             contactNo: contactNo,
             associatedImage: finalImageName
         });

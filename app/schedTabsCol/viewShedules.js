@@ -136,7 +136,7 @@ export default function ViewSchedDetailsCol({ navigation, route }) {
                       ]}
                       value={updatedData.location}
                       multiline={true} 
-                      onFocus={() => handleFieldFocus('location')}
+                      editable={isEditable}
                       onBlur={handleFieldBlur}
                       onChangeText={(text) => setUpdatedData({ ...updatedData, location: text })}
                     />

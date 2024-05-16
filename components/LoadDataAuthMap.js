@@ -2,7 +2,7 @@ import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
-export default function LoadData(userMun, reportRef, imageColRef, collectorLocRef, activeRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setAllActiveTask, setCollectorLocation) {
+export default function LoadData(userMun, reportRef, imageColRef, collectorLocRef, activeRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setAllActiveTask, setCollectorLocation, page, userId) {
     
     const loadPin = async() => {
         const onSnapshot = snapshot => {
@@ -24,7 +24,7 @@ export default function LoadData(userMun, reportRef, imageColRef, collectorLocRe
 
             setState({ coordinates: [] });
             newData.map((pin) => {
-                if(pin.municipality === userMun) {
+                if(pin.municipality === userMun || (page === 'Resident' && pin.userId === userId)) {
                     let imageURL;
                     imageCol.map((url) => {
                         if(url.includes(pin.associatedImage)) {

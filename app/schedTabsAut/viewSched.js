@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Modal, FlatList } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { db, firebase } from '../../firebase_config';
-import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, } from 'firebase/firestore';
 import DatePicker from 'react-native-datepicker';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -12,8 +13,10 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { GOOGLE_API_KEY } from '../../environments';
 import * as Location from 'expo-location';
 
-export default function ViewSchedDetails({ navigation, route: navigationRoute }) {
-  const { scheduleId } = navigationRoute.params;
+import TruckList from '../../components/SchedTruckList';
+
+export default function ViewSchedDetails({ navigation, route }) {
+  let { scheduleId } = route.params;
   const [scheduleData, setScheduleData] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [updatedData, setUpdatedData] = useState({});
@@ -25,20 +28,16 @@ export default function ViewSchedDetails({ navigation, route: navigationRoute })
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [collectorList, setCollectorList] = useState([]);
-  const [assignCollector, setAssignCollector]= useState("");
-  const [assignedTruck, setAssignedTruck] = useState("");
+  const [assignedTruck, setAssignedTruck]= useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [truckList, setTruckList] = useState([]);
+
   const [selectColRoute, setSelectColRoute] = useState(false);
   let routeLongitude, routeLatitude, routeLocName;
   const [route2, setRoute2] = useState({ coordinates: [] });
   const [routeCtr, setRouteCtr] = useState(0);
-  const [latitude, setLatitude] = useState();
-  const [longitude, setLongitude] = useState();
-  const [location, setLocation] = useState("");
   const schedRef = firebase.firestore().collection("schedule");
-  const [schedRoute, setSchedRoute] = useState();
-  const [route, setRoute] = useState({ coordinates: [] });
-  const [truckList, setTruckList] = useState([]);
+  const [schedRoute, setSchedRoute] = useState([]);
   let from, to;
 
   useEffect(() => {
@@ -47,66 +46,103 @@ export default function ViewSchedDetails({ navigation, route: navigationRoute })
             id: doc.id,
             ...doc.data(),
         }));
-
         setSchedRoute(newData);
-
+        newData.map((data) => {
+          if(data.id === scheduleId && data.type === 'Collection') {
+            setRoute2({ coordinates: [] });
+            data.collectionRoute.coordinates.map((coord) => {
+              setRoute2((prev) => ({
+                coordinates: [...prev.coordinates, {name: coord.name, latitude: coord.latitude, longitude: coord.longitude, locationName: coord.locationName}]
+              }));
+            })
+          }
+        })
     };
-
     const unsubscribe = schedRef.onSnapshot(onSnapshot);
-
     return () => {
         unsubscribe();
     };
 }, []);
 
-useEffect(() => {
-  const fetchSchedule = async () => {
+  useEffect(() => {
+    const fetchSchedule = async () => {
       const scheduleRef = doc(db, 'schedule', scheduleId);
-      const unsubscribe = onSnapshot(scheduleRef, (doc) => {
-          if (doc.exists()) {
-              const scheduleData = doc.data();
-              setScheduleData(scheduleData);
-              setUpdatedData(scheduleData);
-          } else {
-              setScheduleData(null);
-              setUpdatedData({});
-          }
-      });
-      return () => unsubscribe();
+      const scheduleSnapshot = await getDoc(scheduleRef);
+      const scheduleData = scheduleSnapshot.data();
+      setScheduleData(scheduleData);
+      setUpdatedData(scheduleData);
     };
     fetchSchedule();
-  }, [scheduleId]);
 
-  const getGarbageCollectors = async () => {
-    const usersCollection = collection(db, 'users');
-    const querySnapshot = await getDocs(usersCollection);
-  
-    const collectorList = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
-      if (userData.accountType === 'Garbage Collector') {
-        collectorList.push({
+    const onSnapshot = snapshot => {
+      const newData = snapshot.docs.map(doc => ({
           id: doc.id,
-          name: userData.username,
+          ...doc.data(),
+      }));
+      setSchedRoute(newData);
+      newData.map((data) => {
+        if(data.id === scheduleId) {
+          setScheduleData(data);
+          setUpdatedData(data);
+        }
+        if(data.id === scheduleId && data.type === 'Collection') {
+          setRoute2({ coordinates: [] });
+          data.collectionRoute.coordinates.map((coord) => {
+            setRoute2((prev) => ({
+              coordinates: [...prev.coordinates, {name: coord.name, latitude: coord.latitude, longitude: coord.longitude, locationName: coord.locationName}]
+            }));
+          })
+        }
+      })
+    };
+    const unsubscribe = schedRef.onSnapshot(onSnapshot);
+    return () => {
+        unsubscribe();
+    };
+  }, [scheduleId]);
+  
+  const getGarbageCollectors = async () => {
+    const truckCollection = collection(db, 'trucks');
+    const querySnapshot = await getDocs(truckCollection);
+  
+    const tempCollection = [];
+    const code = await AsyncStorage.getItem('userLguCode');
+
+    querySnapshot.forEach((doc) => {
+      const tempData = doc.data();
+      if(tempData.lguCode === code) {
+        tempCollection.push({
+          id: doc.id,
+          dateTime: tempData.dateTime,
+          driverID: tempData.driverID,
+          lguCode: tempData.lguCode,
+          lguID: tempData.lguID,
+          members: tempData.members,
+          plateNo: tempData.plateNo
         });
       }
     });
   
-    return collectorList;
-  };
+    return tempCollection;
+};
 
   useEffect(() => {
-    // Fetch garbage collectors when component mounts
-    const fetchCollectors = async () => {
-      const collectors = await getGarbageCollectors();
-      setCollectorList(collectors);
-    };
-    fetchCollectors();
+      // Fetch garbage collectors when component mounts
+      const fetchCollectors = async () => {
+          const collectors = await getGarbageCollectors();
+          setTruckList(collectors);
+      };
+      fetchCollectors();
   }, []);
 
-  const handleSelectCollector = (collectorName) => {
-    setAssignCollector(collectorName);
+  const closeTruckModal = async() => {
     setModalVisible(false);
+  }
+
+  const handleSelectCollector = (truckPlateNo) => {
+      setAssignedTruck(truckPlateNo);
+      setUpdatedData({ ...updatedData, assignedTruck: truckPlateNo })
+      closeTruckModal();
   };
 
   const handleEdit = () => {
@@ -117,6 +153,7 @@ useEffect(() => {
     try {
       await updateDoc(doc(db, 'schedule', scheduleId), updatedData);
       alert('Schedule successfully updated!');
+      scheduleId = route.params;
       setIsEditable(false);
     } catch (error) {
       console.log('Error updating schedule:', error);
@@ -221,7 +258,6 @@ useEffect(() => {
                 finalAddress = finalAddress + address[0].region + ' region, ';
             if(address[0].country !== null)
                 finalAddress = finalAddress + address[0].country;
-            // setLocation(finalAddress);
             setRoute2({ 
                 coordinates: route2.coordinates.map((coordinate) => 
                     coordinate.name === name ? {
@@ -343,32 +379,40 @@ useEffect(() => {
     <>
       <View style={{ position: "absolute", height: "100%", width: "100%", justifyContent: "flex-start", alignItems: "center", zIndex: 10, backgroundColor: "rgba(0, 0, 0, 0.85)" }}>
         <View style={{ position: "absolute", width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", top: 30, paddingHorizontal: 20, zIndex: 10 }}>
-          <TouchableOpacity onPress={() => { resetEdit(); navigation.navigate('mainSched'); }}>
-            <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgb(179, 229, 94)" }} />
-          </TouchableOpacity>
+          {!isEditable &&
+                <TouchableOpacity onPress={() => { resetEdit(); navigation.navigate('mainSched'); }}>
+                    <Ionicons name="arrow-back" style={{ fontSize: 40, color: "rgba(126,185,73,1)" }} />
+                </TouchableOpacity>
+          }
           {!isEditable ? (
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity onPress={handleEdit}>
-                <Ionicons name="pencil" style={{ fontSize: 25, color: "rgb(179, 229, 94)", marginRight: 10 }} />
+                <Ionicons name="pencil" style={{ fontSize: 25, color: "rgba(126,185,73,1)", marginRight: 10 }} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDelete}>
-                <Ionicons name="trash" style={{ fontSize: 25, color: "rgb(179, 229, 94)" }} />
+                <Ionicons name="trash" style={{ fontSize: 25, color: "rgba(126,185,73,1)" }} />
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={() => {
-              handleUpdate();
-              if(updatedData.type === "Collection") {
-                updateRoute();
-              }
-            }}>
-              <Ionicons name="checkmark" style={{ fontSize: 35, color: "rgb(179, 229, 94)"}} />
-            </TouchableOpacity>
+            <View style={{display: 'flex', flex: 1, flexDirection: 'row', gap: 5, justifyContent: 'flex-end'}}>
+                <TouchableOpacity onPress={() => {
+                    handleUpdate();
+                    if(updatedData.type === "Collection") {
+                        updateRoute();
+                    }
+                }}>
+                    <Ionicons name="checkmark" style={{ fontSize: 35, color: "rgba(126,185,73,1)"}} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => {setIsEditable(false); resetEdit()}}>
+                    <Ionicons name="close-outline" style={{ fontSize: 35, color: '#DE462A'}} />
+                </TouchableOpacity>
+            </View>
+            
           )}
         </View>
         <View style={{ width: "100%", height: "100%", backgroundColor: "#ffffff" }}>
-          <ScrollView style={{ width: "100%" }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90, }}>
-            <Text style={{ marginBottom: 5, fontSize: 25, fontWeight: 'bold', color: '#0D5601', width: '100%', paddingLeft: 25 }}>SCHEDULE DETAILS</Text>
+          <ScrollView style={{ width: "100%", marginBottom: 60 }} contentContainerStyle={{ alignItems: 'flex-start', paddingTop: 90}}>
+            <Text style={{ marginBottom: 5, fontSize: 25, fontWeight: 'bold', color: '#0D5601', width: '100%', paddingLeft: 25 }}>{!isEditable ? 'SCHEDULE DETAILS' : 'EDIT SCHEDULE DETAILS'}</Text>
             {scheduleData && (
               <>
                 {scheduleData.type && (
@@ -399,7 +443,7 @@ useEffect(() => {
                     <TextInput
                       style={[styles.fieldValue, focusedField === 'description' && styles.focusedField]}
                       value={updatedData.description}
-                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment')}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || updatedData.type === 'Event')}
                       multiline={true}
                       onFocus={() => handleFieldFocus('description')}
                       onBlur={handleFieldBlur}
@@ -407,19 +451,25 @@ useEffect(() => {
                     />
                   </View>
                 )}
-                {scheduleData.assignedTruck && (
-                      <View style={styles.fieldContainer}>
-                        <Text style={styles.fieldName}>Assigned Truck</Text>
-                        <TextInput
-                          style={[styles.fieldValue, focusedField === 'assignedTruck' && styles.focusedField]}
-                          value={updatedData.assignedTruck}
-                          onFocus={() => setModalVisible(true)}
-                          editable={isEditable}
-                          onBlur={handleFieldBlur}
-                          onChangeText={(text) => setUpdatedData({ ...updatedData, assignedTruck: text })}
-                        />
-                      </View>
-                    )}
+
+                {(updatedData.type === 'Collection' || updatedData.type === 'Assignment') &&
+                  <>
+                    <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Truck Assigned</Text>
+                        {isEditable ?
+                          <>
+                            <TouchableOpacity onPress={() => setModalVisible(true)}>
+                              <Text style={styles.fieldValue}>{updatedData.assignedTruck}</Text>
+                            </TouchableOpacity>
+                          </>
+                          :
+                          <Text style={styles.fieldValue}>{updatedData.assignedTruck}</Text>
+                        }
+                    </View>
+                  </>
+                }
+
+                {/* Dynamic location field based on the type */}
                 {(updatedData.type === 'Event' || updatedData.type === 'Assignment') && (
                     <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Location</Text>
@@ -435,20 +485,44 @@ useEffect(() => {
                     )}
                   </View>
                 )}
+                
                 {/* Collection-specific fields */}
                 {updatedData.type === 'Collection' && (
                   <>
-                    {scheduleData.type && scheduleData.type === 'Collection' && (
-                        <View style={styles.fieldContainer}>
-                            <Text style={styles.fieldName}>Collection Route</Text>
-                            {scheduleData.collectionRoute.coordinates.map((coordinate, index) => (
-                                <Text key={index} style={styles.fieldValue}>
-                                    <Ionicons name="location" size={20} color="red" style={{ marginRight: 5 }} />
-                                    {coordinate.locationName}
-                                </Text>
-                            ))}
-                        </View>
+                    {(scheduleData.collectionRoute !== undefined) && (
+                      <View style={styles.fieldContainer}>
+                        <Text style={styles.fieldName}>Collection Route</Text>
+                        {isEditable ?
+                          // Display TextInput for editing
+                          <>{CollectionRoute()}</> 
+                        : 
+                          <View style={{width: 310, gap: 10, paddingTop: 10, paddingLeft: 20}}>
+                              {schedRoute.map((sched) => {
+                                if(sched.id === scheduleId) {
+                                  return(
+                                    scheduleData.collectionRoute.coordinates.map((coord) => {
+                                      return(
+                                          <View key={coord.name} style={{backgroundColor: '#B8FEE6', borderRadius: 5, padding: 8}}>
+                                              <Text>{coord.locationName}</Text>
+                                          </View>
+                                      );
+                                    })
+                                  );
+                                }
+                              })}
+                                {/* {scheduleData.collectionRoute.coordinates.map((coord) => {
+                                    return(
+                                        <View key={coord.name} style={{backgroundColor: '#B8FEE6', borderRadius: 5, padding: 8}}>
+                                            <Text>{coord.locationName}</Text>
+                                        </View>
+                                    );
+                                })} */}
+                          </View>
+                        }
+                      </View>
                     )}
+                    
+                    {/* Date and Time fields */}
                     {scheduleData.selectedDate && (
                       <View style={styles.fieldContainer}>
                         <Text style={styles.fieldName}>Date</Text>
@@ -496,6 +570,7 @@ useEffect(() => {
                         />
                       </View>
                     )}            
+                    {/* Date and Time fields */}
                     {scheduleData.selectedDate && (
                       <View style={styles.fieldContainer}>
                         <Text style={styles.fieldName}>Date</Text>
@@ -525,7 +600,7 @@ useEffect(() => {
                           <Text style={styles.fieldValue}>{updatedData.startTime}</Text>
                         )}
                       </View>
-                    )}   
+                    )}
                   </>
                 )}
                 {/* Event-specific fields */}
@@ -581,6 +656,7 @@ useEffect(() => {
           </ScrollView>
         </View>
       </View>
+      {(modalVisible === true) && <TruckList close={closeTruckModal} dataList={truckList} selected={handleSelectCollector} />}
       {isTimePickerVisible && (
         <DateTimePickerModal
           isVisible={isTimePickerVisible}
@@ -597,116 +673,93 @@ useEffect(() => {
         onCancel={hideDatePicker}
       />
       )}
-      <Modal visible={modalVisible} animationType='slide' transparent={true}>
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <View style={{ backgroundColor: 'rgb(231,247,233)', width: 310, padding: 20, borderRadius: 10, elevation: 5, borderWidth: 1, borderColor: 'green'}}>
-                    <FlatList
-                      data={collectorList}
-                      keyExtractor={(item) => item.id.toString()}
-                      renderItem={({ item }) => (
-                        <TouchableOpacity onPress={() => handleSelectCollector(item.name)}>
-                          <Text style={{ fontSize: 16, marginBottom: 10 }}>{item.name}</Text>
-                        </TouchableOpacity>
-                      )}
-                    />
-                    {/* Close modal button */}
-                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                      <Text style={{ fontSize: 12, color: 'blue', marginTop: 10 }}>Close</Text>
-                    </TouchableOpacity>
+        {addNewLocation ?
+          <View style={{position: 'absolute', zIndex: 99, height: '100%', width: '100%', padding: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'}}>
+              <View style={{width: '100%', height: 120, backgroundColor: 'white', padding: 20, borderRadius: 10, justifyContent: 'flex-end'}}>
+                  <View style={{width: '113%', position: 'absolute', paddingHorizontal: 20, paddingTop: 20, top: 0, zIndex: 100}}>
+                      <GooglePlacesAutocomplete
+                          placeholder='Search'
+                          fetchDetails
+                          enablePoweredByContainer={false}
+                          onPress={(data, details = null) => {
+                              routeLatitude = details.geometry.location.lat;
+                              routeLongitude = details.geometry.location.lng;
+                              routeLocName = data.description;
+                          }}
+                          query={{
+                              key: GOOGLE_API_KEY,
+                              language: 'en',
+                          }}
+                          styles={{
+                              textInput: {
+                                  height: 38,
+                                  fontSize: 14,
+                                  marginTop: 3,
+                                  shadowColor: 'black',
+                                  shadowOffset:{width: 2, height: 2},
+                                  shadowOpacity: 0.4,
+                                  shadowRadius: 4,
+                                  elevation: 4,
+                              },
+                              listView: {
+                                  backgroundColor:'#c8c7cc',
+                              },
+                              row: {
+                                  backgroundColor: '#FFFFFF',
+                                  padding: 9,
+                                  height: 38,
+                                  marginVertical: 0.01,
+                              },
+                              description: {
+                                  fontSize: 12
+                              },
+                          }}
+                      />
                   </View>
-                </View>
-              </Modal>
-              {addNewLocation ?
-                <View style={{position: 'absolute', zIndex: 99, height: '100%', width: '100%', padding: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'}}>
-                    <View style={{width: '100%', height: 120, backgroundColor: 'white', padding: 20, borderRadius: 10, justifyContent: 'flex-end'}}>
-                        <View style={{width: '113%', position: 'absolute', paddingHorizontal: 20, paddingTop: 20, top: 0, zIndex: 100}}>
-                            <GooglePlacesAutocomplete
-                                placeholder='Search'
-                                fetchDetails
-                                enablePoweredByContainer={false}
-                                onPress={(data, details = null) => {
-                                    routeLatitude = details.geometry.location.lat;
-                                    routeLongitude = details.geometry.location.lng;
-                                    routeLocName = data.description;
-                                }}
-                                query={{
-                                    key: GOOGLE_API_KEY,
-                                    language: 'en',
-                                }}
-                                styles={{
-                                    textInput: {
-                                        height: 38,
-                                        fontSize: 14,
-                                        marginTop: 3,
-                                        shadowColor: 'black',
-                                        shadowOffset:{width: 2, height: 2},
-                                        shadowOpacity: 0.4,
-                                        shadowRadius: 4,
-                                        elevation: 4,
-                                    },
-                                    listView: {
-                                        backgroundColor:'#c8c7cc',
-                                    },
-                                    row: {
-                                        backgroundColor: '#FFFFFF',
-                                        padding: 9,
-                                        height: 38,
-                                        marginVertical: 0.01,
-                                    },
-                                    description: {
-                                        fontSize: 12
-                                    },
-                                }}
-                            />
-                        </View>
-                        <View style={{width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: 10}}>
-                            <TouchableOpacity 
-                                activeOpacity={0.5}
-                                onPress={() => {
-                                    if(routeLocName !== undefined && routeLatitude !== undefined && routeLongitude !== undefined) {
-                                        if(updatedData.type === 'Collection') {
-                                            (async() => {
-                                                let {status} = await Location.requestForegroundPermissionsAsync();
-                                                if (status !== 'granted') {
-                                                    setErrorMsg('Permission to access location was denied');
-                                                    return;
-                                                }
-                                            })();
-                                            setRoute2((prev) => ({
-                                                ...prev,
-                                                coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
-                                            }));
-                                            setRouteCtr(routeCtr + 1);
-                                        } else if(updatedData.type === 'Assignment') {
-                                            setLocation(routeLocName);
-                                            setLatitude(routeLatitude);
-                                            setLongitude(routeLongitude);
-                                        } else if(updatedData.type === 'Event') {
-                                            setLocation(routeLocName);
-                                            setLatitude(routeLatitude);
-                                            setLongitude(routeLongitude);
-                                        }
-                                    }
-                                    setAddNewLocation(false);
-                                }}
-                            >
-                                <View style={{backgroundColor: 'green', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
-                                    <Text>Add</Text>
-                                </View>
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(false)}}>
-                                <View style={{backgroundColor: 'red', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
-                                    <Text>Close</Text>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-                :
-                <></>
-              }
-            </>
-        ); 
+                  <View style={{width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', gap: 10}}>
+                      <TouchableOpacity 
+                          activeOpacity={0.5}
+                          onPress={() => {
+                              if(routeLocName !== undefined && routeLatitude !== undefined && routeLongitude !== undefined) {
+                                  if(updatedData.type === 'Collection') {
+                                      (async() => {
+                                          let {status} = await Location.requestForegroundPermissionsAsync();
+                                          if (status !== 'granted') {
+                                              setErrorMsg('Permission to access location was denied');
+                                              return;
+                                          }
+                                      })();
+                                      setRoute2((prev) => ({
+                                          ...prev,
+                                          coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
+                                      }));
+                                      setRouteCtr(routeCtr + 1);
+                                  } else if(updatedData.type === 'Assignment') {
+                                      setUpdatedData((prev) => ({...prev, location: routeLocName, latitude: routeLatitude, longitude: routeLongitude}));
+                                  } else if(updatedData.type === 'Event') {
+                                      setUpdatedData((prev) => ({...prev, location: routeLocName, latitude: routeLatitude, longitude: routeLongitude}));
+                                  }
+                              }
+                              setAddNewLocation(false);
+                          }}
+                      >
+                          <View style={{backgroundColor: 'green', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
+                              <Text>Add</Text>
+                          </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(false)}}>
+                          <View style={{backgroundColor: 'red', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
+                              <Text>Close</Text>
+                          </View>
+                      </TouchableOpacity>
+                  </View>
+              </View>
+          </View>
+          :
+          <></>
+        }
+      </>
+  ); 
 }
 
 const styles = StyleSheet.create({
@@ -727,13 +780,12 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgb(215,233,217)',
     color: 'rgba(45, 105, 35, 1)',
-    paddingLeft: 10,
-    paddingRight: 10,
+    paddingHorizontal: 10,
+    padding: 8,
     fontSize: 16,
     marginTop: 5,
     width: 310,
-    height: 35,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   focusedField: {
     borderColor: 'rgba(17, 152, 18, 1)',

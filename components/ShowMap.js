@@ -158,20 +158,23 @@ export default function LoadMap({ mapRef, page }) {
 
     useEffect(() => {
         const getMapData = async() => {
+            const userId = await AsyncStorage.getItem('userId');
             userMun = await AsyncStorage.getItem('userMunicipality');
-            LoadData(userMun, reportRef, imageColRef, collectorLocRef, activeRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setAllActiveTask, setCollectorLocation);
+            LoadData(userMun, reportRef, imageColRef, collectorLocRef, activeRef, mapType, setInfoID, users, setUserUploads, imageCol, setImageCol, setState, setTrack, setAllActiveTask, setCollectorLocation, page, userId);
         }
         getMapData();
     }, [])
 
     const changeMap = async() => {
         userMun = await AsyncStorage.getItem('userMunicipality');
-        Reload(userMun, mapType, setInfoID, userUploads, imageCol, setState, 'Auto');
+        const userId = await AsyncStorage.getItem('userId');
+        Reload(userMun, mapType, setInfoID, userUploads, imageCol, setState, 'Auto', page, userId);
     }
 
     const reloadManual = async() => {
         userMun = await AsyncStorage.getItem('userMunicipality');
-        Reload(userMun, mapType, setInfoID, userUploads, imageCol, setState, 'Manual');
+        const userId = await AsyncStorage.getItem('userId');
+        Reload(userMun, mapType, setInfoID, userUploads, imageCol, setState, 'Manual', page, userId);
     }
 
     const changeStatus = async(id, changeType) => {
@@ -411,7 +414,7 @@ export default function LoadMap({ mapRef, page }) {
                     longitudeDelta: 0.0421,
                 }}
                 customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
-                // showsUserLocation
+                showsUserLocation={page === 'Resident' ? true : false}
             >
 {/* ========================================================================================================================================================================================================================================================================================================================================================================================================================================== */}
                 {showRepPin && <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} viewTrack={viewTrack} taskToTrack={taskToTrack} />}
@@ -663,7 +666,7 @@ export default function LoadMap({ mapRef, page }) {
         
             {openTaskList && <TaskPanel open={setOpenTaskList} trackRoute={trackRoute} setShowColMarker={setShowColMarker} quickRoute={quickRoute} setShowDirection={setShowDirection} setShowFlag={setShowFlag} setShowAssignPin={setShowAssignPin} setAssignPinLoc={setAssignPinLoc} />}
 
-            {openTaskListView && <TaskView open={setOpenTaskListView} setViewTrack={setViewTrack} setTaskToTrack={setTaskToTrack} />}
+            {openTaskListView && <TaskView open={setOpenTaskListView} setViewTrack={setViewTrack} setTaskToTrack={setTaskToTrack} page={page} />}
         </>
     ));   
 }
