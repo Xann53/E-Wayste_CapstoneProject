@@ -23,118 +23,89 @@ export default function Registration3({ navigation }) {
     const [image, setImage] = useState(null);
     const [users, setUsers] = useState();
     const [pendingUser, setPendingUser] = useState();
+    const [provincesData, setProvincesData] = useState([]);
+    const [municipalitiesData, setMunicipalitiesData] = useState([]);
+    const [barangaysData, setBarangaysData] = useState([]);
     
     const usersCollection = collection(db, "pendingUsers");
     const usersRef = firebase.firestore().collection("users");
     const pendingUserRef = firebase.firestore().collection("pendingUsers");
 
-    const ProvinceOfPhp = [
-        { key: "Cebu", value: "Cebu" }
-    ];
+    const fetchProvinces = async () => {
+        try {
+            const response = await fetch('https://psgc.cloud/api/provinces');
+            const data = await response.json();
+            setProvincesData(data);
+        } catch (error) {
+            console.error('Error fetching provinces data:', error);
+        }
+    };
 
-    let MunicipalityOfCebu = [];
-    if(province === 'Cebu') {
-        MunicipalityOfCebu = [
-            { key: "Compostela", value: "Compostela" },
-            { key: "Liloan", value: "Liloan" },
-            { key: "Consolacion", value: "Consolacion" },
-            { key: "Mandaue", value: "Mandaue" },
-        ];
-    }
+    useEffect(() => {
+        fetchProvinces();
+    }, []);
 
-    let BarangayOfcebu = [];
-    if(municipality === 'Compostela') {
-        BarangayOfcebu = [
-            { key: "Bagalnga", value: "Bagalnga" },
-            { key: "Basak", value: "Basak" },
-            { key: "Buluang", value: "Buluang" },
-            { key: "Cabadiangan", value: "Cabadiangan" },
-            { key: "Cambayog", value: "Cambayog" },
-            { key: "Canamucan", value: "Canamucan" },
-            { key: "Cogon", value: "Cogon" },
-            { key: "Dapdap", value: "Dapdap" },
-            { key: "Estaca", value: "Estaca" },
-            { key: "Lupa", value: "Lupa" },
-            { key: "Magay", value: "Magay" },
-            { key: "Mulao", value: "Mulao" },
-            { key: "Panangban", value: "Panangban" },
-            { key: "Poblacion", value: "Poblacion" },
-            { key: "Tag‑ube", value: "Tag‑ube" },
-            { key: "Tamiao", value: "Tamiao" },
-            { key: "Tubigan", value: "Tubigan" },
-        ];
-    } else if(municipality === 'Liloan') {
-        BarangayOfcebu = [
-            { key: "Cabadiangan", value: "Cabadiangan" },
-            { key: "Calero", value: "Calero" },
-            { key: "Catarman", value: "Catarman" },
-            { key: "Cotcot", value: "Cotcot" },
-            { key: "Jubay", value: "Jubay" },
-            { key: "Lataban", value: "Lataban" },
-            { key: "Mulao", value: "Mulao" },
-            { key: "Poblacion", value: "Poblacion" },
-            { key: "San Roque", value: "San Roque" },
-            { key: "San Vicente", value: "San Vicente" },
-            { key: "Santa Cruz", value: "Santa Cruz" },
-            { key: "Tabla", value: "Tabla" },
-            { key: "Tayud", value: "Tayud" },
-            { key: "Yati", value: "Yati" },
-        ];
-    } else if(municipality === 'Consolacion') {
-        BarangayOfcebu = [
-            { key: "Cabangahan", value: "Cabangahan" },
-            { key: "Cansaga", value: "Cansaga" },
-            { key: "Casili", value: "Casili" },
-            { key: "Danglag", value: "Danglag" },
-            { key: "Garing", value: "Garing" },
-            { key: "Jugan", value: "Jugan" },
-            { key: "Lamac", value: "Lamac" },
-            { key: "Lanipga", value: "Lanipga" },
-            { key: "Nangka", value: "Nangka" },
-            { key: "Panas", value: "Panas" },
-            { key: "Panoypoy", value: "Panoypoy" },
-            { key: "Pitogo", value: "Pitogo" },
-            { key: "Poblacion Occidental", value: "Poblacion Occidental" },
-            { key: "Poblacion Oriental", value: "Poblacion Oriental" },
-            { key: "Polog", value: "Polog" },
-            { key: "Pulpogan", value: "Pulpogan" },
-            { key: "Sacsac", value: "Sacsac" },
-            { key: "Tayud", value: "Tayud" },
-            { key: "Tilhaong", value: "Tilhaong" },
-            { key: "Tolotolo", value: "Tolotolo" },
-            { key: "Tugbongan", value: "Tugbongan" },
-        ];
-    } else if(municipality === 'Mandaue') {
-        BarangayOfcebu = [
-            { key: "Alang-alang", value: "Alang-alang" },
-            { key: "Bakilid", value: "Bakilid" },
-            { key: "Banilad", value: "Banilad" },
-            { key: "Basak", value: "Basak" },
-            { key: "Cabancalan", value: "Cabancalan" },
-            { key: "Cambaro", value: "Cambaro" },
-            { key: "Canduman", value: "Canduman" },
-            { key: "Casili", value: "Casili" },
-            { key: "Casuntingan", value: "Casuntingan" },
-            { key: "Centro", value: "Centro" },
-            { key: "Cubacub", value: "Cubacub" },
-            { key: "Guizo", value: "Guizo" },
-            { key: "Ibabao-Estancia", value: "Ibabao-Estancia" },
-            { key: "Jagobiao", value: "Jagobiao" },
-            { key: "Labogon", value: "Labogon" },
-            { key: "Looc", value: "Looc" },
-            { key: "Maguikay", value: "Maguikay" },
-            { key: "Mantuyong", value: "Mantuyong" },
-            { key: "Opao", value: "Opao" },
-            { key: "Paknaan", value: "Paknaan" },
-            { key: "Pagsabungan", value: "Pagsabungan" },
-            { key: "Subangdaku", value: "Subangdaku" },
-            { key: "Tabok", value: "Tabok" },
-            { key: "Tawason", value: "Tawason" },
-            { key: "Tingub", value: "Tingub" },
-            { key: "Tipolo", value: "Tipolo" },
-            { key: "Umapad", value: "Umapad" },
-        ];
-    }
+    const fetchMunicipalities = async (provinceCode) => {
+        try {
+            const response = await fetch(`https://psgc.cloud/api/provinces/${provinceCode}/cities-municipalities`);
+            let data = await response.json();
+            // Modify municipality names if they contain the word "City"
+            data = data.map(municipalityData => ({
+                ...municipalityData,
+                name: municipalityData.name.includes("City") ? municipalityData.name.replace("City of", "").trim() + " City" : municipalityData.name
+            }));
+            setMunicipalitiesData(data);
+        } catch (error) {
+            console.error('Error fetching municipalities data:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (province) {
+            fetchMunicipalities(province);
+        }
+    }, [province]);
+
+    const fetchBarangays = async (municipalityCode) => {
+        try {
+            const response = await fetch(`https://psgc.cloud/api/cities-municipalities/${municipalityCode}/barangays`);
+            const data = await response.json();
+            setBarangaysData(data);
+        } catch (error) {
+            console.error('Error fetching barangays data:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (municipality) {
+            fetchBarangays(municipality);
+        }
+    }, [municipality]);
+
+    const sortedProvincesData = provincesData.slice().sort((a, b) => {
+        if (a.name < b.name) {
+            return -1;
+        }
+        if (a.name > b.name) {
+            return 1;
+        }
+        return 0;
+    });
+
+    const ProvinceOptions = sortedProvincesData.map(provinceData => ({
+        key: provinceData.code,
+        value: provinceData.name
+    }));
+
+    const MunicipalityOptions = municipalitiesData.map(municipalityData => ({
+        key: municipalityData.code,
+        value: municipalityData.name
+    }));
+
+    const BarangayOptions = barangaysData.map(barangayData => ({
+        key: barangayData.code,
+        value: barangayData.name
+    })); 
 
     useEffect(() => {
         const onSnapshot = snapshot => {
@@ -142,13 +113,10 @@ export default function Registration3({ navigation }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setUsers(newData);
-
         };
 
         const unsubscribe = usersRef.onSnapshot(onSnapshot);
-
         return () => {
             unsubscribe();
         };
@@ -229,9 +197,9 @@ export default function Registration3({ navigation }) {
             username: username,
             email: email,
             password: password,
-            province: province,
-            municipality: municipality,
-            barangay: barangay,
+            province: provincesData.find(p => p.code === province)?.name || "", 
+            municipality: municipalitiesData.find(m => m.code === municipality)?.name || "", 
+            barangay: barangaysData.find(b => b.code === barangay)?.name || "", 
             contactNo: contactNo,
             associatedImage: finalImageName,
             dateTime: fullDateTime
@@ -247,6 +215,9 @@ export default function Registration3({ navigation }) {
         setMunicipality("");
         setBarangay("");
         setContactNo("");
+        setBarangay("");
+        setMunicipality("");
+        setProvince("");
     }
 
     function Redirect() {
@@ -283,8 +254,8 @@ export default function Registration3({ navigation }) {
                 <View style={{justifyContent: 'center', alignItems: 'center', marginTop: 100,}}>
                     <Text style={{fontWeight: "900", fontSize: 30, bottom: 20, color: 'rgba(16, 139, 0, 1)',}}>CREATE ACCOUNT</Text>
                     <SelectList
-                        setSelected={(e) => {setProvince(e)}}
-                        data={ProvinceOfPhp}
+                        setSelected={(value) => setProvince(value)} // Make sure this corresponds to the correct state setter
+                        data={ProvinceOptions}
                         boxStyles={{
                             width: 270,
                             height: 40,
@@ -309,10 +280,11 @@ export default function Registration3({ navigation }) {
                         }}
                         search={false}
                         placeholder="Province"
+                        selected={province}  // Make sure this corresponds to the correct state variable
                     />
                     <SelectList
-                        setSelected={(e) => {setMunicipality(e)}}
-                        data={MunicipalityOfCebu}
+                        setSelected={(value) => setMunicipality(value)}
+                        data={MunicipalityOptions}
                         boxStyles={{
                             width: 270,
                             height: 40,
@@ -337,10 +309,11 @@ export default function Registration3({ navigation }) {
                         }}
                         search={false}
                         placeholder="Municipality"
+                        selected={municipality} 
                     />
                     <SelectList
-                        setSelected={(e) => {setBarangay(e)}}
-                        data={BarangayOfcebu}
+                        setSelected={(value) => setBarangay(value)}
+                        data={BarangayOptions}
                         boxStyles={{
                             width: 270,
                             height: 40,
@@ -365,6 +338,7 @@ export default function Registration3({ navigation }) {
                         }}
                         search={false}
                         placeholder="Barangay"
+                        selected={barangay}
                     />
                     <TextInput
                         value={contactNo}

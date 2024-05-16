@@ -7,7 +7,7 @@ import NewsfeedCol from '../app/homePageC';
 import ReportCol from '../app/reportPageC';
 import MapCol from '../app/mapPageCol';
 import SchedColLayout from './schedRouteCol';
-import MessageLayout from './messageRoute';
+import MessageLayoutA from './messageRoute';
 import Notifications from '../app/notifPage';
 import Profile from '../app/profilePage';
 
@@ -68,7 +68,7 @@ export default function CollectorLayout() {
             <Tab.Screen name='report' component={ReportCol} options={{ headerShown: false }} />
             <Tab.Screen name='map' component={MapCol} options={{ headerShown: false }} />
             <Tab.Screen name='schedule' component={SchedColLayout} options={{ headerShown: false }} />
-            <Tab.Screen name='message' component={MessageLayout} options={{ headerShown: false }} />
+            <Tab.Screen name='message' component={MessageLayoutA} options={{ headerShown: false }} />
             <Tab.Screen name='notification' component={Notifications} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
             <Tab.Screen name='profile' component={Profile} options={{ headerShown: false, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' }  }} />
         </Tab.Navigator>

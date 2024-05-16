@@ -4,6 +4,7 @@ import CommentOverlay from '../components/commentOverlay';
 import { StyleSheet, View, Text, TextInput, Modal, Share, TouchableOpacity, ScrollView, SafeAreaView, Button, RefreshControl, Image } from "react-native";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect, useRef } from 'react';
 import { parse } from 'date-fns';
 import * as ImagePicker from 'expo-image-picker';
@@ -45,6 +46,21 @@ export default function Newsfeed({ navigation }) {
     const imageColRef = ref(storage, "postImages/");
     const imageFeedColRef = ref(storage, "FeedpostImages/");
 
+    const [userMunicipality, setUserMunicipality] = useState('');
+
+    useEffect(() => {
+        const retrieveUserData = async () => {
+            try {
+                const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                setUserMunicipality(userMunicipality);
+            } catch (error) {
+                console.error('Error retrieving user municipality:', error);
+            }
+        };
+
+        retrieveUserData();
+    }, []);
+
     const handleAllPress = () => {
         setIsAllPressed(true);
         setIsEventsPressed(false);
@@ -64,59 +80,56 @@ export default function Newsfeed({ navigation }) {
         .utcOffset('+08:00')
         .format('YYYY/MM/DD hh:mm:ss a');
     
-    const formatTimestamp = (timestamp) => {
-        // Assuming timestamp is in the format 'yyyy/MM/dd hh:mm:ss a'
-        const formattedDate = moment(timestamp, 'YYYY/MM/DD hh:mm:ss a').format('YYYY/MM/DD hh:mm:ss a');
-        return formattedDate;
-    };    
-    
-    useEffect(() => {
-        const fetchEvents = () => {
-          try {
-            const eventsRef = collection(db, 'schedule');
-      
-            const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
-              const events = querySnapshot.docs.map((doc) => {
-                const eventData = doc.data();
-                if (eventData.type === 'Event') {
-                  return {
-                    id: doc.id,
-                    description: eventData.description,
-                    location: eventData.location,
-                    startTime: eventData.startTime,
-                    selectedDate: eventData.selectedDate,
-                    title: eventData.title,
-                    userId: eventData.userID,
-                    timestamp: eventData.dateTimeUploaded,
-                  };
+        useEffect(() => {
+            const fetchEvents = async () => {
+                try {
+                    const eventsRef = collection(db, 'schedule');
+        
+                    const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
+                        const events = querySnapshot.docs.map((doc) => {
+                            const eventData = doc.data();
+                            if (eventData.type === 'Event') {
+                                return {
+                                    id: doc.id,
+                                    description: eventData.description,
+                                    location: eventData.location,
+                                    startTime: eventData.startTime,
+                                    selectedDate: eventData.selectedDate,
+                                    title: eventData.title,
+                                    userId: eventData.userID,
+                                    timestamp: eventData.dateTimeUploaded,
+                                };
+                            }
+                            return null;
+                        }).filter(event => event !== null);
+        
+                        events.sort((a, b) => {
+                            const timestampA = new Date(a.timestamp).getTime();
+                            const timestampB = new Date(b.timestamp).getTime();
+                            return timestampB - timestampA;
+                        });
+        
+                        const userIds = events.map(event => event.userId);
+                        const eventUsers = await getUsersByIds(userIds);
+        
+                        const enrichedEvents = events.map((event, index) => ({
+                            ...event,
+                            userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
+                        }));
+        
+                        // Filter events based on userMunicipality
+                        const filteredEvents = enrichedEvents.filter(event => event.location.includes(userMunicipality));
+        
+                        setUserEvents(filteredEvents);
+                    });
+        
+                    return () => unsubscribe();
+                } catch (error) {
+                    console.error('Error fetching events: ', error);
                 }
-                return null; 
-              }).filter(event => event !== null);
-      
-              events.sort((a, b) => {
-                const timestampA = new Date(a.timestamp).getTime();
-                const timestampB = new Date(b.timestamp).getTime();
-                return timestampB - timestampA;
-              });
-      
-              const userIds = events.map(event => event.userId);
-              const eventUsers = await getUsersByIds(userIds);
-      
-              const enrichedEvents = events.map((event, index) => ({
-                ...event,
-                userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
-              }));
-      
-              setUserEvents(enrichedEvents);
-            });
-
-            return () => unsubscribe();
-          } catch (error) {
-            console.error('Error fetching events: ', error);
-          }
-        };
-        fetchEvents();
-      }, []);
+            };
+            fetchEvents();
+        }, [userMunicipality]);
       
       const getUsersByIds = async (userIds) => {
         try {
@@ -157,27 +170,28 @@ export default function Newsfeed({ navigation }) {
         }
       };
       
-    const handleLike = async (postId) => {
+      const handleLike = async (postId) => {
         try {
+          const userId = await fetchUserId();
+          
           // Check if the post is already liked
           const isAlreadyLiked = likedPosts.includes(postId);
-    
+          
           // Toggle the liked status
           const newLikedPosts = isAlreadyLiked
             ? likedPosts.filter((id) => id !== postId)
             : [...likedPosts, postId];
-    
+          
           // Update the state
           setLikedPosts(newLikedPosts);
-    
-          const userId = await fetchUserId();
-
+      
           // Update the liked status in the database
           await updateLikesInDatabase(postId, userId, !isAlreadyLiked);
         } catch (error) {
           console.error('Error liking/unliking post: ', error);
         }
-      };
+    };
+
 
     const updateLikesInDatabase = async (postId, userId, isLiked) => {
         try {
@@ -193,7 +207,7 @@ export default function Newsfeed({ navigation }) {
                 await addDoc(collection(db, 'likes'), {
                     postId,
                     userId,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    timestamp: fullDateTime,
                 });
             }
         } catch (error) {
@@ -202,6 +216,7 @@ export default function Newsfeed({ navigation }) {
     };
     
     const handlePost = async () => {
+        // Check if both postTitle and postText are not empty
         if (postText.trim() === '') {
             alert('Please enter a content.');
             return;
@@ -212,10 +227,13 @@ export default function Newsfeed({ navigation }) {
         try {
             let imageUrl = '';
     
+            // Check if a user has selected an image
             if (selectedImage) {
+                // Use a random name for the image
                 const imageName = uuid.v1(); // Generating a random name using uuid
                 const imageDestination = 'FeedpostImages/' + imageName;
     
+                // Continue with the image upload logic
                 userId = await fetchUserId();
                 if (!userId) {
                     alert('Error fetching user ID.');
@@ -242,30 +260,21 @@ export default function Newsfeed({ navigation }) {
                 userId,
                 timestamp: fullDateTime,
             };
-    
+
+            // Continue with the post creation logic, including imageUrl or without it
             const postRef = await addDoc(collection(db, 'posts'), postData);
     
             // Reset state values
             setPostTitle('');
             setPostText('');
             setSelectedImage('');
+    
+            // Close the modal
             setModalVisible(false);
-
-             // Check if the number of posts exceeds 500
-            const postsQuery = query(collection(db, 'posts'));
-            const postsSnapshot = await getDocs(postsQuery);
-            const numPosts = postsSnapshot.size;
-            if (numPosts > 500) {
-            const sortedPostsQuery = query(collection(db, 'posts'), orderBy('timestamp', 'asc'));
-            const sortedPostsSnapshot = await getDocs(sortedPostsQuery);
-            const oldestPost = sortedPostsSnapshot.docs[0];
-            // Delete the oldest post
-            await deleteDoc(doc(db, 'posts', oldestPost.id));
-            }
         } catch (error) {
             console.error('Error adding post: ', error);
         }
-    };
+    }; 
      
     function getCurrentDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -317,12 +326,14 @@ export default function Newsfeed({ navigation }) {
                 querySnapshot => {
                     const uploads = []
                     querySnapshot.forEach((doc) => {
-                        const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                       const {associatedImage, dateTime, description, municipality, location, status, userId} = doc.data();
+
                         uploads.push({
                             id: doc.id,
                             associatedImage,
                             dateTime,
                             description,
+                            municipality,
                             location,
                             status,
                             userId
@@ -392,8 +403,13 @@ export default function Newsfeed({ navigation }) {
             console.error('Error picking image: ', error);
         }
     };
-    
 
+    const formatTimestamp = (timestamp) => {
+        // Assuming timestamp is in the format 'yyyy/MM/dd hh:mm:ss a'
+        const formattedDate = moment(timestamp, 'YYYY/MM/DD hh:mm:ss a').format('YYYY/MM/DD hh:mm:ss a');
+        return formattedDate;
+      };
+      
     function SideNavigation(navigation) {
         return (
             <>
@@ -452,7 +468,6 @@ export default function Newsfeed({ navigation }) {
                     return;
                 }
         
-                // Get the current username
                 const currentUser = users.find((u) => u.id === currentUserId);
         
                 if (!currentUser) {
@@ -495,13 +510,15 @@ export default function Newsfeed({ navigation }) {
         };
 
         let temp = [];
+        const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
         if(isAllPressed){
-        userUploads.map((uploads) => {
+        filteredUploads.map((uploads) => {
             var valueToPush = {};
             valueToPush["id"] = uploads.id;
             valueToPush["imageLink"] = uploads.associatedImage;
             valueToPush["dateTime"] = uploads.dateTime;
             valueToPush["description"] = uploads.description;
+            valueToPush["municipality"] = uploads.municipality;
             valueToPush["location"] = uploads.location;
             valueToPush["status"] = uploads.status;
             valueToPush["userId"] = uploads.userId;
@@ -685,19 +702,17 @@ export default function Newsfeed({ navigation }) {
               }
             }
     
-
-     function ViewAllContent() {
-        const currentDate = new Date().toISOString().split('T')[0];      
+    function ViewAllContent() {
+        const currentDate = new Date().toISOString().split('T')[0];   
+        const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);   
     
-        // Filter images based on reports uploaded today
         const imagesToday = imageCol.filter(url => {
-            const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
+            const associatedReport = filteredUploads.find(report => url.includes(report.associatedImage));
     
             if (associatedReport) {
                 const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
                 return reportDate.toISOString().split('T')[0] === currentDate;
             }
-    
             return false;
         });
         const imageList = imagesToday.map((url, index) => (
@@ -714,59 +729,40 @@ export default function Newsfeed({ navigation }) {
             </View>
         );
      }
-
-        function CheckIfReportToday() {
-            const currentDate = new Date().toISOString().split('T')[0];      
-            let temp = false;
-            imageCol.filter(url => {
-                const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
-                if (associatedReport) {
-                    const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
-                    if(reportDate.toISOString().split('T')[0] === currentDate) {
-                        temp = true;
-                    }
-                }
-            });
-            return(temp);
-        }
-
         return (
             <>
+                <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }}>
+                    <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+                </TouchableOpacity>
+        
                 {openSideBar}
+        
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }>
                     <SafeAreaView style={styles.container}>
-                        <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => { setOpenSideBar(SideNavigation(navigation)) }}>
-                            <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                        </TouchableOpacity>
-                        {/* <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
-                            <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)'}} />
-                        </TouchableOpacity> */}
                         <View style={{ width: '100%', flexDirection: 'row', top: 11, justifyContent: 'center', paddingTop: 14 }}>
-                            <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
+                            <Text style={{ fontSize: 25, marginTop: -10, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
                         </View>
-                        <Text style={{ position: 'absolute', right: 20, top: 90 }}>
+                        <Text style={{ position: 'absolute', right: 20, top: 80 }}>
                             <Text style={{ fontWeight: 600 }}> {todayDate}</Text>
                         </Text>
-                        {(CheckIfReportToday()) &&
-                            <View style={{ width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50 }}>
-                                <View style={{ flexDirection: 'row', width: '100%' }}>
-                                    <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
-                                    <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }} onPress={() => navigation.navigate('report')}>
-                                        <Text style={{textDecorationLine: 'underline'}}>
-                                            View all
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-                                <ScrollView horizontal={true}>
-                                    {ViewAllContent()}
-                                </ScrollView>
+                        <View style={{ width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50 }}>
+                            <View style={{ flexDirection: 'row', width: '100%' }}>
+                                <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
+                                <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }} onPress={() => navigation.navigate('report')}>
+                                    <Text style={{textDecorationLine: 'underline'}}>
+                                        View all
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
-                        }
-                        <View style={{marginTop: 20}}>
+                            <ScrollView horizontal={true}>
+                                {ViewAllContent()}
+                            </ScrollView>
+                        </View>
+                        <View style={{marginTop: 10}}>
                             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'flex-start' }}>
-                                <Text style={{ fontSize: 20, fontWeight: 900, color: 'rgb(81,175,91)' }}>NEWSFEED</Text>
+                                <Text style={{ fontSize: 20, fontWeight: 900, color: 'rgb(81,175,91)', marginBottom: 5, marginLeft: 120 }}>NEWSFEED</Text>
                             </View>
                             <View style={{ width: 330, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgb(16, 139, 0)', marginBottom: 20 }}>
                                 <TouchableOpacity activeOpacity={0.5} onPress={toggleModal}>
@@ -775,25 +771,26 @@ export default function Newsfeed({ navigation }) {
                                             <Ionicons name='person-outline' style={[styles.placeholderPfp, { fontSize: 25 }]} />
                                         </View>
                                         <View>
-                                            <Text style={{ left: 15 }}>
+                                            <Text style={{ left: 10 }}>
                                                 What's on your mind?
                                             </Text>
                                         </View>
                                     </View>
                                 </TouchableOpacity>
                             </View>
-                            <View style={{ paddingHorizontal: 10, flexDirection: 'row', gap: 10, marginBottom: 15 }}>
-                                <View style={{ width: 45, height: 20, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
+                            <View style={{ paddingHorizontal: 5, flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: -10 }}>
+                                <View style={{ width: 50, height: 30, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
                                     <TouchableOpacity activeOpacity={0.5} onPress={handleAllPress}>
                                         <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center',  backgroundColor: isAllPressed ? 'rgb(179, 229, 94)' : 'white' }}>
-                                            <Text style={{ fontWeight: 700, fontSize: 12, color: 'rgb(113, 112, 108)' }}>All</Text>
+                                            <Text style={{ fontWeight: 700, fontSize: 14, color: 'rgb(113, 112, 108)' }}>All</Text>
                                         </View>
                                     </TouchableOpacity>
                                 </View>
-                                <View style={{ width: 70, height: 20, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
+                                <View style={{ width: 70, height: 30, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
                                     <TouchableOpacity activeOpacity={0.5} onPress={handleEventsPress}>
                                         <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: isEventsPressed ? 'rgb(179, 229, 94)' : 'white' }}>
-                                            <Text style={{ fontWeight: 700, fontSize: 12, color: 'rgb(113, 112, 108)' }}>Events</Text>
+                                            <Text style={{ fontWeight: 700, fontSize: 14, color: 'rgb(113, 112, 108)' }}>Events</Text>
+
                                         </View>
                                     </TouchableOpacity>
                                 </View>
@@ -844,7 +841,7 @@ export default function Newsfeed({ navigation }) {
         );
 }
 
-const styles = StyleSheet.create({
+     const styles = StyleSheet.create({
      container: {
         flex: 1,
         flexDirection: 'column',

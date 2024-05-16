@@ -28,6 +28,20 @@ export default function ReportCol({ navigation }) {
     const [viewAllReports, setViewAllReports] = useState(false);
     const currentDate = new Date().toISOString().split('T')[0];
     const DateToday= getCurrentDate();
+    const [userMunicipality, setUserMunicipality] = useState('');
+
+        useEffect(() => {
+            const retrieveUserData = async () => {
+                try {
+                    const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                    setUserMunicipality(userMunicipality);
+                } catch (error) {
+                    console.error('Error retrieving user municipality:', error);
+                }
+            };
+    
+            retrieveUserData();
+        }, []);
 
     function getCurrentDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -52,12 +66,13 @@ export default function ReportCol({ navigation }) {
             querySnapshot => {
                 const uploads = []
                 querySnapshot.forEach((doc) => {
-                    const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                    const {associatedImage, dateTime, description, municipality, location, status, userId} = doc.data();
                     uploads.push({
                         id: doc.id,
                         associatedImage,
                         dateTime,
                         description,
+                        municipality,
                         location,
                         status,
                         userId
@@ -77,6 +92,7 @@ export default function ReportCol({ navigation }) {
         )
     }, [])
     
+
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
         setTimeout(() => {
@@ -105,6 +121,7 @@ export default function ReportCol({ navigation }) {
             valueToPush["imageLink"] = uploads.associatedImage;
             valueToPush["dateTime"] = uploads.dateTime;
             valueToPush["description"] = uploads.description;
+            valueToPush["municipality"] = uploads.municipality;
             valueToPush["location"] = uploads.location;
             valueToPush["status"] = uploads.status;
             valueToPush["userId"] = uploads.userId;
@@ -116,9 +133,11 @@ export default function ReportCol({ navigation }) {
                 return 0;
             });
         })
+        
+        const filteredUploads = uploadCollection.filter(upload => upload.municipality === userMunicipality);
 
         let temp = [];
-        uploadCollection.map((post) => {
+        filteredUploads.map((post) => {
             if (post.status === 'collected') {
                 return;
             }
@@ -128,10 +147,9 @@ export default function ReportCol({ navigation }) {
                     imageURL = url;
                 }
             })
-
+            
             temp.push(
                 <View style={[styles.contentButton, styles.contentGap]}>
-                    <TouchableOpacity activeOpacity={0.5}>
                         <View style={styles.contentButtonFront}>
                             <View style={{width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10}}>
                                 <View style={styles.containerPfp}>
@@ -139,92 +157,94 @@ export default function ReportCol({ navigation }) {
                                 </View>
                                 <Text style={{fontSize: 16, fontWeight: 800, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(post.userId === user.id) {return user.username;}})}</Text>
                             </View>
-                            <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 20}}>
+                            <SafeAreaView style={{width: '100%', marginVertical: 5, paddingHorizontal: 20}}>
                             <Text style={{ fontSize: 13 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {post.dateTime} </Text>
-                            <Text style={{ fontSize: 13 }}>
+                                <Text style={{ fontSize: 13 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Location:</Text> {post.location} </Text>
-                            <Text style={{ fontSize: 13 }}>
+                                <Text style={{ fontSize: 13 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
                                 <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
                                     <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
                                 </View>
                             </SafeAreaView>
                         </View>
-                    </TouchableOpacity>
                 </View>
             );
         });
         
-        <ul>
-            {temp.map(item =>
-                <li key="{item}">{item}</li>
-            )}
-        </ul>
-
         return (
             <View>
                 {temp}
             </View>
         );
     }
+
     function ViewAllContent() {
-        const [selectedReport, setSelectedReport] = useState(null);
-        const currentDate = new Date().toISOString().split('T')[0];
-    
-        // Filter reports based on the current date
-        const reportsToShow = viewAllReports
-        ? userUploads.filter(report => report && report.dateTime && report.dateTime.includes(currentDate))
-        : userUploads.filter(report => {
+     const [selectedReport, setSelectedReport] = useState(null);
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
+
+    // Filter reports based on the current date
+    const reportsToShow = viewAllReports
+        ? filteredUploads.filter(report => report && report.dateTime && report.dateTime.includes(currentDate))
+        : filteredUploads.filter(report => {
             const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
             const reportDateString = reportDate.toISOString().split('T')[0];
             return reportDateString === currentDate;
         });
-    
-        // Create a list of image components
-        const imageList = viewAllReports && imageCol
-        .filter(url => userUploads.some(report => {
-          const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
-          const reportDateString = reportDate.toISOString().split('T')[0];
-    
-          return report && report.dateTime && reportDateString === currentDate && url.includes(report.associatedImage);
+
+    // Create a list of image components
+    const imageList = viewAllReports && imageCol
+        .filter(url => filteredUploads.some(report => {
+            const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+            const reportDateString = reportDate.toISOString().split('T')[0];
+
+            return report && report.dateTime && reportDateString === currentDate && url.includes(report.associatedImage);
         }))
         .map((url, index) => (
-          <View key={index} style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
-            <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10, borderColor: '#0D5601' }} />
-          </View>
+            <View key={`image-${index}`} style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
+                <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10, borderColor: '#0D5601' }} />
+            </View>
         ));
     
-    
          // Create a list of report components for the current date
-         const reportList = reportsToShow.map(uploads => (
-            <TouchableOpacity key={uploads.id} activeOpacity={0.5} onPress={() => setSelectedReport(uploads)}>
-                <View style={{ width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 5, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 1, elevation: 5 }}>
-                    <View style={{ width: '100%', backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', color: 'rgba(113, 112, 108, 1)' }}>
-                        <SafeAreaView style={{ width: '100%', paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                        <View style={{width: '93%', flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 15}}>
-                                <View style={styles.containerPfp}>
-                                    <Ionicons name='person-outline' style={styles.placeholderPfp} />
+         const reportList = reportsToShow.map((uploads, index) => (
+            <View key={index} style={{ marginBottom: 10 }}>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => setSelectedReport(uploads)}>
+                    <View style={{ width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 5, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 1, elevation: 5 }}>
+                        <View style={{ width: '100%', backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', color: 'rgba(113, 112, 108, 1)',  }}>
+                            <SafeAreaView style={{ width: '100%', paddingHorizontal: 15, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                                <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10 }}>
+                                    <View style={styles.containerPfp}>
+                                        <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'grey' }}>
+                                            {users.map((user) => { if (uploads.userId === user.id) { return user.username; } })}
+                                        </Text>
+                                        <Text style={{ fontSize: 12, marginLeft: 65, color: 'grey' }}>
+                                            {uploads.dateTime}
+                                        </Text>
+                                    </View>
                                 </View>
-                                <Text style={{fontSize: 16, fontWeight: 500, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(uploads.userId === user.id) {return user.username;}})}</Text>
-                            </View>
-                            <Text style={{ fontSize: 12, marginTop: 10 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {uploads.dateTime} </Text>
-                            <Text style={{ fontSize: 12 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Location</Text> {uploads.location} </Text>
-                            <Text style={{ fontSize: 12 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {uploads.status} </Text>
-                            <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5, justifyContent: 'flex-start', alignItems: 'flex-start', borderRadius: 10 }}>
-                                {imageCol && imageCol.length > 0 && (
-                                    imageCol.find(url => url.includes(uploads.associatedImage)) && (
-                                        <Image source={{ uri: imageCol.find(url => url.includes(uploads.associatedImage)) }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
-                                    )
-                                )}
-                            </View>
-                        </SafeAreaView>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                                    <Ionicons name="location" size={20} color="red" style={{ marginRight: 1 }} />
+                                    <Text style={{ fontSize: 13, paddingEnd:10 }}>{uploads.location}</Text>
+                                </View>
+                                <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5, justifyContent: 'flex-start', alignItems: 'flex-start', borderRadius: 10 }}>
+                                    {imageCol && imageCol.length > 0 && (
+                                        imageCol.find(url => url.includes(uploads.associatedImage)) && (
+                                            <Image source={{ uri: imageCol.find(url => url.includes(uploads.associatedImage)) }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
+                                        )
+                                    )}
+                                </View>
+                            </SafeAreaView>
+                        </View>
                     </View>
-                </View>
-            </TouchableOpacity>
+                </TouchableOpacity>
+            </View>
         ));
 
         return (
@@ -277,10 +297,10 @@ export default function ReportCol({ navigation }) {
                         {(CheckIfReportToday()) &&
                             <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10,  overflow: 'hidden', marginBottom: 5, marginTop: 50, shadowColor: '#0D5601', shadowOffset: { width: 0, height: 2,}, shadowOpacity: 0.8, shadowRadius: 3, elevation: 5 }}>
                                 <View style={{ flexDirection: 'row', width: '100%' }}>
-                                    <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
+                                    <Text style={{ left: 10, marginTop: 10, fontWeight: 700 }}>REPORTS TODAY</Text>
                                     <TouchableOpacity
                                         activeOpacity={0.5}
-                                        style={{ position: 'absolute', right: 15, marginTop: 15 }}
+                                        style={{ position: 'absolute', right: 15, marginTop: 10 }}
                                         onPress={() => setViewAllReports(!viewAllReports)}
                                     >
                                         <Text style={{ textDecorationLine: 'underline' }}>View Details</Text>

@@ -4,11 +4,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { parse } from 'date-fns';
 import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, query } from 'firebase/firestore';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
-
 import SideBar from '../components/SideNav';
 
 export default function Report({ navigation }) {
@@ -24,19 +23,28 @@ export default function Report({ navigation }) {
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const imageColRef = ref(storage, "postImages/");
 
-    const currentDate = getCurrentDate();
+    const [viewAllReports, setViewAllReports] = useState(false);
+    const currentDate = new Date().toISOString().split('T')[0];
+    const DateToday= getCurrentDate();
+    const [userMunicipality, setUserMunicipality] = useState('');
 
-    const [isPressed, setIsPressed] = useState(false);
-
-    const handlePress = () => {
-      setIsPressed(!isPressed);
-    };
+        useEffect(() => {
+            const retrieveUserData = async () => {
+                try {
+                    const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                    setUserMunicipality(userMunicipality);
+                } catch (error) {
+                    console.error('Error retrieving user municipality:', error);
+                }
+            };
+    
+            retrieveUserData();
+        }, []);
 
     function getCurrentDate() {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const currentDate = new Date().toLocaleDateString(undefined, options);
-      
-        return currentDate;
+        const DateToday= new Date().toLocaleDateString(undefined, options);
+        return DateToday;
       }
 
     useEffect(() => {
@@ -44,7 +52,7 @@ export default function Report({ navigation }) {
             setOpenSideBar();
         }
     });
-
+    
     useEffect(() => {
         const getUsers = async () => {
             const data = await getDocs(usersCollection);
@@ -56,12 +64,13 @@ export default function Report({ navigation }) {
             querySnapshot => {
                 const uploads = []
                 querySnapshot.forEach((doc) => {
-                    const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                    const {associatedImage, dateTime, description, municipality, location, status, userId} = doc.data();
                     uploads.push({
                         id: doc.id,
                         associatedImage,
                         dateTime,
                         description,
+                        municipality,
                         location,
                         status,
                         userId
@@ -80,7 +89,8 @@ export default function Report({ navigation }) {
             }
         )
     }, [])
-    
+        
+
     const onRefresh = React.useCallback(() => {
         setRefreshing(true);
         setTimeout(() => {
@@ -109,20 +119,23 @@ export default function Report({ navigation }) {
             valueToPush["imageLink"] = uploads.associatedImage;
             valueToPush["dateTime"] = uploads.dateTime;
             valueToPush["description"] = uploads.description;
+            valueToPush["municipality"] = uploads.municipality;
             valueToPush["location"] = uploads.location;
             valueToPush["status"] = uploads.status;
             valueToPush["userId"] = uploads.userId;
             uploadCollection.push(valueToPush);
             uploadCollection.sort((a, b) => {
                 let fa = a.dateTime, fb = b.dateTime;
-                if (fa > fb) {return -1;}
-                if (fa < fb) {return 1;}
+                if (fa < fb) {return -1;}
+                if (fa > fb) {return 1;}
                 return 0;
             });
         })
+        
+        const filteredUploads = uploadCollection.filter(upload => upload.municipality === userMunicipality);
 
         let temp = [];
-        uploadCollection.map((post) => {
+        filteredUploads.map((post) => {
             if (post.status === 'collected') {
                 return;
             }
@@ -132,42 +145,37 @@ export default function Report({ navigation }) {
                     imageURL = url;
                 }
             })
-
+            
             temp.push(
                 <View style={[styles.contentButton, styles.contentGap]}>
-                  <TouchableOpacity activeOpacity={0.5}>
-                    <View style={styles.contentButtonFront}>
-                      <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
-                        <View style={styles.containerPfp}>
-                          <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                        <View style={styles.contentButtonFront}>
+                            <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10 }}>
+                                <View style={styles.containerPfp}>
+                                    <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'grey' }}>
+                                            {users.map((user) => { if (post.userId === user.id) { return user.username; } })}
+                                        </Text>
+                                        <Text style={{ fontSize: 12, marginLeft: 85, color: 'grey' }}>
+                                            {post.dateTime}
+                                        </Text>
+                                    </View>
+                            </View>
+                            <SafeAreaView style={{ width: '100%', marginVertical: 5, paddingHorizontal: 20 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Ionicons name="location" style={{ fontSize: 20, color: 'red', marginRight: 1 }} />
+                                    <Text style={{ fontSize: 13, paddingEnd: 20 }}>{post.location}</Text>
+                                </View> 
+                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                                    <Image src={imageURL} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
+                                </View>
+                            </SafeAreaView>
                         </View>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)' }}>
-                          {users.map((user) => { if (post.userId === user.id) { return user.username; } })}
-                        </Text>
-                        <Text style={{ fontSize: 13, marginLeft: 5, color: 'gray' }}>{post.dateTime}</Text>
-                      </View>
-                      <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Ionicons name="location" size={16} color="red" style={{ marginRight: 5 }} />
-                          <Text style={{ fontSize: 13, marginBottom: 5 }}>{post.location}</Text>
-                        </View>
-                        <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                          {/* <Ionicons name='images-outline' style={{fontSize: 100, color: 'white'}} /> */}
-                          <Image src={imageURL} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
-                        </View>
-                      </SafeAreaView>
-                    </View>
-                  </TouchableOpacity>
                 </View>
-              );
+            );
         });
         
-        <ul>
-            {temp.map(item =>
-                <li key="{item}">{item}</li>
-            )}
-        </ul>
-
         return (
             <View>
                 {temp}
@@ -175,31 +183,146 @@ export default function Report({ navigation }) {
         );
     }
 
+    function ViewAllContent() {
+     const [selectedReport, setSelectedReport] = useState(null);
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
+
+    // Filter reports based on the current date
+    const reportsToShow = viewAllReports
+        ? filteredUploads.filter(report => report && report.dateTime && report.dateTime.includes(currentDate))
+        : filteredUploads.filter(report => {
+            const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+            const reportDateString = reportDate.toISOString().split('T')[0];
+            return reportDateString === currentDate;
+        });
+
+    // Create a list of image components
+    const imageList = viewAllReports && imageCol
+        .filter(url => filteredUploads.some(report => {
+            const reportDate = parse(report.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+            const reportDateString = reportDate.toISOString().split('T')[0];
+
+            return report && report.dateTime && reportDateString === currentDate && url.includes(report.associatedImage);
+        }))
+        .map((url, index) => (
+            <View key={`image-${index}`} style={{ width: 80, height: 80, backgroundColor: '#D6D6D8', marginVertical: 10, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }}>
+                <Image source={{ uri: url }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover', borderRadius: 10, borderColor: '#0D5601' }} />
+            </View>
+        ));
+    
+        const reportList = reportsToShow.map((uploads, index) => (
+            <View key={index} style={{ marginBottom: 10 }}>
+                <TouchableOpacity activeOpacity={0.5} onPress={() => setSelectedReport(uploads)}>
+                    <View style={{ width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 5, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 1, elevation: 5 }}>
+                        <View style={{ width: '100%', backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', color: 'rgba(113, 112, 108, 1)',  }}>
+                            <SafeAreaView style={{ width: '100%', paddingHorizontal: 15, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                                <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10 }}>
+                                    <View style={styles.containerPfp}>
+                                        <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'grey' }}>
+                                            {users.map((user) => { if (uploads.userId === user.id) { return user.username; } })}
+                                        </Text>
+                                        <Text style={{ fontSize: 12, marginLeft: 65, color: 'grey' }}>
+                                            {uploads.dateTime}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                                    <Ionicons name="location" size={20} color="red" style={{ marginRight: 1 }} />
+                                    <Text style={{ fontSize: 13 }}>
+                                        {uploads.location}
+                                    </Text>
+                                </View>
+                                <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5, justifyContent: 'flex-start', alignItems: 'flex-start', borderRadius: 10 }}>
+                                    {imageCol && imageCol.length > 0 && (
+                                        imageCol.find(url => url.includes(uploads.associatedImage)) && (
+                                            <Image source={{ uri: imageCol.find(url => url.includes(uploads.associatedImage)) }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
+                                        )
+                                    )}
+                                </View>
+                            </SafeAreaView>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </View>
+        ));
+
+        return (
+            <View>
+                <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
+                    {imageList}
+                </View>
+                <View style={{ flexDirection: 'row', marginHorizontal: 10, gap: 10 }}>
+                    {reportList}
+                </View>
+            </View>
+        );
+    }
+    function CheckIfReportToday() {
+        const currentDate = new Date().toISOString().split('T')[0];      
+        let temp = false;
+        imageCol.filter(url => {
+            const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
+            if (associatedReport) {
+                const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
+                if(reportDate.toISOString().split('T')[0] === currentDate) {
+                    temp = true;
+                }
+            }
+        });
+        return(temp);
+    }         
     return (
         <>
-            <View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 99, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}>
                 <TouchableOpacity activeOpacity={0.5} onPress={() => {navigation.navigate('camera')}}>
                     <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
                         <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(81,175,91)', top: -3, right: -0.9 }} />
                     </View>
                 </TouchableOpacity>
-            </View>
-            {openSideBar}
+        </View>
+        {openSideBar}
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }>
-                <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
-                    <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
-                </TouchableOpacity>
+              <TouchableOpacity style={{ position: 'absolute', left: 20, top: 30, zIndex: 99 }} onPress={() => {setOpenSideBar(SideNavigation(navigation))}}>
+                  <Ionicons name='menu' style={{ fontSize: 40, color: 'rgb(81,175,91)' }} />
+              </TouchableOpacity>
+              <TouchableOpacity style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
+                  <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)' }} />
+              </TouchableOpacity>
                 <SafeAreaView style={styles.container}>
                     <View style={{width: '100%', flexDirection: 'row', justifyContent: 'center', paddingTop: 14}}>
                         <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>REPORTS</Text>
                     </View>
                     <Text style={{position: 'absolute', right: 20, top: 80}}>
-                    <Text style={{ fontWeight: 600 }}> {currentDate}</Text>
+                        <Text style={{ fontWeight: 600 }}> {DateToday}</Text>
                     </Text>
-                    <View style={{ marginTop: 50 }}>
-                        {BodyContent ()}
+                    <View>
+                        {(CheckIfReportToday()) &&
+                            <View style={{width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10,  overflow: 'hidden', marginBottom: 5, marginTop: 50, shadowColor: '#0D5601', shadowOffset: { width: 0, height: 2,}, shadowOpacity: 0.8, shadowRadius: 3, elevation: 5 }}>
+                                <View style={{ flexDirection: 'row', width: '100%' }}>
+                                    <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
+                                    <TouchableOpacity
+                                        activeOpacity={0.5}
+                                        style={{ position: 'absolute', right: 15, marginTop: 15 }}
+                                        onPress={() => setViewAllReports(!viewAllReports)}
+                                    >
+                                        <Text style={{ textDecorationLine: 'underline' }}>View Details</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <ScrollView horizontal={true}>
+                                    <ViewAllContent viewAllReports={viewAllReports} currentDate={currentDate} />
+                                </ScrollView>
+                            </View>
+                        }
+                        <View style={{marginTop: !CheckIfReportToday() ? 40 : 0}}>
+                            {BodyContent()}
+                        </View>
                     </View>
                 </SafeAreaView>
             </ScrollView>

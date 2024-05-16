@@ -5,6 +5,7 @@ import { StyleSheet, View, Text, TextInput, Modal, Share, TouchableOpacity, Scro
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parse } from 'date-fns';
 import moment from 'moment';
 import { db, auth, storage, firebase } from '../firebase_config';
@@ -41,6 +42,19 @@ export default function NewsfeedCol({ navigation }) {
     const reportFeedRef = firebase.firestore().collection("posts");
     const imageColRef = ref(storage, "postImages/");
     const imageFeedColRef = ref(storage, "FeedpostImages/");
+    const [userMunicipality, setUserMunicipality] = useState('');
+
+    useEffect(() => {
+        const retrieveUserData = async () => {
+            try {
+                const userMunicipality = await AsyncStorage.getItem('userMunicipality');
+                setUserMunicipality(userMunicipality);
+            } catch (error) {
+                console.error('Error retrieving user municipality:', error);
+            }
+        };
+        retrieveUserData();
+    }, []);
 
     const handleAllPress = () => {
         setIsAllPressed(true);
@@ -62,63 +76,64 @@ export default function NewsfeedCol({ navigation }) {
         .format('YYYY/MM/DD hh:mm:ss a');
     
     const formatTimestamp = (timestamp) => {
-        // Assuming timestamp is in the format 'yyyy/MM/dd hh:mm:ss a'
         const formattedDate = moment(timestamp, 'YYYY/MM/DD hh:mm:ss a').format('YYYY/MM/DD hh:mm:ss a');
         return formattedDate;
     };    
     
     useEffect(() => {
-        const fetchEvents = () => {
-          try {
-            const eventsRef = collection(db, 'schedule');
-      
-            const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
-              const events = querySnapshot.docs.map((doc) => {
-                const eventData = doc.data();
-                if (eventData.type === 'Event') {
-                  return {
-                    id: doc.id,
-                    description: eventData.description,
-                    location: eventData.location,
-                    startTime: eventData.startTime,
-                    selectedDate: eventData.selectedDate,
-                    title: eventData.title,
-                    userId: eventData.userID,
-                    timestamp: eventData.dateTimeUploaded,
-                  };
-                }
-                return null; 
-              }).filter(event => event !== null);
-      
-              events.sort((a, b) => {
-                const timestampA = new Date(a.timestamp).getTime();
-                const timestampB = new Date(b.timestamp).getTime();
-                return timestampB - timestampA;
-              });
-      
-              const userIds = events.map(event => event.userId);
-              const eventUsers = await getUsersByIds(userIds);
-      
-              const enrichedEvents = events.map((event, index) => ({
-                ...event,
-                userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
-              }));
-      
-              setUserEvents(enrichedEvents);
-            });
-
-            return () => unsubscribe();
-          } catch (error) {
-            console.error('Error fetching events: ', error);
-          }
+        const fetchEvents = async () => {
+            try {
+                const eventsRef = collection(db, 'schedule');
+    
+                const unsubscribe = onSnapshot(eventsRef, async (querySnapshot) => {
+                    const events = querySnapshot.docs.map((doc) => {
+                        const eventData = doc.data();
+                        if (eventData.type === 'Event') {
+                            return {
+                                id: doc.id,
+                                description: eventData.description,
+                                location: eventData.location,
+                                startTime: eventData.startTime,
+                                selectedDate: eventData.selectedDate,
+                                title: eventData.title,
+                                userId: eventData.userID,
+                                timestamp: eventData.dateTimeUploaded,
+                            };
+                        }
+                        return null;
+                    }).filter(event => event !== null);
+    
+                    events.sort((a, b) => {
+                        const timestampA = new Date(a.timestamp).getTime();
+                        const timestampB = new Date(b.timestamp).getTime();
+                        return timestampB - timestampA;
+                    });
+    
+                    const userIds = events.map(event => event.userId);
+                    const eventUsers = await getUsersByIds(userIds);
+    
+                    const enrichedEvents = events.map((event, index) => ({
+                        ...event,
+                        userName: eventUsers[index] ? `${eventUsers[index].firstName} ${eventUsers[index].lastName}` : 'Unknown User',
+                    }));
+    
+                    // Filter events based on userMunicipality
+                    const filteredEvents = enrichedEvents.filter(event => event.location.includes(userMunicipality));
+    
+                    setUserEvents(filteredEvents);
+                });
+    
+                return () => unsubscribe();
+            } catch (error) {
+                console.error('Error fetching events: ', error);
+            }
         };
         fetchEvents();
-      }, []);
+    }, [userMunicipality]);
+    
       
       const getUsersByIds = async (userIds) => {
         try {
-      
-          // Filter out undefined values from the userIds array
           const validUserIds = userIds.filter(userId => userId !== undefined);
       
           const users = await Promise.all(
@@ -314,12 +329,13 @@ export default function NewsfeedCol({ navigation }) {
                 querySnapshot => {
                     const uploads = []
                     querySnapshot.forEach((doc) => {
-                        const {associatedImage, dateTime, description, location, status, userId} = doc.data();
+                        const {associatedImage, dateTime, description,municipality, location, status, userId} = doc.data();
                         uploads.push({
                             id: doc.id,
                             associatedImage,
                             dateTime,
                             description,
+                            municipality,
                             location,
                             status,
                             userId
@@ -492,13 +508,15 @@ export default function NewsfeedCol({ navigation }) {
         };
 
         let temp = [];
+        const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
         if(isAllPressed){
-        userUploads.map((uploads) => {
+       filteredUploads.map((uploads) => {
             var valueToPush = {};
             valueToPush["id"] = uploads.id;
             valueToPush["imageLink"] = uploads.associatedImage;
             valueToPush["dateTime"] = uploads.dateTime;
             valueToPush["description"] = uploads.description;
+            valueToPush["municipality"] = uploads.municipality;
             valueToPush["location"] = uploads.location;
             valueToPush["status"] = uploads.status;
             valueToPush["userId"] = uploads.userId;
@@ -685,10 +703,9 @@ export default function NewsfeedCol({ navigation }) {
 
      function ViewAllContent() {
         const currentDate = new Date().toISOString().split('T')[0];      
-    
-        // Filter images based on reports uploaded today
+        const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);
         const imagesToday = imageCol.filter(url => {
-            const associatedReport = userUploads.find(report => url.includes(report.associatedImage));
+            const associatedReport = filteredUploads.find(report => url.includes(report.associatedImage));
     
             if (associatedReport) {
                 const reportDate = parse(associatedReport.dateTime, 'yyyy/MM/dd hh:mm:ss a', new Date());
@@ -740,12 +757,25 @@ export default function NewsfeedCol({ navigation }) {
                         <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 20, top: 31, zIndex: 99 }} onPress={() => {navigation.navigate('notification')}}>
                             <Ionicons name='notifications' style={{ fontSize: 35, color: 'rgb(81,175,91)'}} />
                         </TouchableOpacity>
-                        <View style={{ width: '100%', flexDirection: 'row', top: 11, justifyContent: 'center', paddingTop: 14 }}>
+                        <View style={{ width: '100%', flexDirection: 'row', top: 3, justifyContent: 'center', paddingTop: 14 }}>
                             <Text style={{ fontSize: 25, fontWeight: 900, color: 'rgb(81,175,91)' }}>DASHBOARD</Text>
                         </View>
-                        <Text style={{ position: 'absolute', right: 20, top: 90 }}>
+                        <Text style={{ position: 'absolute', right: 20, top: 80 }}>
                             <Text style={{ fontWeight: 600 }}> {todayDate}</Text>
                         </Text>
+                        {/*<View style={{ width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 40 }}>
+                            <View style={{ flexDirection: 'row', width: '100%' }}>
+                                <Text style={{ left: 10, marginTop: 15, fontWeight: 700 }}>REPORTS TODAY</Text>
+                                <TouchableOpacity activeOpacity={0.5} style={{ position: 'absolute', right: 15, marginTop: 15 }} onPress={() => navigation.navigate('report')}>
+                                    <Text style={{textDecorationLine: 'underline'}}>
+                                        View all
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView horizontal={true}>
+                                {ViewAllContent()}
+                            </ScrollView>
+                        </View>*/}
                         {(CheckIfReportToday()) &&
                             <View style={{ width: 330, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 10, overflow: 'hidden', marginBottom: 5, marginTop: 50 }}>
                                 <View style={{ flexDirection: 'row', width: '100%' }}>
@@ -761,9 +791,9 @@ export default function NewsfeedCol({ navigation }) {
                                 </ScrollView>
                             </View>
                         }
-                        <View style={{marginTop: 20}}>
+                        <View style={{marginTop: 10}}>
                             <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'flex-start' }}>
-                                <Text style={{ fontSize: 20, fontWeight: 900, color: 'rgb(81,175,91)' }}>NEWSFEED</Text>
+                                <Text style={{ fontSize: 20, fontWeight: 900, color: 'rgb(81,175,91)', marginTop: 25,marginBottom: 10, marginLeft: 120 }}>NEWSFEED</Text>
                             </View>
                             <View style={{ width: 330, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgb(16, 139, 0)', marginBottom: 20 }}>
                                 <TouchableOpacity activeOpacity={0.5} onPress={toggleModal}>
@@ -779,22 +809,22 @@ export default function NewsfeedCol({ navigation }) {
                                     </View>
                                 </TouchableOpacity>
                             </View>
-                            <View style={{ paddingHorizontal: 10, flexDirection: 'row', gap: 10, marginBottom: 15 }}>
-                                <View style={{ width: 45, height: 20, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
+                            <View style={{ paddingHorizontal: 5, flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: -10 }}>
+                                <View style={{ width: 50, height: 30, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
                                     <TouchableOpacity activeOpacity={0.5} onPress={handleAllPress}>
                                         <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center',  backgroundColor: isAllPressed ? 'rgb(179, 229, 94)' : 'white' }}>
-                                            <Text style={{ fontWeight: 700, fontSize: 12, color: 'rgb(113, 112, 108)' }}>All</Text>
+                                            <Text style={{ fontWeight: 700, fontSize: 14, color: 'rgb(113, 112, 108)' }}>All</Text>
                                         </View>
                                     </TouchableOpacity>
                                 </View>
-                                <View style={{ width: 70, height: 20, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
+                                <View style={{ width: 70, height: 30, backgroundColor: 'rgb(179, 229, 94)', borderRadius: 20, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 0, height: 3, }, shadowOpacity: 0.27, elevation: 3 }}>
                                     <TouchableOpacity activeOpacity={0.5} onPress={handleEventsPress}>
                                         <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: isEventsPressed ? 'rgb(179, 229, 94)' : 'white' }}>
-                                            <Text style={{ fontWeight: 700, fontSize: 12, color: 'rgb(113, 112, 108)' }}>Events</Text>
+                                            <Text style={{ fontWeight: 700, fontSize: 14, color: 'rgb(113, 112, 108)' }}>Events</Text>
                                         </View>
                                     </TouchableOpacity>
                                 </View>
-                            </View>     
+                            </View>       
                             {BodyContent()}
                         </View>
                     </SafeAreaView>

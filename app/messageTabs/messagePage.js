@@ -134,69 +134,99 @@ const handleUserSelect = async (selectedEmail) => {
 
 
 useEffect(() => {
-  const unsubscribeChats = currentUser
-    ? onSnapshot(
-        collection(db, 'chats'),
-        async (querySnapshot) => {
-          const allChats = [];
+  const unsubscribeChats = currentUser ? onSnapshot(
+    collection(db, 'chats'),
+    async (querySnapshot) => {
+      const allChats = [];
+      for (const doc of querySnapshot.docs) {
+        const userData = doc.data();
+        if (userData && userData.users && userData.users.includes(currentUser.email)) {
+          const messagesRef = collection(db, 'messages');
+          const q = query(messagesRef, where('chatId', '==', doc.id), orderBy('timestamp', 'desc'), limit(1));
+          const messagesSnapshot = await getDocs(q);
+          if (!messagesSnapshot.empty) {
+            const lastMessageData = messagesSnapshot.docs[0]?.data();
+            const lastMessageTimestamp = lastMessageData?.timestamp?.toDate();
+            let lastMessageText = lastMessageData?.imageUrl ? 'Photo attached' : lastMessageData?.text || '';
+            const otherParticipantEmail = userData.users.find(email => email !== currentUser.email);
 
-          for (const doc of querySnapshot.docs) {
-            const userData = doc.data();
+            // Fetch the full name of the other participant
+            const userRef = collection(db, 'users');
+            const userQuery = query(userRef, where('email', '==', otherParticipantEmail));
+            const userDocs = await getDocs(userQuery);
+            let receiverFullName = otherParticipantEmail; // Default to email if name not found
+            userDocs.forEach((doc) => {
+              const userData = doc.data();
+              receiverFullName = `${userData.firstName} ${userData.lastName}`;
+            });
 
-            if (userData && userData.users && userData.users.includes(currentUser.email)) {
-              const messagesRef = collection(db, 'messages');
-              const q = query(messagesRef, where('chatId', '==', doc.id), orderBy('timestamp', 'desc'), limit(1));
-              const messagesSnapshot = await getDocs(q);
-
-              if (!messagesSnapshot.empty) {
-                const lastMessageData = messagesSnapshot.docs[0]?.data();
-                const lastMessageTimestamp = lastMessageData?.timestamp?.toDate();
-
-                let lastMessageText = lastMessageData?.imageUrl ? 'Photo attached' : lastMessageData?.text || '';
-
-                allChats.push({
-                  chatId: doc.id,
-                  otherParticipantEmail: userData.users.find((email) => email !== currentUser.email),
-                  lastMessage: lastMessageText,
-                  timestamp: lastMessageTimestamp,
-                });
-              }
-            }
+            allChats.push({
+              chatId: doc.id,
+              otherParticipantEmail,
+              receiverUsername: receiverFullName,
+              lastMessage: lastMessageText,
+              lastMessageSenderId: lastMessageData.senderId, // Correctly assign last message sender ID
+              timestamp: lastMessageTimestamp,
+              unreadCount: userData.unreadCount || 0
+            });
           }
-
-          allChats.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          setChatSummaries(allChats);
-        },
-        (error) => {
-          console.error('Error fetching chats:', error);
         }
-      )
-    : undefined;
+      }
+      allChats.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setChatSummaries(allChats);
+    },
+    (error) => {
+      console.error('Error fetching chats:', error);
+    }
+  ) : undefined;
 
   return () => {
     if (unsubscribeChats) {
       unsubscribeChats();
     }
   };
-}, [currentUser, refreshPage, chatSummaries]);
+}, [currentUser]);
+
+
+const openChat = (chatId, receiverEmail) => {
+  navigation.navigate('chatView', { chatId, receiverEmail });
+  const chatRef = doc(db, 'chats', chatId);
+  updateDoc(chatRef, { unreadCount: 0 });
+};
 
 
 const renderItem = ({ item }) => (
   <TouchableOpacity
     style={[styles.itemContainer, styles.itemShadow]}
-    onPress={() => navigation.navigate('chatView', { chatId: item.chatId, receiverEmail: item.otherParticipantEmail })}
-    onLongPress={() => handleLongPress(item)} 
+    onPress={() => openChat(item.chatId, item.otherParticipantEmail)}
+    onLongPress={() => handleLongPress(item)}
   >
     <View style={[styles.avatarContainer, styles.itemShadow]}>
       <Icon name="user" size={25} color="#05652D" />
     </View>
     <View style={styles.textAndTimestampContainer}>
-      <Text style={styles.emailText}>{item.otherParticipantEmail}</Text>
-      <Text style={styles.lastMessageText} numberOfLines={1} ellipsizeMode="tail">{item.lastMessage}</Text>
-      <Text style={styles.timestampText}>{item.timestamp.toLocaleTimeString()}</Text>
+      <View style={styles.receiverNameContainer}>
+        <Text style={styles.emailText}>{item.receiverUsername}</Text>
+        {item.lastMessageSenderId === currentUser.uid ? (
+          <Text style={styles.sentText}>Sent</Text>
+        ) : (
+          item.otherParticipantEmail !== currentUser.email && item.unreadCount > 0 && (
+            <View style={styles.unreadBadgeContainer}>
+              <Text style={styles.unreadText}>{item.unreadCount}</Text>
+            </View>
+          )
+        )}
+      </View>
+      <Text style={styles.lastMessageText} numberOfLines={1} ellipsizeMode="tail">
+        {item.lastMessage}
+      </Text>
+      <Text style={styles.timestampText}>
+        {item.timestamp ? item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+      </Text>
     </View>
   </TouchableOpacity>
 );
+
 
 return (
   <View style={styles.container}>
@@ -251,7 +281,7 @@ return (
     <FlatList
       data={chatSummaries}
       renderItem={renderItem}
-      keyExtractor={(item) => item.chatId}
+      keyExtractor={item => item.chatId}
     />
     <Modal
       animationType="slide"
@@ -385,5 +415,28 @@ searchInput: {
     paddingVertical: 10,
     textAlign: 'center',
     color: 'black', 
+  },
+  unreadBadgeContainer: {
+    backgroundColor: 'red', // background color of the badge
+    borderRadius: 12, // half of the width and height to make it a circle
+    width: 24, // fixed width to ensure a circle
+    height: 24, // fixed height to ensure a circle
+    justifyContent: 'center', // center the text vertically
+    alignItems: 'center', // center the text horizontally
+    marginLeft: 8, // space between the text and the unread badge
+  },
+  unreadText: {
+    color: 'white', // text color
+    fontSize: 12, // adjust font size as needed
+    fontWeight: 'bold', // optional: make the text bold
+  },
+  sentText: {
+    color: 'gray', // example style for sent text
+    marginLeft: 8, // space between the text and the sent status
+  },
+  receiverNameContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
