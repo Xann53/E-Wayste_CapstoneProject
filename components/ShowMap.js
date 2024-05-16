@@ -10,7 +10,7 @@ import { collection, addDoc, getDocs, query, updateDoc, doc } from 'firebase/fir
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 import * as Location from 'expo-location';
-import MapView, { Callout, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Callout, Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { GOOGLE_API_KEY } from '../environments';
 import MapViewDirections from 'react-native-maps-directions';
@@ -322,6 +322,52 @@ export default function LoadMap({ mapRef, page }) {
         })}
     };
 
+    const [routeCoordinates, setRouteCoordinates] = useState([]);
+
+    const fetchRoute = async (originLat, originLon, destinationLat, destinationLon) => {
+        try {
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/directions/json?origin=${originLat},${originLon}&destination=${destinationLat},${destinationLon}&key=${GOOGLE_MAPS_APIKEY}`
+            );
+            const data = await response.json();
+
+            if (data.routes && data.routes.length > 0) {
+                const decodedPoints = decodePolyline(data.routes[0].overview_polyline.points);
+                setRouteCoordinates(decodedPoints);
+            }
+        } catch (e) {}
+    };
+
+    const decodePolyline = (encoded) => {
+        let points = [];
+        let index = 0, len = encoded.length;
+        let lat = 0, lng = 0;
+      
+        while (index < len) {
+          let b, shift = 0, result = 0;
+          do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+          lat += dlat;
+      
+          shift = 0;
+          result = 0;
+          do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+          lng += dlng;
+      
+          points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+        }
+        return points;
+      };
+
     return (
         allShift.map((shift) => {
             if(shift.driverId === userID) {
@@ -341,6 +387,7 @@ export default function LoadMap({ mapRef, page }) {
                 })
             }
         }),
+        fetchRoute(origin.latitude, origin.longitude, destination.latitude, destination.longitude),
     (
         <>
             <TouchableOpacity activeOpacity={0.5} onPress={() => { mapType === 'uncollected' ? setMapType('collected') : setMapType('uncollected'); changeMap()}} style={{position: 'absolute', top: '3%', zIndex: 50, justifyContent: 'center', alignItems: 'center',}}>
@@ -451,11 +498,20 @@ export default function LoadMap({ mapRef, page }) {
                     <MapViewDirections
                         origin={origin}
                         destination={destination}
-                        apikey={GOOGLE_API_KEY }
+                        apikey={GOOGLE_API_KEY}
                         strokeWidth={4}
                         strokeColor='#6644ff'
                     />
                 }
+
+                {routeCoordinates.length > 0 && (
+                    <Polyline
+                        coordinates={routeCoordinates}
+                        apikey={GOOGLE_API_KEY}
+                        strokeWidth={4}
+                        strokeColor="blue"
+                    />
+                )}
 
                 {(showFlag) &&
                     <>
