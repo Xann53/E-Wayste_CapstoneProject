@@ -1,4 +1,4 @@
-export default function Reload(userMun, mapType, setInfoID, userUploads, imageCol, setState, reloadType) {
+export default function Reload(userMun, mapType, setInfoID, userUploads, imageCol, setState, reloadType, page, userId) {
     const reload = async() => {
         let temp;
 
@@ -16,7 +16,7 @@ export default function Reload(userMun, mapType, setInfoID, userUploads, imageCo
         
         setState({ coordinates: [] });
         userUploads.map((pin) => {
-            if(pin.municipality === userMun) {
+            if(pin.municipality === userMun || (page === 'Resident' && pin.userId === userId)) {
                 let imageURL;
                 imageCol.map((url) => {
                     if(url.includes(pin.associatedImage)) {

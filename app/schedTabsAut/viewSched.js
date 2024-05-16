@@ -16,7 +16,7 @@ import * as Location from 'expo-location';
 import TruckList from '../../components/SchedTruckList';
 
 export default function ViewSchedDetails({ navigation, route }) {
-  const { scheduleId } = route.params;
+  let { scheduleId } = route.params;
   const [scheduleData, setScheduleData] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [updatedData, setUpdatedData] = useState({});
@@ -36,11 +36,8 @@ export default function ViewSchedDetails({ navigation, route }) {
   let routeLongitude, routeLatitude, routeLocName;
   const [route2, setRoute2] = useState({ coordinates: [] });
   const [routeCtr, setRouteCtr] = useState(0);
-  const [latitude, setLatitude] = useState();
-  const [longitude, setLongitude] = useState();
-  const [location, setLocation] = useState("");
   const schedRef = firebase.firestore().collection("schedule");
-  const [schedRoute, setSchedRoute] = useState();
+  const [schedRoute, setSchedRoute] = useState([]);
   let from, to;
 
   useEffect(() => {
@@ -49,13 +46,19 @@ export default function ViewSchedDetails({ navigation, route }) {
             id: doc.id,
             ...doc.data(),
         }));
-
         setSchedRoute(newData);
-
+        newData.map((data) => {
+          if(data.id === scheduleId && data.type === 'Collection') {
+            setRoute2({ coordinates: [] });
+            data.collectionRoute.coordinates.map((coord) => {
+              setRoute2((prev) => ({
+                coordinates: [...prev.coordinates, {name: coord.name, latitude: coord.latitude, longitude: coord.longitude, locationName: coord.locationName}]
+              }));
+            })
+          }
+        })
     };
-
     const unsubscribe = schedRef.onSnapshot(onSnapshot);
-
     return () => {
         unsubscribe();
     };
@@ -70,6 +73,32 @@ export default function ViewSchedDetails({ navigation, route }) {
       setUpdatedData(scheduleData);
     };
     fetchSchedule();
+
+    const onSnapshot = snapshot => {
+      const newData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+      }));
+      setSchedRoute(newData);
+      newData.map((data) => {
+        if(data.id === scheduleId) {
+          setScheduleData(data);
+          setUpdatedData(data);
+        }
+        if(data.id === scheduleId && data.type === 'Collection') {
+          setRoute2({ coordinates: [] });
+          data.collectionRoute.coordinates.map((coord) => {
+            setRoute2((prev) => ({
+              coordinates: [...prev.coordinates, {name: coord.name, latitude: coord.latitude, longitude: coord.longitude, locationName: coord.locationName}]
+            }));
+          })
+        }
+      })
+    };
+    const unsubscribe = schedRef.onSnapshot(onSnapshot);
+    return () => {
+        unsubscribe();
+    };
   }, [scheduleId]);
   
   const getGarbageCollectors = async () => {
@@ -110,9 +139,9 @@ export default function ViewSchedDetails({ navigation, route }) {
     setModalVisible(false);
   }
 
-  const handleSelectCollector = (collectorName) => {
-      setAssignedTruck(collectorName);
-      setUpdatedData({ ...updatedData, assignedTruck: collectorName })
+  const handleSelectCollector = (truckPlateNo) => {
+      setAssignedTruck(truckPlateNo);
+      setUpdatedData({ ...updatedData, assignedTruck: truckPlateNo })
       closeTruckModal();
   };
 
@@ -124,6 +153,7 @@ export default function ViewSchedDetails({ navigation, route }) {
     try {
       await updateDoc(doc(db, 'schedule', scheduleId), updatedData);
       alert('Schedule successfully updated!');
+      scheduleId = route.params;
       setIsEditable(false);
     } catch (error) {
       console.log('Error updating schedule:', error);
@@ -228,7 +258,6 @@ export default function ViewSchedDetails({ navigation, route }) {
                 finalAddress = finalAddress + address[0].region + ' region, ';
             if(address[0].country !== null)
                 finalAddress = finalAddress + address[0].country;
-            // setLocation(finalAddress);
             setRoute2({ 
                 coordinates: route2.coordinates.map((coordinate) => 
                     coordinate.name === name ? {
@@ -414,7 +443,7 @@ export default function ViewSchedDetails({ navigation, route }) {
                     <TextInput
                       style={[styles.fieldValue, focusedField === 'description' && styles.focusedField]}
                       value={updatedData.description}
-                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment')}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || updatedData.type === 'Event')}
                       multiline={true}
                       onFocus={() => handleFieldFocus('description')}
                       onBlur={handleFieldBlur}
@@ -468,13 +497,26 @@ export default function ViewSchedDetails({ navigation, route }) {
                           <>{CollectionRoute()}</> 
                         : 
                           <View style={{width: 310, gap: 10, paddingTop: 10, paddingLeft: 20}}>
-                                {scheduleData.collectionRoute.coordinates.map((coord) => {
+                              {schedRoute.map((sched) => {
+                                if(sched.id === scheduleId) {
+                                  return(
+                                    scheduleData.collectionRoute.coordinates.map((coord) => {
+                                      return(
+                                          <View key={coord.name} style={{backgroundColor: '#B8FEE6', borderRadius: 5, padding: 8}}>
+                                              <Text>{coord.locationName}</Text>
+                                          </View>
+                                      );
+                                    })
+                                  );
+                                }
+                              })}
+                                {/* {scheduleData.collectionRoute.coordinates.map((coord) => {
                                     return(
                                         <View key={coord.name} style={{backgroundColor: '#B8FEE6', borderRadius: 5, padding: 8}}>
                                             <Text>{coord.locationName}</Text>
                                         </View>
                                     );
-                                })}
+                                })} */}
                           </View>
                         }
                       </View>
@@ -693,13 +735,9 @@ export default function ViewSchedDetails({ navigation, route }) {
                                       }));
                                       setRouteCtr(routeCtr + 1);
                                   } else if(updatedData.type === 'Assignment') {
-                                      setLocation(routeLocName);
-                                      setLatitude(routeLatitude);
-                                      setLongitude(routeLongitude);
+                                      setUpdatedData((prev) => ({...prev, location: routeLocName, latitude: routeLatitude, longitude: routeLongitude}));
                                   } else if(updatedData.type === 'Event') {
-                                      setLocation(routeLocName);
-                                      setLatitude(routeLatitude);
-                                      setLongitude(routeLongitude);
+                                      setUpdatedData((prev) => ({...prev, location: routeLocName, latitude: routeLatitude, longitude: routeLongitude}));
                                   }
                               }
                               setAddNewLocation(false);

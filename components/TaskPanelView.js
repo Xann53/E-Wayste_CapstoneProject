@@ -13,7 +13,7 @@ import { returnKeyType } from 'deprecated-react-native-prop-types/DeprecatedText
 import PushNotif from './PushNotification';
 import RecordView from './CollectionRecords';
 
-export default function TaskView({ open, setViewTrack, setTaskToTrack }) {
+export default function TaskView({ open, setViewTrack, setTaskToTrack, page }) {
     const userRef = firebase.firestore().collection("users");
     const reportRef = firebase.firestore().collection("generalUsersReports");
     const schedRef = firebase.firestore().collection("schedule");
@@ -553,7 +553,7 @@ export default function TaskView({ open, setViewTrack, setTaskToTrack }) {
                                             <>
                                                 {allReports.map((report) => {
                                                     let imageURI;
-                                                    if(report.municipality === userMun) {
+                                                    if(report.municipality === userMun || (page === 'Resident' && report.userId === userID)) {
                                                         try {
                                                             const uri = images.find((link) => link.includes(report.associatedImage));
                                                             imageURI = uri;
