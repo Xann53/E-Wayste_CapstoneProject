@@ -74,7 +74,8 @@ export default function LoadMap({ mapRef, page }) {
     const [viewTrack, setViewTrack] = useState(false);
     const [taskToTrack, setTaskToTrack] = useState({});
 
-    let tempDistance = [];
+    let tempDistance = []; 
+    const[tempDistance2, setTempDistance2] = useState([]);
     const [viewDistance, setViewDistance] = useState();
     const [doneNotif, setDoneNotif] = useState([]);
 
@@ -322,6 +323,38 @@ export default function LoadMap({ mapRef, page }) {
         })}
     };
 
+    const calculateDistanceUser = (colLat, colLon) => {
+        try {
+            let tempD = [];
+            allActiveTask.map((task) => {
+                if(task.taskId === taskToTrack.taskId) {
+                    allActiveRoute.map((route) => {
+                        if(route.activeTaskId === task.id) {
+                            route.taskRoute.map((loc) => {
+                                const lat1 = colLat, lon1 = colLon, lat2 = loc.latitude, lon2 = loc.longitude, id = loc.name;
+                                const toRadian = angle => (Math.PI / 180) * angle;
+                                const R = 6371000; // Earth's radius in meters
+                                const dLat = toRadian(lat2 - lat1);
+                                const dLon = toRadian(lon2 - lon1);
+                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                          Math.cos(toRadian(lat1)) * Math.cos(toRadian(lat2)) *
+                                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                                const d = R * c;
+
+                                tempD.push({
+                                    id: id,
+                                    distance: d.toFixed(2)
+                                });
+                            })
+                        }
+                    })
+                }
+            })
+            return(tempD);
+        } catch(e) {return('');}
+    };
+
     const [routeCoordinates, setRouteCoordinates] = useState([]);
 
     const fetchRoute = async (originLat, originLon, destinationLat, destinationLon) => {
@@ -344,26 +377,26 @@ export default function LoadMap({ mapRef, page }) {
         let lat = 0, lng = 0;
       
         while (index < len) {
-          let b, shift = 0, result = 0;
-          do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-          } while (b >= 0x20);
-          let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-          lat += dlat;
-      
-          shift = 0;
-          result = 0;
-          do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-          } while (b >= 0x20);
-          let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-          lng += dlng;
-      
-          points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+            let b, shift = 0, result = 0;
+            do {
+                b = encoded.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+        
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charCodeAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+        
+            points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
         }
         return points;
       };
@@ -462,6 +495,13 @@ export default function LoadMap({ mapRef, page }) {
                 }}
                 customMapStyle={mapType === 'uncollected' ? mapStyle : mapStyle2}
                 showsUserLocation={page === 'Resident' ? true : false}
+                showsMyLocationButton={false}
+                onUserLocationChange={(location) => {
+                    const lat = location.nativeEvent.coordinate.latitude;
+                    const lon = location.nativeEvent.coordinate.longitude;
+                    const data = calculateDistanceUser(lat, lon);
+                    setTempDistance2(data);
+                }}
             >
 {/* ========================================================================================================================================================================================================================================================================================================================================================================================================================================== */}
                 {showRepPin && <RepMarker mapType={mapType} state={state} setInfoID={setInfoID} setInfoImage={setInfoImage} viewTrack={viewTrack} taskToTrack={taskToTrack} />}
@@ -648,12 +688,19 @@ export default function LoadMap({ mapRef, page }) {
                                                         >
                                                             {viewDistance === loc.name &&
                                                                 tempDistance.map((data) => {
+                                                                    let distanceUsertoPin;
+                                                                    tempDistance2.map((data2) => {
+                                                                        if(data2.id === loc.name) {
+                                                                            distanceUsertoPin = data2.distance;
+                                                                        }
+                                                                    })
                                                                     if(data.id === loc.name) {
                                                                         return (
                                                                             // <Text key={loc.name} style={{fontWeight: 500, fontSize: 12, color: '#F76811', transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 20}}>{data.distance} km away</Text>
                                                                             <View key={loc.name} style={{transform: [{translateY: 27}], zIndex: 99, backgroundColor: 'white', padding: 2, paddingHorizontal: 5, borderRadius: 10, alignItems: 'center', maxWidth: 300}}>
                                                                                 <Text numberOfLines={1} style={{fontWeight: 500, fontSize: 12, color: 'green'}}>{loc.locationName}</Text>
-                                                                                <Text style={{fontWeight: 500, fontSize: 12, color: '#F76811'}}>{data.distance} km away</Text>
+                                                                                <Text style={{fontWeight: 500, fontSize: 12, color: '#F76811'}}>Garbage Truck is {data.distance} km away</Text>
+                                                                                <Text style={{fontWeight: 500, fontSize: 12, color: '#49B28E'}}>You are {distanceUsertoPin} m away</Text>
                                                                             </View>
                                                                         );
                                                                     }

@@ -181,7 +181,6 @@ export default function Registration3({ navigation }) {
         const imageName = imageURI.substring(imageURI.lastIndexOf('/') + 1);
         const finalImageName = uuid.v1() + imageName;
         const imageDestination = 'userWorkID/' + finalImageName;
-        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss a');
         
         const response = await fetch(imageURI);
         const blob = await response.blob();
@@ -201,8 +200,7 @@ export default function Registration3({ navigation }) {
             municipality: municipalitiesData.find(m => m.code === municipality)?.name || "", 
             barangay: barangaysData.find(b => b.code === barangay)?.name || "", 
             contactNo: contactNo,
-            associatedImage: finalImageName,
-            dateTime: fullDateTime
+            associatedImage: finalImageName
         });
         await AsyncStorage.clear();
         setImage(null);

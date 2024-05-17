@@ -21,8 +21,6 @@ export default function ScheduleAut({ navigation }) {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [userMunicipality, setUserMunicipality] = useState('');
 
-  const currentDateForTask = new Date().toISOString().substring(0, 10); 
-
   useEffect(() => {
     const fetchMunicipality = async () => {
       try {
@@ -221,7 +219,7 @@ export default function ScheduleAut({ navigation }) {
               key={index} 
               onPress={() => navigation.navigate('viewSched', { scheduleId: event.id })} 
             > 
-              <View style={{ width: '100%', flexDirection: 'row' }}>
+              <View style={{ width: '100%', flexDirection: 'row' }}> 
                 <View 
                   style={{ 
                     width: 80, 
@@ -229,9 +227,7 @@ export default function ScheduleAut({ navigation }) {
                     borderRadius: 20, 
                     backgroundColor: getEventBackgroundColor(event), 
                     justifyContent: 'center', 
-                    alignItems: 'center',
-                    borderWidth: event.selectedDate === currentDateForTask ? 2.5 : 1,
-                    borderColor: event.selectedDate === currentDateForTask ? '#DFBD08' : 'black'
+                    alignItems: 'center', 
                   }} 
                 > 
                   <Text style={{ fontSize: 30, fontWeight: 800 }}> 
@@ -247,9 +243,7 @@ export default function ScheduleAut({ navigation }) {
                     backgroundColor: getEventBackgroundColor(event), 
                     right: 0, 
                     justifyContent: 'center', 
-                    paddingHorizontal: 15,
-                    borderWidth: event.selectedDate === currentDateForTask ? 2.5 : 1,
-                    borderColor: event.selectedDate === currentDateForTask ? '#DFBD08' : 'black'
+                    paddingHorizontal: 15, 
                   }} 
                 > 
                   <Text style={{ fontSize: 18, fontWeight: 800 }}>{event.type}</Text> 
@@ -298,7 +292,10 @@ export default function ScheduleAut({ navigation }) {
     ); 
   } 
   function getEventBackgroundColor(event) { 
-    if (event.type === 'Collection') { 
+    const currentDate = new Date().toISOString().substring(0, 10); 
+    if (event.selectedDate === currentDate) { 
+      return 'rgba(255, 203, 60, 0.5)'; 
+    } else if (event.type === 'Collection') { 
       return 'rgba(255, 203, 60, 0.5)'; 
     } else if (event.type === 'Event') { 
       return 'rgba(72, 229, 239, 0.5)'; 

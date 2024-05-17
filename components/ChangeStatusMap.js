@@ -5,12 +5,10 @@ import PushNotif from './PushNotification';
 export default function ChangeStatus(users, userUploads, id, changeType) {
     const changeToCollected = async(id) => {
         try {
-            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:MM:SS');
             const docRef = firebase.firestore().collection("generalUsersReports").doc(id);
-            await docRef.update(
-                {status: 'collected'},
-                {dateTimeCollected: fullDateTime}
-            );
+            await docRef.update({
+                status: 'collected',
+            });
 
             let userFullName, location;
             userUploads.map((temp) => {
@@ -26,8 +24,8 @@ export default function ChangeStatus(users, userUploads, id, changeType) {
 
             const title = 'REPORTED GARBAGE COLLECTED - LGU';
             const body = 'Garbage reported by ' + userFullName + ' at location (' + location + ') has been collected';
-            const fullDateTime2 = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
-            PushNotif(title, body, fullDateTime2);
+            const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+            PushNotif(title, body, fullDateTime);
         } catch(e) {
             console.error(e);
         }
@@ -36,10 +34,9 @@ export default function ChangeStatus(users, userUploads, id, changeType) {
     const changeToUncollected = async(id) => {
         try {
             const docRef = firebase.firestore().collection("generalUsersReports").doc(id);
-            await docRef.update(
-                {status: 'uncollected'},
-                {dateTimeCollected: ''}
-            );
+            await docRef.update({
+                status: 'uncollected',
+            });
         } catch(e) {
             console.error(e);
         }

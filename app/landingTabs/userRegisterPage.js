@@ -137,8 +137,6 @@ export default function Registration1({ navigation, clearForm }) {
     };
     
     const createUser = async (accountType, firstName, lastName, username, email) => {
-        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss a');
-
         const account = await addDoc(usersCollection, {
             accountType: accountType,
             firstName: firstName,

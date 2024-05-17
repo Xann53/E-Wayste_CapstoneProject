@@ -423,11 +423,11 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                 <>
                     <Modal animationType='fade' visible={true} transparent={true} statusBarTranslucent={true}>
                         <View style={{display: 'flex', flexDirection: 'row', width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.65)'}}>
-                            <View style={{display: 'flex', backgroundColor: 'white', height: selected.id === undefined ? '40%' : '47%', width: '90%', borderRadius: 15, padding: 10}}>
+                            <View style={{display: 'flex', flex: 1, backgroundColor: 'white', height: selected.id === undefined ? '40%' : '47%', borderRadius: 15, padding: 10, marginHorizontal: 50}}>
                                 <View style={{display: 'flex', flexDirection: 'row', width: '100%'}}>
                                     <View style={{display: 'flex', flex: 1}} />
                                     <View style={{display: 'flex', flex: 10, flexDirection: 'row', justifyContent: 'center'}}>
-                                        <Text style={{fontSize: 16, fontWeight: 900, letterSpacing: 1, color: 'green'}}>{!openAttendance ? 'SHIFT MANAGEMENT' : 'ATTENDANCE'}</Text>
+                                        <Text style={{fontSize: 18, fontWeight: 900, letterSpacing: 1, color: 'green'}}>{!openAttendance ? 'SHIFT MANAGEMENT' : 'ATTENDANCE'}</Text>
                                     </View>
                                     <View style={{display: 'flex', flex: 1, flexDirection: 'row', justifyContent: 'flex-end'}}>
                                         <TouchableOpacity onPress={() => {open(false)}}>
@@ -440,13 +440,13 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                 {!openAttendance &&
                                     <View style={{display: 'flex', flexDirection: 'row', width: '100%', marginTop: 15, justifyContent: 'space-evenly', gap: 5, paddingHorizontal: 15}}>
                                         <TouchableOpacity onPress={() => {setFilter('All'); changeFilter('All')}} activeOpacity={0.7} disabled={filter === 'All' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'All' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
-                                                <Text style={{fontSize: 13}}>All</Text>
+                                                <Text>All</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity onPress={() => {setFilter('Driver'); changeFilter('Driver')}} activeOpacity={0.7} disabled={filter === 'Driver' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'Driver' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
-                                                <Text style={{fontSize: 13}}>Driver</Text>
+                                                <Text>Driver</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity onPress={() => {setFilter('Collector'); changeFilter('Collector')}} activeOpacity={0.7} disabled={filter === 'Collector' ? true : false} style={{display: 'flex', flex: 1, padding: 5, alignItems: 'center', borderRadius: 100, backgroundColor: filter === 'Collector' ? 'rgb(242,190,45)' : 'white', shadowColor: 'black', shadowOpacity: 1, elevation: 2}}>
-                                                <Text style={{fontSize: 13}}>Collector</Text>
+                                                <Text>Collector</Text>
                                         </TouchableOpacity>
                                     </View>
                                 }
@@ -459,11 +459,11 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                                         <TouchableOpacity key={truck.id} onPress={() => { selected.id !== truck.id ? setSelected(truck) : setSelected([]); loadCurrentShift()}}>
                                                             <View style={{display: 'flex', flexDirection: 'row', width: '100%', padding: 10, backgroundColor: selected.id === truck.id ? 'rgba(126,185,73,1)' : 'white', borderRadius: 5}}>
                                                                 <View style={{display: 'flex', flex: 1.2, justifyContent: 'center', overflow: 'hidden'}}>
-                                                                    <Text style={{fontWeight: 800, fontSize: 15, color: selected.id === truck.id ? 'white' : '#B47707'}}>{truck.plateNo}</Text>
+                                                                    <Text style={{fontWeight: 800, fontSize: 16, color: selected.id === truck.id ? 'white' : '#B47707'}}>{truck.plateNo}</Text>
                                                                 </View>
                                                                 <View style={{display: 'flex', flex: 2, justifyContent: 'center', alignItems: 'center', overflow: 'hidden'}}>
                                                                     {selected.id === truck.id &&
-                                                                        <Text style={{fontWeight: 800, fontSize: 12, transform: [{translateX: -15}], color: 'rgb(135,255,116)'}}>{userIDState === truck.driverID ? 'DRIVER' : 'COLLECTOR'}</Text>
+                                                                        <Text style={{fontWeight: 800, fontSize: 14, transform: [{translateX: -15}], color: 'rgb(135,255,116)'}}>{userIDState === truck.driverID ? 'DRIVER' : 'COLLECTOR'}</Text>
                                                                     }
                                                                 </View>
                                                                 <View style={{display: 'flex', flex: 0.5, alignItems: 'flex-end', overflow: 'hidden'}}>
@@ -496,7 +496,7 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                                                     return(
                                                                         <View key={member.id} style={{display: 'flex', flexDirection: 'row', width: '100%', padding: 10, backgroundColor: member.status !== 'Present' ? 'white' : 'rgba(126,185,73,1)', borderRadius: 5}}>
                                                                             <View style={{display: 'flex', flex: 1, justifyContent: 'center', overflow: 'hidden'}}>
-                                                                                <Text style={{fontWeight: 800, fontSize: 15, color: member.status !== 'Present' ? '#B47707' : 'white'}}>{name}</Text>
+                                                                                <Text style={{fontWeight: 800, fontSize: 16, color: member.status !== 'Present' ? '#B47707' : 'white'}}>{name}</Text>
                                                                             </View>
                                                                             <View style={{display: 'flex', flex: 0.6, alignItems: 'flex-end', overflow: 'hidden'}}>
                                                                                 {member.status !== 'Present' ?
@@ -545,18 +545,18 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                                                         })
                                                                     }
                                                                 })}
-                                                                <TouchableOpacity disabled={(pending.length !== 0 || joined) ? true : false} onPress={() => {setActiveByUser(selected); createLocData(selected.id); loadCurrentShift()}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: '10%', marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                <TouchableOpacity disabled={(pending.length !== 0 || joined) ? true : false} onPress={() => {setActiveByUser(selected); createLocData(selected.id); loadCurrentShift()}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 50, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
                                                                     {(pending.length !== 0 || joined) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
-                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>START COLLECTION</Text>
+                                                                    <Text style={{color: 'white', fontWeight: 900}}>START COLLECTION</Text>
                                                                 </TouchableOpacity>
                                                             </>
                                                             :
                                                             <>
-                                                                <TouchableOpacity onPress={() => {setActiveByUser([]); deleteLocData(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: '2%', marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 11}}>END COLLECTION</Text>
+                                                                <TouchableOpacity onPress={() => {setActiveByUser([]); deleteLocData(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 5, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>END COLLECTION</Text>
                                                                 </TouchableOpacity>
-                                                                <TouchableOpacity onPress={() => {setOpenAttendance(true)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: '2%', marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'orange', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 11}}>VIEW ATTENDEES</Text>
+                                                                <TouchableOpacity onPress={() => {setOpenAttendance(true)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 5, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'orange', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>VIEW ATTENDEES</Text>
                                                                 </TouchableOpacity>
                                                             </>
                                                         }
@@ -597,14 +597,14 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                                             }
                                                         })}
                                                         {(pending.truckId === selected.id || joined) ?
-                                                            <TouchableOpacity onPress={() => {departShift(selected.id); departPending(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: '9%', marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                                {joined && <Text style={{color: 'white', fontWeight: 900, fontSize: 11}}>DEPART COLLECTION</Text>}
-                                                                {pending.truckId === selected.id && <Text style={{color: 'white', fontWeight: 900, fontSize: 11}}>DEPART COLLECTION <Text style={{fontWeight: 600}}>[PENDING]</Text></Text>}
+                                                            <TouchableOpacity onPress={() => {departShift(selected.id); departPending(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 30, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                {joined && <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>DEPART COLLECTION</Text>}
+                                                                {pending.truckId === selected.id && <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>DEPART COLLECTION <Text style={{fontWeight: 600}}>[PENDING]</Text></Text>}
                                                             </TouchableOpacity>
                                                             :
-                                                            <TouchableOpacity disabled={(!isActiveByOther || activeByUser.driverID === userIDState || pending.length !== 0 || joined2) ? true : false} onPress={() => {joinShift(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: '10%', marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgb(242,190,45)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                            <TouchableOpacity disabled={(!isActiveByOther || activeByUser.driverID === userIDState || pending.length !== 0 || joined2) ? true : false} onPress={() => {joinShift(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 50, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgb(242,190,45)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
                                                                 {(!isActiveByOther || activeByUser.driverID === userIDState || pending.length !== 0 || joined2) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
-                                                                <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>JOIN COLLECTION</Text>
+                                                                <Text style={{color: 'white', fontWeight: 900}}>JOIN COLLECTION</Text>
                                                             </TouchableOpacity>
                                                         }
                                                     </>
@@ -615,8 +615,8 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                     :
                                     <>
                                         <View style={{display: 'flex', flexDirection: 'row', flex: 0.8}}>
-                                            <TouchableOpacity onPress={() => {setOpenAttendance(false)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: '25%', marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgb(242,190,45)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                <Text style={{color: 'white', fontWeight: 900, fontSize: 13}}>BACK</Text>
+                                            <TouchableOpacity onPress={() => {setOpenAttendance(false)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 80, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgb(242,190,45)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                <Text style={{color: 'white', fontWeight: 900}}>BACK</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </>

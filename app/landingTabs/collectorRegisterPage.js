@@ -191,7 +191,7 @@ export default function Registration2({ navigation }) {
         const imageName = imageURI.substring(imageURI.lastIndexOf('/') + 1);
         const finalImageName = uuid.v1() + imageName;
         const imageDestination = 'userWorkID/' + finalImageName;
-        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss a');
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss');
         
         let proceed = false;
         users.map((user) => {

@@ -45,7 +45,6 @@ export default function Newsfeed({ navigation }) {
     const reportFeedRef = firebase.firestore().collection("posts");
     const imageColRef = ref(storage, "postImages/");
     const imageFeedColRef = ref(storage, "FeedpostImages/");
-
     const [userMunicipality, setUserMunicipality] = useState('');
 
     useEffect(() => {
@@ -75,7 +74,7 @@ export default function Newsfeed({ navigation }) {
         setModalVisible(!isModalVisible);
         setSelectedImage('');
     };
-
+    
     const fullDateTime = moment()
         .utcOffset('+08:00')
         .format('YYYY/MM/DD hh:mm:ss a');
@@ -192,7 +191,6 @@ export default function Newsfeed({ navigation }) {
         }
     };
 
-
     const updateLikesInDatabase = async (postId, userId, isLiked) => {
         try {
             const likesRef = collection(db, 'likes');
@@ -235,6 +233,7 @@ export default function Newsfeed({ navigation }) {
     
                 // Continue with the image upload logic
                 userId = await fetchUserId();
+    
                 if (!userId) {
                     alert('Error fetching user ID.');
                     return;
@@ -260,7 +259,7 @@ export default function Newsfeed({ navigation }) {
                 userId,
                 timestamp: fullDateTime,
             };
-
+    
             // Continue with the post creation logic, including imageUrl or without it
             const postRef = await addDoc(collection(db, 'posts'), postData);
     
@@ -326,8 +325,7 @@ export default function Newsfeed({ navigation }) {
                 querySnapshot => {
                     const uploads = []
                     querySnapshot.forEach((doc) => {
-                       const {associatedImage, dateTime, description, municipality, location, status, userId} = doc.data();
-
+                        const {associatedImage, dateTime, description, municipality, location, status, userId} = doc.data();
                         uploads.push({
                             id: doc.id,
                             associatedImage,
@@ -455,6 +453,7 @@ export default function Newsfeed({ navigation }) {
                 }
         
                 const user = auth.currentUser;
+        
                 if (!user) {
                     console.error('User not authenticated.');
                     return;
@@ -702,6 +701,7 @@ export default function Newsfeed({ navigation }) {
               }
             }
     
+
     function ViewAllContent() {
         const currentDate = new Date().toISOString().split('T')[0];   
         const filteredUploads = userUploads.filter(upload => upload.municipality === userMunicipality);   
@@ -790,7 +790,6 @@ export default function Newsfeed({ navigation }) {
                                     <TouchableOpacity activeOpacity={0.5} onPress={handleEventsPress}>
                                         <View style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: isEventsPressed ? 'rgb(179, 229, 94)' : 'white' }}>
                                             <Text style={{ fontWeight: 700, fontSize: 14, color: 'rgb(113, 112, 108)' }}>Events</Text>
-
                                         </View>
                                     </TouchableOpacity>
                                 </View>
