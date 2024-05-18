@@ -419,18 +419,19 @@ export default function ViewSchedDetails({ navigation, route }) {
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldName}>Type</Text>
                     {isEditable ? (
-                      <View style={styles.pickerContainer}>
-                        <Picker
-                          selectedValue={updatedData.type}
-                          onValueChange={(value) => setUpdatedData({ ...updatedData, type: value })}
-                          style={styles.picker}
-                          enabled={isEditable}
-                        >
-                          <Picker.Item label="Collection" value="Collection" />
-                          <Picker.Item label="Event" value="Event" />
-                          <Picker.Item label="Assignment" value="Assignment" />
-                        </Picker>
-                      </View>
+                      // <View style={styles.pickerContainer}>
+                      //   <Picker
+                      //     selectedValue={updatedData.type}
+                      //     onValueChange={(value) => setUpdatedData({ ...updatedData, type: value })}
+                      //     style={styles.picker}
+                      //     enabled={isEditable}
+                      //   >
+                      //     <Picker.Item label="Collection" value="Collection" />
+                      //     <Picker.Item label="Event" value="Event" />
+                      //     <Picker.Item label="Assignment" value="Assignment" />
+                      //   </Picker>
+                      // </View>
+                      <Text style={styles.fieldValue}>{updatedData.type}</Text>
                     ) : (
                       <Text style={styles.fieldValue}>{updatedData.type}</Text>
                     )}
@@ -451,7 +452,20 @@ export default function ViewSchedDetails({ navigation, route }) {
                     />
                   </View>
                 )}
-
+                {scheduleData.title && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldName}>Title</Text>
+                    <TextInput
+                      style={[styles.fieldValue, focusedField === 'title' && styles.focusedField]}
+                      value={updatedData.title}
+                      editable={isEditable && (updatedData.type === 'Collection' || updatedData.type === 'Assignment' || updatedData.type === 'Event')}
+                      multiline={true}
+                      onFocus={() => handleFieldFocus('title')}
+                      onBlur={handleFieldBlur}
+                      onChangeText={(text) => setUpdatedData({ ...updatedData, description: text })}
+                    />
+                  </View>
+                )}
                 {(updatedData.type === 'Collection' || updatedData.type === 'Assignment') &&
                   <>
                     <View style={styles.fieldContainer}>

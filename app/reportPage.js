@@ -126,8 +126,8 @@ export default function Report({ navigation }) {
             uploadCollection.push(valueToPush);
             uploadCollection.sort((a, b) => {
                 let fa = a.dateTime, fb = b.dateTime;
-                if (fa < fb) {return -1;}
-                if (fa > fb) {return 1;}
+                if (fa > fb) {return -1;}
+                if (fa < fb) {return 1;}
                 return 0;
             });
         })
