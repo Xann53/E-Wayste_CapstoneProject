@@ -115,8 +115,8 @@ export default function ManagePageStat({ navData, NavFunction, setColNoFunction,
         useEffect(() => {
             let ctr = 0;
             try {
-                pendingUser.map((user) => {
-                    if(user.accountType === 'Garbage Collector' && user.lguCode === lguCode) {
+                users.map((user) => {
+                    if(user.accountType === 'Pending' && user.lguCode === lguCode) {
                         ctr++;
                     }
                 });

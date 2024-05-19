@@ -4,6 +4,7 @@ import { SelectList } from "react-native-dropdown-select-list";
 import CheckBox from "../../components/CheckBox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import moment from "moment/moment";
 
 import { db, auth } from "../../firebase_config";
 import { collection, addDoc, getDocs } from 'firebase/firestore';
@@ -137,6 +138,7 @@ export default function Registration1({ navigation, clearForm }) {
     };
     
     const createUser = async (accountType, firstName, lastName, username, email) => {
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
         const account = await addDoc(usersCollection, {
             accountType: accountType,
             firstName: firstName,
@@ -146,7 +148,8 @@ export default function Registration1({ navigation, clearForm }) {
             province: provincesData.find(p => p.code === province)?.name || "", // Get the name corresponding to the selected province code
             municipality: municipalitiesData.find(m => m.code === municipality)?.name || "", // Get the name corresponding to the selected municipality code
             barangay: barangaysData.find(b => b.code === barangay)?.name || "", // Get the name corresponding to the selected barangay code
-            contactNo: contactNo
+            contactNo: contactNo,
+            dateTime: fullDateTime
         });
         await AsyncStorage.clear();
         await signOut(auth);

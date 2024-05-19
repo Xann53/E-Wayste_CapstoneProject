@@ -15,6 +15,7 @@ import AddTruck from "../components/AddTruckForm";
 import DisplayWorkID from "../components/ViewID";
 import DisplayUserAcc from "../components/ViewUserAccForm";
 import TruckInfo from "../components/ViewTruckInfo";
+import AddCol from "../components/AddColAccount";
 
 export default function Manage({ navigation }) {
     const isFocused = useIsFocused();
@@ -24,6 +25,7 @@ export default function Manage({ navigation }) {
     const [viewAcc, setViewAcc] = useState();
     const [image, setImage] = useState();
     const [viewTruck, setViewTruck] = useState();
+    const [openAddCol, setOpenAddCol] = useState(false);
 
     const [colNo, setColNo] = useState(0);
     const [pendingNo, setPendingNo] = useState(0);
@@ -129,10 +131,20 @@ export default function Manage({ navigation }) {
                     </TouchableOpacity>
                 </View>
             }
+            {navData === 'Collectors' &&
+                <View style={{ position: 'absolute', right: 20, bottom: 70, zIndex: 1, height: 60, width: 60, borderRadius: 100, backgroundColor: '#ffffff', borderWidth: 1, borderColor: 'rgb(81,175,91)', overflow: 'hidden' }}>
+                    <TouchableOpacity activeOpacity={0.5} onPress={() => {setOpenAddCol(true)}}>
+                        <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                            <Ionicons name='add-circle' style={{ fontSize: 60, color: 'rgb(81,175,91)', top: -3, right: -0.9 }} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            }
             {openAddTruck}
             {viewAcc !== undefined && <DisplayUserAcc accID={viewAcc} setViewAccFunction={setViewAccFunction} setImageFunction={setImageFunction} />}
             {image !== undefined && <DisplayWorkID imageLink={image} setImageFunction={setImageFunction} />}
             {viewTruck !== undefined && <TruckInfo truckID={viewTruck} setViewTruckFunction={setViewTruckFunction} currentPage={'Manage Page'} />}
+            {openAddCol && <AddCol show={setOpenAddCol} />}
         </>
     );
 }

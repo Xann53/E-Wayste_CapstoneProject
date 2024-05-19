@@ -87,63 +87,84 @@ export default function DisplayUserAcc({ accID, setViewAccFunction, setImageFunc
 
                         <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
                             <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
-                                <Text style={{fontSize: 15, fontWeight: 600}}>First Name:</Text>
+                                <Text style={{fontSize: 14, fontWeight: 600}}>First Name:</Text>
                             </View>
                             <View style={{flex: 2, justifyContent: 'center'}}>
                                 <TextInput
                                     value={user.firstName}
                                     editable={false}
-                                    style={{borderRadius: 5, fontSize: 15, fontWeight: '700', width: '100%', padding: 5, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: 'black'}}
+                                    style={{borderRadius: 5, fontSize: 13, fontWeight: '700', width: '100%', padding: 3, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: '#1D4F0F'}}
                                 />
                             </View>
                         </View>
 
                         <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
                             <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
-                                <Text style={{fontSize: 15, fontWeight: 600}}>Last Name:</Text>
+                                <Text style={{fontSize: 14, fontWeight: 600}}>Last Name:</Text>
                             </View>
                             <View style={{flex: 2, justifyContent: 'center'}}>
                                 <TextInput
                                     value={user.lastName}
                                     editable={false}
-                                    style={{borderRadius: 5, fontSize: 15, fontWeight: '700', width: '100%', padding: 5, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: 'black'}}
+                                    style={{borderRadius: 5, fontSize: 13, fontWeight: '700', width: '100%', padding: 3, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: '#1D4F0F'}}
                                 />
                             </View>
                         </View>
 
                         <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
                             <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
-                                <Text style={{fontSize: 15, fontWeight: 600}}>Contact No:</Text>
+                                <Text style={{fontSize: 14, fontWeight: 600}}>Username:</Text>
+                            </View>
+                            <View style={{flex: 2, justifyContent: 'center'}}>
+                                <TextInput
+                                    value={user.username}
+                                    editable={false}
+                                    style={{borderRadius: 5, fontSize: 13, fontWeight: '700', width: '100%', padding: 3, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: '#1D4F0F'}}
+                                />
+                            </View>
+                        </View>
+
+                        {user.accountType === 'Pending' &&
+                            <>
+                                <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
+                                    <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
+                                        <Text style={{fontSize: 14, fontWeight: 600}}>Temp. Password:</Text>
+                                    </View>
+                                    <View style={{flex: 2, justifyContent: 'center'}}>
+                                        <TextInput
+                                            value={user.password}
+                                            editable={false}
+                                            style={{borderRadius: 5, fontSize: 13, fontWeight: '700', width: '100%', padding: 3, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: '#1D4F0F'}}
+                                        />
+                                    </View>
+                                </View>
+                            </>
+                        }
+
+                        <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
+                            <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
+                                <Text style={{fontSize: 14, fontWeight: 600}}>Contact No:</Text>
                             </View>
                             <View style={{flex: 2, justifyContent: 'center'}}>
                                 <TextInput
                                     value={user.contactNo}
                                     editable={false}
-                                    style={{borderRadius: 5, fontSize: 15, fontWeight: '700', width: '100%', padding: 5, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: 'black'}}
+                                    style={{borderRadius: 5, fontSize: 13, fontWeight: '700', width: '100%', padding: 3, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: '#1D4F0F'}}
                                 />
                             </View>
                         </View>
 
-                        <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
-                            <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
-                                <Text style={{fontSize: 15, fontWeight: 600}}>Email:</Text>
-                            </View>
-                            <View style={{flex: 2, justifyContent: 'center'}}>
-                                <TextInput
-                                    value={user.email}
-                                    editable={false}
-                                    style={{borderRadius: 5, fontSize: 15, fontWeight: '700', width: '100%', padding: 5, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: 'black'}}
-                                />
-                            </View>
-                        </View>
+                        {user.accountType !== 'Pending' &&
+                            <>
+                                <Text>ID Picture</Text>
 
-                        <Text>ID Picture</Text>
-
-                        <TouchableOpacity activeOpacity={0.7} onPress={() => {setImageFunction(user.associatedImage)}}>
-                            <View style={{width: '100%', height: 250, backgroundColor: '#D3D3D3', borderRadius: 20, borderWidth: 1, overflow: 'hidden'}}>
-                                {imageURI && <Image source={{ uri: imageURI }} style={{ display: 'flex', flex: 1, width: '100%', resizeMode: 'contain', zIndex: 40 }} />}
-                            </View>
-                        </TouchableOpacity>
+                                <TouchableOpacity activeOpacity={0.7} onPress={() => {setImageFunction(user.associatedImage)}}>
+                                    <View style={{width: '100%', height: 250, backgroundColor: '#D3D3D3', borderRadius: 20, borderWidth: 1, overflow: 'hidden'}}>
+                                        {imageURI && <Image source={{ uri: imageURI }} style={{ display: 'flex', flex: 1, width: '100%', resizeMode: 'contain', zIndex: 40 }} />}
+                                    </View>
+                                </TouchableOpacity>
+                            </>
+                        }
 
                     </View>
                 );
@@ -169,7 +190,7 @@ export default function DisplayUserAcc({ accID, setViewAccFunction, setImageFunc
         <>
             <Modal animationType='fade' transparent={true} statusBarTranslucent={true}>
                 <View style={{position: 'absolute', display: 'flex', flex: 1, width: '100%', height: '100%', padding: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 5}}>
-                    <Text style={{fontSize: 25, fontWeight: 900, color: 'green', marginTop: -100, zIndex: 25, transform:[{translateY: 39}]}}>USER INFORMATION</Text>
+                    <Text style={{fontSize: 23, fontWeight: 900, color: 'green', marginTop: -100, zIndex: 25, transform:[{translateY: 39}]}}>USER INFORMATION</Text>
                     <View style={{display: 'flex', width: '100%', padding: 10, backgroundColor: 'white', borderRadius: 10, zIndex: 20}}>
                         <View style={{width: '100%', alignItems: 'flex-end', marginBottom: 20}}>
                             <TouchableOpacity onPress={() => {setViewAccFunction()}} style={{zIndex: 15}}>

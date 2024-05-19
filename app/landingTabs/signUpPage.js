@@ -99,7 +99,7 @@ export default function SignUp({ navigation }) {
     const Type = [
         { key: "Residents / General Users", value: "Residents / General Users" },
         { key: "LGU / Waste Management Head", value: "LGU / Waste Management Head" },
-        { key: "Garbage Collector", value: "Garbage Collector" },
+        // { key: "Garbage Collector", value: "Garbage Collector" },
     ];
 
     return (

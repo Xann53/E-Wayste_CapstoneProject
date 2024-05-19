@@ -277,8 +277,6 @@ export default function Notifications({ navigation }) {
                     }
                 })
 
-                console.log(notif);
-
                 if (currentDate === notif.selectedDate && displayNotifType === 'Reminder') {
                     if(notif.notifType === 'Schedule' && notif.type === 'Collection') {
                         temp.push(
@@ -308,7 +306,7 @@ export default function Notifications({ navigation }) {
                                 </View>
                                 <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
                                     <View style={{width: '90%'}}>
-                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title}{notif.type}</Text>
+                                        <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.title} {notif.type}</Text>
                                         <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 13, fontWeight: 600, marginTop: -1}}>Event scheduled by {username}</Text>
                                         <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 13}}>{notif.description}</Text>
                                         <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
@@ -318,27 +316,50 @@ export default function Notifications({ navigation }) {
                         );
                     }
                     if(notif.notifType === 'Schedule' && notif.type === 'Assignment') {
-                        users.map((user) => {
-                            if(user.username.toLowerCase() === notif.assignCollector.toLowerCase() && (user.username.toLowerCase() === currentUser.toLowerCase() || notif.userID === currentId)) {
-                                temp.push(
-                                    <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
-                                        <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
-                                            <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
-                                                <Ionicons name='person' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
-                                            </View>
-                                        </View>
-                                        <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
-                                            <View style={{width: '90%'}}>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 13, fontWeight: 600, marginTop: -1}}>Assignment for {user.username} by {username}</Text>
-                                                <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 13}}>{notif.description}</Text>
-                                                <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
-                                            </View>
-                                        </View>
-                                    </View>
-                                );
+                        let plateNo;
+                        let driver;
+                        let driverUName;
+                        let members = [];
+                        let creator;
+                        let creatorUName;
+                        allTruck.map((truck) => {
+                            if(truck.plateNo === notif.assignedTruck) {
+                                plateNo = truck.plateNo;
+                                driver = truck.driverID;
+                                truck.members.collector.map((member) => {
+                                    members.push(member.id);
+                                })
+                                creator = notif.userID;
                             }
                         })
+                        users.map((user) => {
+                            if(user.id === driver) {
+                                driverUName = user.username;
+                            }
+                            if(user.id === creator) {
+                                creatorUName = user.username;
+                            }
+                        })
+                        
+                        if(notif.userID === currentId || (plateNo === notif.assignedTruck && driverUName === currentUser)) {
+                            temp.push(
+                                <View style={{ display: 'flex', flex: 1, width: '100%', height: 90, backgroundColor: 'rgb(231, 247, 233)', borderRadius: 15, overflow: 'hidden', flexDirection: 'row' }}>
+                                    <View style={{ height: '100%', width: 70, backgroundColor: 'rgb(189,228,124)', justifyContent: 'center', alignItems: 'center' }}>
+                                        <View style={{width: 50, height: 50, borderRadius: 100, backgroundColor: 'rgb(81,175,91)', justifyContent: 'center', alignItems: 'center'}}>
+                                            <Ionicons name='person' style={{ fontSize: 35, color: 'rgb(13,86,1)' }} />
+                                        </View>
+                                    </View>
+                                    <View style={{display: 'flex', flex: 1, marginLeft: 10, marginTop: 7}}>
+                                        <View style={{width: '90%'}}>
+                                            <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 16, fontWeight: 900, color: 'rgb(13,86,1)'}}>{notif.type}</Text>
+                                            <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 13, fontWeight: 600, marginTop: -1}}>Assignment for {driverUName} by {creatorUName}</Text>
+                                            <Text ellipsizeMode='tail' numberOfLines={1} style={{fontSize: 13}}>{notif.description}</Text>
+                                            <Text style={{fontSize: 12, fontWeight: 700}}>Start Time: {notif.startTime}</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            );
+                        }
                     }
                 }
 

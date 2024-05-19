@@ -10,6 +10,7 @@ import { db, auth, storage, firebase } from "../../firebase_config";
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import moment from "moment/moment";
 
 import * as ImagePicker from 'expo-image-picker';
 
@@ -189,6 +190,8 @@ export default function Registration3({ navigation }) {
             console.log("Image Uploaded");
         });
 
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+
         const account = await addDoc(usersCollection, {
             accountType: accountType,
             firstName: firstName,
@@ -200,7 +203,8 @@ export default function Registration3({ navigation }) {
             municipality: municipalitiesData.find(m => m.code === municipality)?.name || "", 
             barangay: barangaysData.find(b => b.code === barangay)?.name || "", 
             contactNo: contactNo,
-            associatedImage: finalImageName
+            associatedImage: finalImageName,
+            dateTime: fullDateTime
         });
         await AsyncStorage.clear();
         setImage(null);

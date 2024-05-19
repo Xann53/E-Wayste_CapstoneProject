@@ -5,7 +5,7 @@ import CheckBox from "../../components/CheckBox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import uuid from 'react-native-uuid';
-import moment from "moment";
+import moment from "moment/moment";
 
 import { db, auth, storage, firebase } from "../../firebase_config";
 import { collection, addDoc, getDocs } from 'firebase/firestore';
@@ -191,7 +191,7 @@ export default function Registration2({ navigation }) {
         const imageName = imageURI.substring(imageURI.lastIndexOf('/') + 1);
         const finalImageName = uuid.v1() + imageName;
         const imageDestination = 'userWorkID/' + finalImageName;
-        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD HH:mm:ss');
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
         
         let proceed = false;
         users.map((user) => {
