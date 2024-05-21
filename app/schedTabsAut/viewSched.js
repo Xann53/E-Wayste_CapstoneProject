@@ -118,7 +118,8 @@ export default function ViewSchedDetails({ navigation, route }) {
           lguCode: tempData.lguCode,
           lguID: tempData.lguID,
           members: tempData.members,
-          plateNo: tempData.plateNo
+          plateNo: tempData.plateNo,
+          condition: tempData.condition
         });
       }
     });

@@ -7,6 +7,7 @@ import { collection, addDoc, getDocs, query, updateDoc, doc, deleteDoc } from 'f
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { setUserId } from "firebase/analytics";
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 export default function Login({navigation}) {
   const usersCollection = collection(db, "users");
@@ -155,6 +156,8 @@ export default function Login({navigation}) {
           contactNo = user.contactNo;
           lguCode = user.lguCode;
 
+          await signInWithEmailAndPassword(auth, email,  password.trim());
+
           await AsyncStorage.clear();
           await AsyncStorage.setItem('userId', accountId);
           await AsyncStorage.setItem('userType', accountType);
@@ -183,7 +186,7 @@ export default function Login({navigation}) {
         break;
       } else if((users[i].username === usernameEmail.trim()) && (users[i].accountType === 'Pending') && (users[i].password === password.trim())) {
         setIdForEdit(users[i].id);
-        setEmailForEdit(users[i].username + '@gmail.com')
+        setEmailForEdit(users[i].username.toLowerCase() + '@gmail.com')
         setShowChangePass(true);
         showError = false;
         break;
@@ -202,6 +205,7 @@ export default function Login({navigation}) {
 
   async function ChangePassFunction() {
       if(newPass !== '' && confirmPass !== '') {
+        await createUserWithEmailAndPassword(auth, emailForEdit, newPass);
          if(newPass === confirmPass) {
             const userDoc = doc(db, 'users', idForEdit);
             await updateDoc(userDoc, {

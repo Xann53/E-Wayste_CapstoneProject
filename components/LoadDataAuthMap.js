@@ -24,7 +24,7 @@ export default function LoadData(userMun, reportRef, imageColRef, collectorLocRe
 
             setState({ coordinates: [] });
             newData.map((pin) => {
-                if(pin.municipality === userMun || (page === 'Resident' && pin.userId === userId)) {
+                if(/*pin.municipality === userMun || */(page === 'Resident' && pin.userId === userId)) {
                     let imageURL;
                     imageCol.map((url) => {
                         if(url.includes(pin.associatedImage)) {

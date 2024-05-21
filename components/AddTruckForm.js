@@ -179,7 +179,8 @@ export default function AddTruck({ close }) {
                     members: members,
                     lguCode: lguCode,
                     lguID: lguID,
-                    dateTime: fullDateTime
+                    dateTime: fullDateTime,
+                    condition: 'operational'
                 });
                 clear();
                 close();

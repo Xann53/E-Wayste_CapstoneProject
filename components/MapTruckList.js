@@ -526,38 +526,46 @@ export default function MTruckList({ open, collectorLocation, collectorLoc, user
                                             <View style={{display: 'flex', flexDirection: 'row', flex: 1}}>
                                                 {selected.driverID === userIDState ?
                                                     <>
-                                                        {selected.id !== activeByUser.id ?
-                                                            <>
-                                                                {shiftData.map((shift) => {
-                                                                    let proceed = false;
-                                                                    activeByOther.map((truck) => {
-                                                                        if(shift.truckId === truck.id) {
-                                                                            proceed = true;
-                                                                        }
-                                                                    })
-                                                                    if(proceed) {
-                                                                        shift.attendees.map((attendee) => {
-                                                                            if(attendee.id === userIDState) {
-                                                                                if(attendee.status === 'Present') {
-                                                                                    joined = true;
-                                                                                }
-                                                                            }
-                                                                        })
-                                                                    }
-                                                                })}
-                                                                <TouchableOpacity disabled={(pending.length !== 0 || joined) ? true : false} onPress={() => {setActiveByUser(selected); createLocData(selected.id); loadCurrentShift()}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 50, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                                    {(pending.length !== 0 || joined) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
-                                                                    <Text style={{color: 'white', fontWeight: 900}}>START COLLECTION</Text>
-                                                                </TouchableOpacity>
-                                                            </>
+                                                        {selected.condition === 'inoperational' ?
+                                                            <View style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 50, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#C9C9C9', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                <Text style={{color: 'grey', fontWeight: 900}}>OUT OF ORDER</Text>
+                                                            </View>
                                                             :
                                                             <>
-                                                                <TouchableOpacity onPress={() => {setActiveByUser([]); deleteLocData(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 5, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>END COLLECTION</Text>
-                                                                </TouchableOpacity>
-                                                                <TouchableOpacity onPress={() => {setOpenAttendance(true)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 5, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'orange', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
-                                                                    <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>VIEW ATTENDEES</Text>
-                                                                </TouchableOpacity>
+                                                                {selected.id !== activeByUser.id ?
+                                                                    <>
+                                                                        {shiftData.map((shift) => {
+                                                                            let proceed = false;
+                                                                            activeByOther.map((truck) => {
+                                                                                if(shift.truckId === truck.id) {
+                                                                                    proceed = true;
+                                                                                }
+                                                                            })
+                                                                            if(proceed) {
+                                                                                shift.attendees.map((attendee) => {
+                                                                                    if(attendee.id === userIDState) {
+                                                                                        if(attendee.status === 'Present') {
+                                                                                            joined = true;
+                                                                                        }
+                                                                                    }
+                                                                                })
+                                                                            }
+                                                                        })}
+                                                                        <TouchableOpacity disabled={(pending.length !== 0 || joined) ? true : false} onPress={() => {setActiveByUser(selected); createLocData(selected.id); loadCurrentShift()}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 50, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'rgba(126,185,73,1)', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                            {(pending.length !== 0 || joined) && <View style={{position: 'absolute', height: '200%', width: '200%', backgroundColor: '#C9C9C9', opacity: 0.4, zIndex: 5}} />}
+                                                                            <Text style={{color: 'white', fontWeight: 900}}>START COLLECTION</Text>
+                                                                        </TouchableOpacity>
+                                                                    </>
+                                                                    :
+                                                                    <>
+                                                                        <TouchableOpacity onPress={() => {setActiveByUser([]); deleteLocData(selected.id)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 5, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: '#DE462A', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                            <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>END COLLECTION</Text>
+                                                                        </TouchableOpacity>
+                                                                        <TouchableOpacity onPress={() => {setOpenAttendance(true)}} activeOpacity={0.7} style={{display: 'flex', flex: 1, padding: 5, marginTop: 10, marginHorizontal: 5, marginBottom: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 100, backgroundColor: 'orange', shadowColor: 'black', shadowOpacity: 1, elevation: 2, overflow: 'hidden'}}>
+                                                                            <Text style={{color: 'white', fontWeight: 900, fontSize: 12}}>VIEW ATTENDEES</Text>
+                                                                        </TouchableOpacity>
+                                                                    </>
+                                                                }
                                                             </>
                                                         }
                                                     </>

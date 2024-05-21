@@ -5,15 +5,19 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { db, auth, storage, firebase } from "../firebase_config";
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 
 export default function TrkManageList({ setViewTruckFunction }) {
     const [lguCode, setLguCode] = useState();
     const [users, setUsers] = useState();
     const [trucks, setTrucks] = useState();
+    const [allShift, setAllShift] = useState([]);
+    const [allActiveTask, setAllActiveTask] = useState([]);
 
     const userRef = firebase.firestore().collection("users");
     const trucksRef = firebase.firestore().collection("trucks");
+    const sihftRef = firebase.firestore().collection("collectorShift");
+    const activeRef = firebase.firestore().collection("activeTask");
 
     useEffect(() => {
         const getUserData = async() => {
@@ -29,13 +33,9 @@ export default function TrkManageList({ setViewTruckFunction }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setUsers(newData);
-
         };
-
         const unsubscribe = userRef.onSnapshot(onSnapshot);
-
         return () => {
             unsubscribe();
         };
@@ -47,17 +47,48 @@ export default function TrkManageList({ setViewTruckFunction }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setTrucks(newData);
-
         };
-
         const unsubscribe = trucksRef.onSnapshot(onSnapshot);
-
         return () => {
             unsubscribe();
         };
     }, []);
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllShift(newData);
+        };
+        const unsubscribe = sihftRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, [])
+
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllActiveTask(newData);
+        };
+        const unsubscribe = activeRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, [])
+
+    async function ChangeCondition(id, condition) {
+        const collectDoc = doc(db, 'trucks', id);
+        await updateDoc(collectDoc, {
+            condition: condition
+        });
+    }
 
     function BodyContent() {
         try {
@@ -71,6 +102,16 @@ export default function TrkManageList({ setViewTruckFunction }) {
             let temp = [];
             let ctr = 1;
             trucks.map((truck) => {
+                let isActive = false;
+                allActiveTask.map((task) => {
+                    allShift.map((shift) => {
+                        if(task.shiftId === shift.id) {
+                            if(shift.truckId === truck.id) {
+                                isActive = true;
+                            }
+                        }
+                    })
+                })
                 if(truck.lguCode === lguCode) {
                     temp.push(
                         <TouchableOpacity activeOpacity={0.7} onPress={() => {setViewTruckFunction(truck.id)}} style={{display: 'flex', flex: 1, width: '100%', backgroundColor: 'white', marginBottom: 10, padding: 10, borderRadius: 10, shadowColor: 'black', shadowOpacity: 1, elevation: 1, flexDirection: 'row', alignItems: 'center'}}>
@@ -96,6 +137,20 @@ export default function TrkManageList({ setViewTruckFunction }) {
                                         }
                                     })}
                                 , </Text>))}</Text>
+                                {truck.condition === 'inoperational' ?
+                                    <Text>
+                                        <Text style={{fontWeight: 700}}>Status:</Text> <Text style={{fontWeight: 900, color: /*'#DE462A'*/ 'red'}}>INOPERATIONAL</Text>
+                                    </Text>
+                                    :
+                                    <Text>
+                                        <Text style={{fontWeight: 700}}>Status:</Text> <Text style={{fontWeight: 900, color: isActive ? 'green' : 'orange'}}>{isActive ? 'ACTIVE' : 'INACTIVE'}</Text>
+                                    </Text>
+                                }
+                            </View>
+                            <View style={{display:'flex', flex: 0.4, height: '100%', alignItems: 'flex-end'}}>
+                                <TouchableOpacity onPress={() => {ChangeCondition(truck.id, (truck.condition === 'inoperational' ? 'operational' : 'inoperational'))}} style={{backgroundColor: truck.condition === 'inoperational' ? 'rgb(126,185,73)' : 'rgb(179,229,94)', padding: 4, borderRadius: 100}}>
+                                    <Ionicons name={truck.condition === 'inoperational' ? 'checkmark' : 'hammer'} size={18} color={'white'} />
+                                </TouchableOpacity>
                             </View>
                         </TouchableOpacity>
                     );
