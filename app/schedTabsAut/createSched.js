@@ -35,7 +35,7 @@ export default function AddSched({navigation}) {
     
     const [selectColRoute, setSelectColRoute] = useState(false);
     const [addNewLocation, setAddNewLocation] = useState(false);
-    let routeLongitude, routeLatitude, routeLocName;
+    let routeLongitude, routeLatitude, routeLocName, routeLocNameCheck = [], proceedAssign = false;
     const [route, setRoute] = useState({ coordinates: [] });
     const [routeCtr, setRouteCtr] = useState(0);
     const [latitude, setLatitude] = useState();
@@ -820,10 +820,19 @@ export default function AddSched({navigation}) {
                                 placeholder='Search'
                                 fetchDetails
                                 enablePoweredByContainer={false}
-                                onPress={(data, details = null) => {
+                                onPress={async(data, details = null) => {
                                     routeLatitude = details.geometry.location.lat;
                                     routeLongitude = details.geometry.location.lng;
                                     routeLocName = data.description;
+                                    routeLocNameCheck.push(...data.description.split(', '));
+
+                                    const municipality = await AsyncStorage.getItem('userMunicipality');
+
+                                    routeLocNameCheck.map((data) => {
+                                        if(data === municipality) {
+                                            proceedAssign = true;
+                                        }
+                                    })
                                 }}
                                 query={{
                                     key: GOOGLE_API_KEY,
@@ -873,7 +882,7 @@ export default function AddSched({navigation}) {
                                                 coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
                                             }));
                                             setRouteCtr(routeCtr + 1);
-                                        } else if(selectType === 'Assignment') {
+                                        } else if(selectType === 'Assignment' && proceedAssign) {
                                             setLocation(routeLocName);
                                             setLatitude(routeLatitude);
                                             setLongitude(routeLongitude);
@@ -881,18 +890,20 @@ export default function AddSched({navigation}) {
                                             setLocation(routeLocName);
                                             setLatitude(routeLatitude);
                                             setLongitude(routeLongitude);
+                                        } else {
+                                            alert('Invalid location. Location is outside your Municipality. Please choose another location.');
                                         }
                                     }
                                     setAddNewLocation(false);
                                 }}
                             >
                                 <View style={{backgroundColor: 'green', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
-                                    <Text>Add</Text>
+                                    <Text style={{color: 'white', fontWeight: 800}}>Add</Text>
                                 </View>
                             </TouchableOpacity>
                             <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(false)}}>
-                                <View style={{backgroundColor: 'red', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
-                                    <Text>Close</Text>
+                                <View style={{backgroundColor: '#DE462A', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
+                                    <Text style={{color: 'white', fontWeight: 800}}>Close</Text>
                                 </View>
                             </TouchableOpacity>
                         </View>

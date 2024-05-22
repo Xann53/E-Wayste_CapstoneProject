@@ -5,6 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parse } from 'date-fns';
+import moment from 'moment/moment';
 
 import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc, getDocs, query } from 'firebase/firestore';
@@ -148,29 +149,34 @@ export default function ReportCol({ navigation }) {
                 }
             })
             
-            temp.push(
-                <View style={[styles.contentButton, styles.contentGap]}>
-                        <View style={styles.contentButtonFront}>
-                            <View style={{width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10}}>
-                                <View style={styles.containerPfp}>
-                                    <Ionicons name='person-outline' style={styles.placeholderPfp} />
+            const currentMonth = parseInt(moment().utcOffset('+08:00').format('YYYY/MM/DD').split('/')[1]);
+            const prevMonth = ((currentMonth - 1) < 1 ? 12 : currentMonth - 1);
+
+            if(parseInt(post.dateTime.split('/')[1]) === currentMonth || parseInt(post.dateTime.split('/')[1]) === prevMonth) {
+                temp.push(
+                    <View style={[styles.contentButton, styles.contentGap]}>
+                            <View style={styles.contentButtonFront}>
+                                <View style={{width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10}}>
+                                    <View style={styles.containerPfp}>
+                                        <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                                    </View>
+                                    <Text style={{fontSize: 16, fontWeight: 800, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(post.userId === user.id) {return user.username;}})}</Text>
                                 </View>
-                                <Text style={{fontSize: 16, fontWeight: 800, color: 'rgba(113, 112, 108, 1)'}}>{users.map((user) => {if(post.userId === user.id) {return user.username;}})}</Text>
+                                <SafeAreaView style={{width: '100%', marginVertical: 5, paddingHorizontal: 20}}>
+                                <Text style={{ fontSize: 13 }}>
+                                    <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {post.dateTime} </Text>
+                                    <Text style={{ fontSize: 13 }}>
+                                    <Text style={{ fontWeight: 'bold' }}>Location:</Text> {post.location} </Text>
+                                    <Text style={{ fontSize: 13 }}>
+                                    <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
+                                    <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                                        <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
+                                    </View>
+                                </SafeAreaView>
                             </View>
-                            <SafeAreaView style={{width: '100%', marginVertical: 5, paddingHorizontal: 20}}>
-                            <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {post.dateTime} </Text>
-                                <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Location:</Text> {post.location} </Text>
-                                <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
-                                <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Image src={imageURL} style={{width: '100%', height: '100%', flex: 1, resizeMode: 'cover'}} />
-                                </View>
-                            </SafeAreaView>
-                        </View>
-                </View>
-            );
+                    </View>
+                );
+            }
         });
         
         return (

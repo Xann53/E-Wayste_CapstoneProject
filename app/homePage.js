@@ -569,66 +569,72 @@ export default function Newsfeed({ navigation }) {
                   imageURL = imageFeedCol.find((url) => url.includes(post.imageUrl));
                 }
                 
-                temp.push(
-                    <View key={`${post.id}-${postFeed.id}`} style={[styles.contentButton, styles.contentGap]}>
-                      <TouchableOpacity activeOpacity={0.5}>
-                        <View style={styles.contentButtonFront}>
-                          {/* User information */}
-                          <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
-                            <View style={styles.containerPfp}> 
-                              <Ionicons name='person-outline' style={styles.placeholderPfp} />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)', flexShrink: 1 }}>
-                                  {getUserInfo(post.userId)}
-                                </Text>
-                                <Text style={{ fontSize: 12, color: 'gray', marginLeft: 5 }}>
-                                    {formatTimestamp(post.dateTime) || formatTimestamp(postFeed.dateTime)}
+                const currentMonth = parseInt(moment().utcOffset('+08:00').format('YYYY/MM/DD').split('/')[1]);
+                const prevMonth = ((currentMonth - 1) < 1 ? 12 : currentMonth - 1);
+
+                if(parseInt(post.dateTime.split('/')[1]) === currentMonth || parseInt(post.dateTime.split('/')[1]) === prevMonth) {
+                    temp.push(
+                        <View key={`${post.id}-${postFeed.id}`} style={[styles.contentButton, styles.contentGap]}>
+                          <TouchableOpacity activeOpacity={0.5}>
+                            <View style={styles.contentButtonFront}>
+                              {/* User information */}
+                              <View style={{ width: '93%', flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 15 }}>
+                                <View style={styles.containerPfp}> 
+                                  <Ionicons name='person-outline' style={styles.placeholderPfp} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'rgba(113, 112, 108, 1)', flexShrink: 1 }}>
+                                      {getUserInfo(post.userId)}
                                     </Text>
+                                    <Text style={{ fontSize: 12, color: 'gray', marginLeft: 5 }}>
+                                        {formatTimestamp(post.dateTime) || formatTimestamp(postFeed.dateTime)}
+                                        </Text>
+                                  </View>
+                                </View>
+                              </View>
+                              <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
+                                <Text style={{ fontSize: 13, marginBottom: 5, marginStart: -1 }}>{post.description || post.postContent}</Text>
+                                {imageURL ? (
+                                  <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
+                                    <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
+                                  </View>
+                                ) : null}
+                              </SafeAreaView>
+                              <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                              <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id)}>
+                                <Ionicons
+                                    name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
+                                    style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
+                                />
+                                </TouchableOpacity>
+                                <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id)}>
+                                  <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
+                                </TouchableOpacity>
+                                <TouchableOpacity activeOpacity={0.5}>
+                                  <Ionicons
+                                    name="share-outline"
+                                    style={{ fontSize: 25 }}
+                                    onPress={() => handleSharePress(post.id || postFeed.id, post.description || post.postContent, imageURL)}
+                                  />
+                                </TouchableOpacity>
                               </View>
                             </View>
-                          </View>
-                          <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 20, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                            <Text style={{ fontSize: 13, marginBottom: 5, marginStart: -1 }}>{post.description || post.postContent}</Text>
-                            {imageURL ? (
-                              <View style={{ width: '100%', height: 250, backgroundColor: '#D6D6D8', marginVertical: 5, justifyContent: 'center', alignItems: 'center' }}>
-                                <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', flex: 1, resizeMode: 'cover' }} />
-                              </View>
-                            ) : null}
-                          </SafeAreaView>
-                          <View style={{ width: '90%', flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                          <TouchableOpacity activeOpacity={0.5} onPress={() => handleLike(post.id)}>
-                            <Ionicons
-                                name={likedPosts.includes(post.id) ? 'heart' : 'heart-outline'}
-                                style={{ fontSize: 25, color: likedPosts.includes(post.id) ? 'red' : 'black' }}
+                          </TouchableOpacity>
+                          {/* Comment overlay */}
+                          {isCommentOverlayVisible[post.id] && (
+                            <CommentOverlay
+                              comments={postComments[post.id] || []}
+                              commentText={commentText}
+                              setCommentText={setCommentText}
+                              handlePostComment={() => handlePostComment(post.id, commentText)}
                             />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5} onPress={() => handleToggleCommentOverlay(post.id)}>
-                              <Ionicons name='chatbubble-outline' style={{ fontSize: 25 }} />
-                            </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.5}>
-                              <Ionicons
-                                name="share-outline"
-                                style={{ fontSize: 25 }}
-                                onPress={() => handleSharePress(post.id || postFeed.id, post.description || post.postContent, imageURL)}
-                              />
-                            </TouchableOpacity>
-                          </View>
+                          )}
                         </View>
-                      </TouchableOpacity>
-                      {/* Comment overlay */}
-                      {isCommentOverlayVisible[post.id] && (
-                        <CommentOverlay
-                          comments={postComments[post.id] || []}
-                          commentText={commentText}
-                          setCommentText={setCommentText}
-                          handlePostComment={() => handlePostComment(post.id, commentText)}
-                        />
-                      )}
-                    </View>
-                  );                  
-                });
+                    );
+                }
+                                  
+            });
             return (
                 <View>
                      {temp.length > 0 ? temp : <Text>No data to display</Text>}

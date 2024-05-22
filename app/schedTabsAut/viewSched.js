@@ -33,7 +33,7 @@ export default function ViewSchedDetails({ navigation, route }) {
   const [truckList, setTruckList] = useState([]);
 
   const [selectColRoute, setSelectColRoute] = useState(false);
-  let routeLongitude, routeLatitude, routeLocName;
+  let routeLongitude, routeLatitude, routeLocName, routeLocNameCheck = [], proceedAssign = false;
   const [route2, setRoute2] = useState({ coordinates: [] });
   const [routeCtr, setRouteCtr] = useState(0);
   const schedRef = firebase.firestore().collection("schedule");
@@ -682,10 +682,19 @@ export default function ViewSchedDetails({ navigation, route }) {
                           placeholder='Search'
                           fetchDetails
                           enablePoweredByContainer={false}
-                          onPress={(data, details = null) => {
+                          onPress={async(data, details = null) => {
                               routeLatitude = details.geometry.location.lat;
                               routeLongitude = details.geometry.location.lng;
                               routeLocName = data.description;
+                              routeLocNameCheck.push(...data.description.split(', '));
+
+                              const municipality = await AsyncStorage.getItem('userMunicipality');
+
+                              routeLocNameCheck.map((data) => {
+                                  if(data === municipality) {
+                                      proceedAssign = true;
+                                  }
+                              })
                           }}
                           query={{
                               key: GOOGLE_API_KEY,
@@ -735,22 +744,24 @@ export default function ViewSchedDetails({ navigation, route }) {
                                           coordinates: [...prev.coordinates, {name: routeCtr, latitude: routeLatitude, longitude: routeLongitude, locationName: routeLocName}]
                                       }));
                                       setRouteCtr(routeCtr + 1);
-                                  } else if(updatedData.type === 'Assignment') {
+                                  } else if(updatedData.type === 'Assignment' && proceedAssign) {
                                       setUpdatedData((prev) => ({...prev, location: routeLocName, latitude: routeLatitude, longitude: routeLongitude}));
                                   } else if(updatedData.type === 'Event') {
                                       setUpdatedData((prev) => ({...prev, location: routeLocName, latitude: routeLatitude, longitude: routeLongitude}));
+                                  } else {
+                                    alert('Invalid location. Location is outside your Municipality. Please choose another location.');
                                   }
                               }
                               setAddNewLocation(false);
                           }}
                       >
                           <View style={{backgroundColor: 'green', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
-                              <Text>Add</Text>
+                              <Text style={{color: 'white', fontWeight: 800}}>Add</Text>
                           </View>
                       </TouchableOpacity>
                       <TouchableOpacity activeOpacity={0.5} onPress={() => {setAddNewLocation(false)}}>
-                          <View style={{backgroundColor: 'red', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
-                              <Text>Close</Text>
+                          <View style={{backgroundColor: '#DE462A', padding: 5, width: 70, alignItems: 'center', borderRadius: 5}}>
+                              <Text style={{color: 'white', fontWeight: 800}}>Close</Text>
                           </View>
                       </TouchableOpacity>
                   </View>
