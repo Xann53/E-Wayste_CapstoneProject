@@ -46,7 +46,9 @@ export default function AddCol({ show }) {
             const response = await fetch('https://psgc.cloud/api/provinces');
             const data = await response.json();
             setProvincesData(data);
-        } catch(e) {}
+        } catch (error) {
+            console.error('Error fetching provinces data:', error);
+        }
     };
 
     useEffect(() => {
@@ -63,14 +65,14 @@ export default function AddCol({ show }) {
                 name: municipalityData.name.includes("City") ? municipalityData.name.replace("City of", "").trim() + " City" : municipalityData.name
             }));
             setMunicipalitiesData(data);
-        } catch(e) {}
+        } catch (error) {
+            console.error('Error fetching municipalities data:', error);
+        }
     };
 
     useEffect(() => {
-        if (province !== '') {
+        if (province) {
             fetchMunicipalities(province);
-        } else {
-            setMunicipalitiesData([]);
         }
     }, [province]);
 
@@ -85,10 +87,8 @@ export default function AddCol({ show }) {
     };
 
     useEffect(() => {
-        if (municipality !== '') {
+        if (municipality) {
             fetchBarangays(municipality);
-        } else {
-            setBarangaysData([]);
         }
     }, [municipality]);
 
@@ -102,41 +102,20 @@ export default function AddCol({ show }) {
         return 0;
     });
 
-    let ProvinceOptions = [];
-    ProvinceOptions.push({
-        key: '',
-        value: 'Select option'
-    });
-    sortedProvincesData.map((provinceData) => {
-        ProvinceOptions.push({
-            key: provinceData.name,
-            value: provinceData.name
-        })
-    });
+    const ProvinceOptions = sortedProvincesData.map(provinceData => ({
+        key: provinceData.code,
+        value: provinceData.name
+    }));
 
-    let MunicipalityOptions = [];
-    MunicipalityOptions.push({
-        key: '',
-        value: 'Select option'
-    });
-    municipalitiesData.map((municipalityData) => {
-        MunicipalityOptions.push({
-            key: municipalityData.name,
-            value: municipalityData.name
-        })
-    });
+    const MunicipalityOptions = municipalitiesData.map(municipalityData => ({
+        key: municipalityData.code,
+        value: municipalityData.name
+    }));
 
-    const BarangayOptions = [];
-    BarangayOptions.push({
-        key: '',
-        value: 'Select option'
-    });
-    barangaysData.map((barangayData) => {
-        BarangayOptions.push({
-            key: barangayData.name,
-            value: barangayData.name
-        })
-    });
+    const BarangayOptions = barangaysData.map(barangayData => ({
+        key: barangayData.code,
+        value: barangayData.name
+    })); 
 
     const addColFunction = async() => {
         const lguCode = await AsyncStorage.getItem('userLguCode');
@@ -167,9 +146,9 @@ export default function AddCol({ show }) {
                     firstName: firstName,
                     lastName: lastName,
                     contactNo: contactNo,
-                    province: province,
-                    municipality: municipality,
-                    barangay: barangay,
+                    province: provincesData.find(p => p.code === province)?.name || "", 
+                    municipality: municipalitiesData.find(m => m.code === municipality)?.name || "", 
+                    barangay: barangaysData.find(b => b.code === barangay)?.name || "", 
                     accountType: 'Pending',
                     lguCode: lguCode,
                     username: username,
