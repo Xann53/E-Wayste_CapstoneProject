@@ -42,9 +42,11 @@ export default function AddSched({navigation}) {
     const [longitude, setLongitude] = useState();
     const [truckList, setTruckList] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
+    const [allSched, setAllSched] = useState([]);
 
     const [users, setUsers] = useState();
     const userRef = firebase.firestore().collection("users");
+    const schedRef = firebase.firestore().collection("schedule");
 
     useEffect(() => {
         const onSnapshot = snapshot => {
@@ -52,13 +54,23 @@ export default function AddSched({navigation}) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setUsers(newData);
-
         };
-
         const unsubscribe = userRef.onSnapshot(onSnapshot);
+        return () => {
+            unsubscribe();
+        };
+    }, []);
 
+    useEffect(() => {
+        const onSnapshot = snapshot => {
+            const newData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setAllSched(newData);
+        };
+        const unsubscribe = schedRef.onSnapshot(onSnapshot);
         return () => {
             unsubscribe();
         };
@@ -171,111 +183,123 @@ export default function AddSched({navigation}) {
 
         const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
 
-        let id = await AsyncStorage.getItem('userId');
-        // Generate a unique scheduleID
-        const scheduleID = Math.random().toString(36).substring(2, 10);
-        // Validate necessary values
-        if (((location !== "" && latitude !== "" && longitude !== "") || route.coordinates.length !== 0) && setAssignedTruck !== "" && description !== "" && selectedDate) {
-            if(selectType === 'Collection') {
-                await addDoc(schedCollection, {
-                    scheduleID: scheduleID, 
-                    type: selectType,
-                    description: description,
-                    // location: '',
-                    startTime: start,
-                    // title: '',
-                    userID: id,
-                    assignedTruck: assignedTruck,
-                    selectedDate: selectedDate,
-                    collectionRoute: route,
-                    // latitude: '',
-                    // longitude: '',
-                    dateTimeUploaded: fullDateTime,
-                    collectionRecord: [],
-                    visibility: 'enable'
-                });
-
-                let userFullName;
-                users.map((user) => {
-                    if(user.id.includes(id)) {
-                        userFullName = user.firstName + ' ' + user.lastName;
-                    }
-                });
-
-                const title = 'NEW COLLECTION SCHEDULE';
-                const body = userFullName + ' has made a new garbage collection schedule';
-                PushNotif(title, body, fullDateTime);
-
-            } else if(selectType === 'Assignment') {
-                await addDoc(schedCollection, {
-                    scheduleID: scheduleID, 
-                    type: selectType,
-                    description: description,
-                    location: location,
-                    startTime: start,
-                    // title: '',
-                    userID: id,
-                    assignedTruck: assignedTruck,
-                    selectedDate: selectedDate,
-                    // collectionRoute: { coordinates: [] },
-                    latitude: latitude,
-                    longitude: longitude,
-                    dateTimeUploaded: fullDateTime,
-                    collectionRecord: {
-                        status: 'uncollected',
-                        dateTimeCollected: ''
-                    }
-                });
-
-                let userFullName;
-                users.map((user) => {
-                    if(user.id.includes(id)) {
-                        userFullName = user.firstName + ' ' + user.lastName;
-                    }
-                });
-
-                const title = 'NEW ASSIGNMENT SCHEDULED';
-                const body = userFullName + ' has made a new garbage scheduled assignment';
-                PushNotif(title, body, fullDateTime);
-
-            } else if(selectType === 'Event') {
-                await addDoc(schedCollection, {
-                    scheduleID: scheduleID, 
-                    type: selectType,
-                    description: description,
-                    location: location,
-                    startTime: start,
-                    title: newTitle,
-                    userID: id,
-                    // assignedTruck: '',
-                    selectedDate: selectedDate,
-                    // collectionRoute: { coordinates: [] },
-                    latitude: latitude,
-                    longitude: longitude,
-                    dateTimeUploaded: fullDateTime
-                });
-
-                let userFullName;
-                users.map((user) => {
-                    if(user.id.includes(id)) {
-                        userFullName = user.firstName + ' ' + user.lastName;
-                    }
-                });
-
-                const title = 'NEW EVENT SCHEDULE';
-                const body = userFullName + ' has scheduled a new event';
-                PushNotif(title, body, fullDateTime);
-
+        let isOverlapping = false;
+        allSched.map((sched) => {
+            if(sched.selectedDate === selectedDate && sched.assignedTruck === assignedTruck) {
+                isOverlapping = true;
+                return;
             }
+        })
 
-            alert("Schedule successfully added!");
-            setMarkedDates((prevMarkedDates) => ({
-                ...prevMarkedDates,
-                [selectedDate]: { selected: true, selectedColor: getTypeColor(selectType) },
-            }));
+        let id = await AsyncStorage.getItem('userId');
+        
+        const scheduleID = Math.random().toString(36).substring(2, 10);
 
-            clearData();
-            navigation.navigate('mainSched');
+        if (((location !== "" && latitude !== "" && longitude !== "") || route.coordinates.length !== 0) && setAssignedTruck !== "" && description !== "" && selectedDate) {
+            if(!isOverlapping) {
+                if(selectType === 'Collection') {
+                    await addDoc(schedCollection, {
+                        scheduleID: scheduleID, 
+                        type: selectType,
+                        description: description,
+                        // location: '',
+                        startTime: start,
+                        // title: '',
+                        userID: id,
+                        assignedTruck: assignedTruck,
+                        selectedDate: selectedDate,
+                        collectionRoute: route,
+                        // latitude: '',
+                        // longitude: '',
+                        dateTimeUploaded: fullDateTime, 
+                        collectionRecord: [],
+                        visibility: 'enable'
+                    });
+
+                    let userFullName;
+                    users.map((user) => {
+                        if(user.id.includes(id)) {
+                            userFullName = user.firstName + ' ' + user.lastName;
+                        }
+                    });
+
+                    const title = 'NEW COLLECTION SCHEDULE';
+                    const body = userFullName + ' has made a new garbage collection schedule';
+                    PushNotif(title, body, fullDateTime);
+
+                } else if(selectType === 'Assignment') {
+                    await addDoc(schedCollection, {
+                        scheduleID: scheduleID, 
+                        type: selectType,
+                        description: description,
+                        location: location,
+                        startTime: start,
+                        // title: '',
+                        userID: id,
+                        assignedTruck: assignedTruck,
+                        selectedDate: selectedDate,
+                        // collectionRoute: { coordinates: [] },
+                        latitude: latitude,
+                        longitude: longitude,
+                        dateTimeUploaded: fullDateTime,
+                        collectionRecord: {
+                            status: 'uncollected',
+                            dateTimeCollected: ''
+                        }
+                    });
+
+                    let userFullName;
+                    users.map((user) => {
+                        if(user.id.includes(id)) {
+                            userFullName = user.firstName + ' ' + user.lastName;
+                        }
+                    });
+
+                    const title = 'NEW ASSIGNMENT SCHEDULED';
+                    const body = userFullName + ' has made a new garbage scheduled assignment';
+                    PushNotif(title, body, fullDateTime);
+
+                } else if(selectType === 'Event') {
+                    await addDoc(schedCollection, {
+                        scheduleID: scheduleID, 
+                        type: selectType,
+                        description: description,
+                        location: location,
+                        startTime: start,
+                        title: newTitle,
+                        userID: id,
+                        // assignedTruck: '',
+                        selectedDate: selectedDate,
+                        // collectionRoute: { coordinates: [] },
+                        latitude: latitude,
+                        longitude: longitude,
+                        dateTimeUploaded: fullDateTime
+                    });
+
+                    let userFullName;
+                    users.map((user) => {
+                        if(user.id.includes(id)) {
+                            userFullName = user.firstName + ' ' + user.lastName;
+                        }
+                    });
+
+                    const title = 'NEW EVENT SCHEDULE';
+                    const body = userFullName + ' has scheduled a new event';
+                    PushNotif(title, body, fullDateTime);
+
+                }
+
+                alert("Schedule successfully added!");
+                setMarkedDates((prevMarkedDates) => ({
+                    ...prevMarkedDates,
+                    [selectedDate]: { selected: true, selectedColor: getTypeColor(selectType) },
+                }));
+
+                clearData();
+                navigation.navigate('mainSched');
+            } else {
+                alert('Truck Driver has already been assigned to another task on the date.');
+            }
         } else {
             alert("Fill up necessary values");
         }

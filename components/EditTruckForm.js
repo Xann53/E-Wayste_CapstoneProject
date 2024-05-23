@@ -86,21 +86,34 @@ export default function EditTruck({ close, truckID, driverFName }) {
     try {
         let ctr = 1;
         DriverChoice[0] = { key: '', value: '[Select Driver]' };
-        for(let i = 0; i < users.length; i++) {
-            if(users[i].accountType === 'Garbage Collector' && users[i].lguCode === lguCode) {
+        for (let i = 0; i < users.length; i++) {
+            if (users[i].accountType === 'Garbage Collector' && users[i].lguCode === lguCode) {
                 let isRepeat = false;
-                members.collector.map((col) => {
-                    if(users[i].id === col.id) {
-                        isRepeat = true;
+                // Check if the user is already assigned as a driver for another truck
+                let isDriverOfAnotherTruck = false;
+                trucks.forEach((truck) => {
+                    if (users[i].id === truck.driverID) {
+                        isDriverOfAnotherTruck = true;
                     }
-                })
-                if(!isRepeat) {
-                    DriverChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName) };
-                    ctr++;
+                });
+                // If the user is not a driver of another truck, add them to the list of drivers
+                if (!isDriverOfAnotherTruck) {
+                    if (users[i].id !== driverID) {
+                        // Check if the user is already a collector for the current truck
+                        const isCollector = members.collector.find(col => col.id === users[i].id);
+                        if (!isCollector) {
+                            DriverChoice[ctr] = {
+                                key: users[i].id,
+                                value: users[i].firstName + ' ' + users[i].lastName,
+                            };
+                            ctr++;
+                        }
+                    }
                 }
             }
         }
-    } catch(e) {}
+    } catch (e) {}
+    
 
     try {
         let ctr = 1;
@@ -108,18 +121,29 @@ export default function EditTruck({ close, truckID, driverFName }) {
         for(let i = 0; i < users.length; i++) {
             if(users[i].accountType === 'Garbage Collector' && users[i].lguCode === lguCode && users[i].id !== driverID) {
                 let isRepeat = false;
-                members.collector.map((col) => {
-                    if(users[i].id === col.id) {
-                        isRepeat = true;
+                // Check if the user is already assigned as a driver for another truck
+                let isDriverOfAnotherTruck = false;
+                trucks.forEach((truck) => {
+                    if (users[i].id === truck.driverID) {
+                        isDriverOfAnotherTruck = true;
                     }
-                })
-                if(!isRepeat) {
-                    CollectorChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName) };
-                    ctr++;
+                });
+                if (!isDriverOfAnotherTruck) {
+                    // Check if the user is already selected as a collector for this truck
+                    members.collector.forEach((col) => {
+                        if (users[i].id === col.id) {
+                            isRepeat = true;
+                        }
+                    });
+                    if(!isRepeat) {
+                        CollectorChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName) };
+                        ctr++;
+                    }
                 }
             }
         }
     } catch(e) {}
+    
 
     const dismissKeyboard = async() => {
         Keyboard.dismiss();

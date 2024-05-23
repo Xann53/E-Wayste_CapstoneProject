@@ -79,6 +79,8 @@ export default function LoadMap({ mapRef, page }) {
     const [viewDistance, setViewDistance] = useState();
     const [doneNotif, setDoneNotif] = useState([]);
 
+    const [optimizedRoute, setOptimizedRoute] = useState();
+
     useEffect(() => {
         const getID = async() => {
             const temp = await AsyncStorage.getItem('userId');
@@ -399,7 +401,18 @@ export default function LoadMap({ mapRef, page }) {
             points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
         }
         return points;
-      };
+    };
+
+    const showOptRoute = async() => {
+        fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=START&destination=END&waypoints=optimize:true|${waypoints.join('|')}&key=${GOOGLE_API_KEY}`)
+        .then(response => response.json())
+        .then(data => {
+            const optimizedOrder = data.routes[0].waypoint_order;
+            // Reorder waypoints based on optimizedOrder
+            const optimizedWaypoints = optimizedOrder.map(index => waypoints[index]);
+            setOptimizedRoute(optimizedWaypoints);
+        });
+    }
 
     return (
         allShift.map((shift) => {
@@ -541,6 +554,7 @@ export default function LoadMap({ mapRef, page }) {
                         apikey={GOOGLE_API_KEY}
                         strokeWidth={4}
                         strokeColor='#6644ff'
+                        optimizeWaypoints={true}
                     />
                 }
 
@@ -602,6 +616,22 @@ export default function LoadMap({ mapRef, page }) {
                                     allActiveRoute.map((route) => {
                                         if(route.activeTaskId === task.id) {
                                             let temp = [];
+
+
+                                            // for(let i = 1; i < optimizedRoute.length; i++) {
+                                            //     temp.push(
+                                            //         <MapViewDirections
+                                            //             origin={{latitude: parseFloat(optimizedRoute[i-1].latitude), longitude: parseFloat(optimizedRoute[i-1].longitude)}}
+                                            //             destination={{latitude: parseFloat(optimizedRoute[i].latitude), longitude: parseFloat(optimizedRoute[i].longitude)}}
+                                            //             apikey={GOOGLE_API_KEY}
+                                            //             strokeWidth={3}
+                                            //             strokeColor='green'
+                                            //             key={i}
+                                            //         />
+                                            //     );
+                                            // };
+
+
                                             for(let i = 1; i < route.taskRoute.length; i++) {
                                                 temp.push(
                                                     <MapViewDirections
@@ -611,6 +641,7 @@ export default function LoadMap({ mapRef, page }) {
                                                         strokeWidth={3}
                                                         strokeColor='green'
                                                         key={i}
+                                                        optimizeWaypoints={true}
                                                     />
                                                 );
                                             };
@@ -724,6 +755,22 @@ export default function LoadMap({ mapRef, page }) {
                                     allActiveRoute.map((route) => {
                                         if(route.activeTaskId === task.id) {
                                             let temp = [];
+
+
+                                            // for(let i = 1; i < optimizedRoute.length; i++) {
+                                            //     temp.push(
+                                            //         <MapViewDirections
+                                            //             origin={{latitude: parseFloat(optimizedRoute[i-1].latitude), longitude: parseFloat(optimizedRoute[i-1].longitude)}}
+                                            //             destination={{latitude: parseFloat(optimizedRoute[i].latitude), longitude: parseFloat(optimizedRoute[i].longitude)}}
+                                            //             apikey={GOOGLE_API_KEY}
+                                            //             strokeWidth={3}
+                                            //             strokeColor='green'
+                                            //             key={i}
+                                            //         />
+                                            //     );
+                                            // };
+
+
                                             for(let i = 1; i < route.taskRoute.length; i++) {
                                                 temp.push(
                                                     <MapViewDirections
@@ -733,6 +780,7 @@ export default function LoadMap({ mapRef, page }) {
                                                         strokeWidth={3}
                                                         strokeColor='green'
                                                         key={i}
+                                                        optimizeWaypoints={true}
                                                     />
                                                 );
                                             };

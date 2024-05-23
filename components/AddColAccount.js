@@ -79,7 +79,9 @@ export default function AddCol({ show }) {
             const response = await fetch(`https://psgc.cloud/api/cities-municipalities/${municipalityCode}/barangays`);
             const data = await response.json();
             setBarangaysData(data);
-        } catch (e) {}
+        } catch (error) {
+            console.error('Error fetching barangays data:', error);
+        }
     };
 
     useEffect(() => {

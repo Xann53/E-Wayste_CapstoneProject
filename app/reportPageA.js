@@ -5,7 +5,6 @@ import { useIsFocused } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parse } from 'date-fns';
-import moment from 'moment/moment';
 
 import { db, auth, storage, firebase } from '../firebase_config';
 import { collection, addDoc,getDoc, doc,getDocs, query, where, onSnapshot} from 'firebase/firestore';
@@ -315,36 +314,30 @@ export default function ReportAut({navigation}) {
                 }          
             }
 
-            const currentMonth = parseInt(moment().utcOffset('+08:00').format('YYYY/MM/DD').split('/')[1]);
-            const prevMonth = ((currentMonth - 1) < 1 ? 12 : currentMonth - 1);
-
-            if(parseInt(post.dateTime.split('/')[1]) === currentMonth || parseInt(post.dateTime.split('/')[1]) === prevMonth) {
-                temp.push(
-                    <View style={[styles.contentButton, styles.contentGap]}>
-                        <View activeOpacity={0.5}>
-                            <View style={styles.contentButtonFront}>
-                                <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)'}}>
-                                <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Reported By:</Text> {users.map((user) => {if(post.userId === user.id) {return user.username;}})} </Text>
-                                <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {post.dateTime} </Text>
-                                <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Location</Text> {post.location} </Text>
-                                <Text style={{ fontSize: 13 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
-                                    <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5,  justifyContent: 'flex-start', alignItems: 'flex-start'}}>
-                                        {imageURL ? (
-                                                <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
-                                            ) : (
-                                                <Text>No Image Available</Text>
-                                            )}
-                                        </View>   
-                                </SafeAreaView>
-                            </View>
+            temp.push(
+                <View style={[styles.contentButton, styles.contentGap]}>
+                    <View activeOpacity={0.5}>
+                        <View style={styles.contentButtonFront}>
+                            <SafeAreaView style={{width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)'}}>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {post.dateTime} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Location</Text> {post.location} </Text>
+                            <Text style={{ fontSize: 13 }}>
+                            <Text style={{ fontWeight: 'bold' }}>Status of Report:</Text> {post.status} </Text>
+                                <View style={{ width: '100%', height: 250, backgroundColor: 'white', marginVertical: 5,  justifyContent: 'flex-start', alignItems: 'flex-start'}}>
+                                    {imageURL ? (
+                                            <Image source={{ uri: imageURL }} style={{ width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 10, justifyContent: 'flex-start' }} />
+                                        ) : (
+                                            <Text>No Image Available</Text>
+                                        )}
+                                    </View>   
+                            </SafeAreaView>
                         </View>
                     </View>
-                );
-            }
+                </View>
+            );
+            return null;
         });
         
         <ul>
@@ -392,8 +385,6 @@ export default function ReportAut({navigation}) {
                 <View style={{ width: 315, backgroundColor: 'rgb(230, 230, 230)', borderRadius: 5, overflow: 'hidden', shadowColor: "#000", shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 1, elevation: 5 }}>
                     <View style={{ width: '100%', backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', color: 'rgba(113, 112, 108, 1)' }}>
                         <SafeAreaView style={{ width: '100%', marginVertical: 10, paddingHorizontal: 22, paddingBottom: 5, borderBottomWidth: 1, borderColor: 'rgba(190, 190, 190, 1)' }}>
-                            <Text style={{ fontSize: 12 }}>
-                                <Text style={{ fontWeight: 'bold' }}>Reported By:</Text> {users.map((user) => { if (uploads.userId === user.id) { return user.username; } })} </Text>
                             <Text style={{ fontSize: 12 }}>
                                 <Text style={{ fontWeight: 'bold' }}>Date Reported:</Text> {uploads.dateTime} </Text>
                             <Text style={{ fontSize: 12 }}>

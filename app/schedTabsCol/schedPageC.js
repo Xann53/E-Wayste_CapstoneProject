@@ -292,20 +292,6 @@ export default function ScheduleCol({navigation}) {
                 onMonthChange={onMonthChange} 
             /> 
               </View> 
-              <View style={{width: 320, marginTop: 10, gap: 5}}> 
-                  <View style={{ flexDirection: 'row', gap: 10 }}> 
-                      <View style={{ width: 20, height: 20, backgroundColor: 'rgb(242, 190, 45)' }} /> 
-                      <Text>Schedule for Collection</Text> 
-                  </View> 
-                  <View style={{ flexDirection: 'row', gap: 10 }}> 
-                      <View style={{ width: 20, height: 20, backgroundColor: 'rgb(134, 231, 237)' }} /> 
-                      <Text>Events</Text> 
-                      </View>  
-                  <View style={{ flexDirection: 'row', gap: 10 }}>  
-                      <View style={{ width: 20, height: 20, backgroundColor: 'rgb(135, 255, 116)'}} />  
-                      <Text>Assignment</Text>   
-                  </View> 
-              </View> 
               {viewSched ? ViewSchedExtend(schedule) : ViewSchedButton(schedule)}  
           </SafeAreaView> 
       </ScrollView> 

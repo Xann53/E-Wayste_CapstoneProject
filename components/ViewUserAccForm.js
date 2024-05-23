@@ -113,6 +113,19 @@ export default function DisplayUserAcc({ accID, setViewAccFunction, setImageFunc
 
                         <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
                             <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
+                                <Text style={{fontSize: 14, fontWeight: 600}}>Barangay:</Text>
+                            </View>
+                            <View style={{flex: 2, justifyContent: 'center'}}>
+                                <TextInput
+                                    value={user.barangay}
+                                    editable={false}
+                                    style={{borderRadius: 5, fontSize: 13, fontWeight: '700', width: '100%', padding: 3, paddingHorizontal: 15, backgroundColor: 'rgb(189,227,124)', color: '#1D4F0F'}}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={{display: 'flex', width: '100%', flexDirection: 'row', gap: 10}}>
+                            <View style={{flex: 1, justifyContent: 'center', alignItems: 'flex-end'}}>
                                 <Text style={{fontSize: 14, fontWeight: 600}}>Username:</Text>
                             </View>
                             <View style={{flex: 2, justifyContent: 'center'}}>

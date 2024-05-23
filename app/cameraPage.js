@@ -183,15 +183,9 @@ export default function CameraOpen({ navigation: {goBack} }) {
             dateTimeCollected: ''
         });
 
-        let userFullName;
-        users.map((user) => {
-            if(user.id.includes(userID)) {
-                userFullName = user.firstName + ' ' + user.lastName;
-            }
-        });
 
         const title = 'NEW GARBAGE REPORT!';
-        const body = userFullName + ' has submitted a report for collection';
+        const body ='New report has submitted for collection';
         PushNotif(title, body, fullDateTime);
 
         setImage(null);

@@ -75,58 +75,69 @@ export default function AddTruck({ close }) {
     try {
         let ctr = 1;
         DriverChoice[0] = { key: '', value: '[Select Driver]' };
-        for(let i = 0; i < users.length; i++) {
-            if(users[i].accountType === 'Garbage Collector' && users[i].lguCode === lguCode) {
-                let isRepeat = false;
-                let isRepeatDriver = false;
-                members.collector.map((col) => {
-                    if(users[i].id === col.id) {
-                        isRepeat = true;
+        for (let i = 0; i < users.length; i++) {
+            if (users[i].accountType === 'Garbage Collector' && users[i].lguCode === lguCode) {
+                let isDriverOfAnotherTruck = false;
+                let isCollectorOfAnotherTruck = false;
+    
+                trucks.forEach((truck) => {
+                    if (users[i].id === truck.driverID) {
+                        isDriverOfAnotherTruck = true;
                     }
-                })
-                trucks.map((truck) => {
-                    if(users[i].id === truck.driverID) {
-                        isRepeatDriver = true;
+                    if (
+                        truck.members &&
+                        truck.members.collector.find((col) => col.id === users[i].id)
+                    ) {
+                        isCollectorOfAnotherTruck = true;
                     }
-                })
-                if(!isRepeat && !isRepeatDriver) {
-                    DriverChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName) };
-                    ctr++;
-                } else if(!isRepeat && isRepeatDriver) {
-                    DriverChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName + '\n\t(Driver of another truck)') };
+                });
+    
+                if (!isDriverOfAnotherTruck && !isCollectorOfAnotherTruck) {
+                    DriverChoice[ctr] = {
+                        key: users[i].id,
+                        value: users[i].firstName + ' ' + users[i].lastName,
+                    };
                     ctr++;
                 }
             }
         }
-    } catch(e) {}
-
+    } catch (e) {}
+    
     try {
         let ctr = 1;
         CollectorChoice[0] = { key: '', value: '[Select Collector]' };
-        for(let i = 0; i < users.length; i++) {
-            if(users[i].accountType === 'Garbage Collector' && users[i].lguCode === lguCode && users[i].id !== driverID) {
-                let isRepeat = false;
-                let isRepeatDriver = false;
-                members.collector.map((col) => {
-                    if(users[i].id === col.id) {
-                        isRepeat = true;
+        for (let i = 0; i < users.length; i++) {
+            if (
+                users[i].accountType === 'Garbage Collector' &&
+                users[i].lguCode === lguCode &&
+                users[i].id !== driverID
+            ) {
+                let isDriverOfAnotherTruck = false;
+                let isCollectorOfAnotherTruck = false;
+    
+                trucks.forEach((truck) => {
+                    if (users[i].id === truck.driverID) {
+                        isDriverOfAnotherTruck = true;
                     }
-                })
-                trucks.map((truck) => {
-                    if(users[i].id === truck.driverID) {
-                        isRepeatDriver = true;
+                    if (
+                        truck.members &&
+                        truck.members.collector.find((col) => col.id === users[i].id)
+                    ) {
+                        isCollectorOfAnotherTruck = true;
                     }
-                })
-                if(!isRepeat && !isRepeatDriver) {
-                    CollectorChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName) };
-                    ctr++;
-                } else if(!isRepeat && isRepeatDriver) {
-                    CollectorChoice[ctr] = { key: users[i].id, value: (users[i].firstName + ' ' + users[i].lastName + '\n\t(Driver of another truck)') };
+                });
+    
+                if (!isDriverOfAnotherTruck && !isCollectorOfAnotherTruck) {
+                    CollectorChoice[ctr] = {
+                        key: users[i].id,
+                        value: users[i].firstName + ' ' + users[i].lastName,
+                    };
                     ctr++;
                 }
             }
         }
-    } catch(e) {}
+    } catch (e) {}
+    
 
     const dismissKeyboard = async() => {
         Keyboard.dismiss();
@@ -179,8 +190,7 @@ export default function AddTruck({ close }) {
                     members: members,
                     lguCode: lguCode,
                     lguID: lguID,
-                    dateTime: fullDateTime,
-                    condition: 'operational'
+                    dateTime: fullDateTime
                 });
                 clear();
                 close();
