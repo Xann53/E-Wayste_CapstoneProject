@@ -152,10 +152,21 @@ export default function ViewSchedDetails({ navigation, route }) {
 
   const handleUpdate = async () => {
     try {
-      await updateDoc(doc(db, 'schedule', scheduleId), updatedData);
-      alert('Schedule successfully updated!');
-      scheduleId = route.params;
-      setIsEditable(false);
+      let isOverlapping = false;
+      schedRoute.map((sched) => {
+          if(sched.selectedDate === updatedData.selectedDate && sched.assignedTruck === updatedData.assignedTruck) {
+              isOverlapping = true;
+              return;
+          }
+      })
+      if(!isOverlapping) {
+        await updateDoc(doc(db, 'schedule', scheduleId), updatedData);
+        alert('Schedule successfully updated!');
+        scheduleId = route.params;
+        setIsEditable(false);
+      } else {
+        alert('Truck Driver has already been assigned to another task on the date.');
+      }
     } catch (error) {
       console.log('Error updating schedule:', error);
     }
