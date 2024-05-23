@@ -5,6 +5,7 @@ import LandingLayout from "./landingRoute";
 import UserLayout from "./userRoute";
 import CollectorLayout from "./collectorRoute";
 import AuthorityLayout from "./authorityRoute";
+import RepresentativeLayout from "./barangayRepRoute";
 
 const Stack = createNativeStackNavigator();
 
@@ -16,6 +17,7 @@ export default function Layout1() {
                 <Stack.Screen name='userRoute' component={UserLayout} options={{ headerShown: false }} />
                 <Stack.Screen name='collectorRoute' component={CollectorLayout} options={{ headerShown: false }} />
                 <Stack.Screen name='authorityRoute' component={AuthorityLayout} options={{ headerShown: false }} />
+                <Stack.Screen name='barangayRepRoute' component={RepresentativeLayout} options={{ headerShown: false }} />
             </Stack.Navigator>
         </NavigationContainer>
     );

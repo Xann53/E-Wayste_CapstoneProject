@@ -9,7 +9,7 @@ import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { set } from "react-native-reanimated";
 
 export default function ManagePageStat({ navData, NavFunction, setColNoFunction, setPendingNoFunction, setTruckNoFunction }) {
-    const [lguCode, setLguCode] = useState();
+    const [lguCode, setLguCode] = useState('');
 
     const [users, setUsers] = useState();
     const [pendingUser, setPendingUser] = useState();
@@ -120,6 +120,11 @@ export default function ManagePageStat({ navData, NavFunction, setColNoFunction,
                         ctr++;
                     }
                 });
+                pendingUser.map((pending) => {
+                    if(pending.accountType === 'Barangay Representative' && pending.lguCode === lguCode) {
+                        ctr++;
+                    }
+                })
             } catch(e) {}
             setPendingNo(ctr);
             setPendingNoFunction(ctr);

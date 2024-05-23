@@ -91,7 +91,7 @@ export default function SignUp({ navigation }) {
         if (accountType === "LGU / Waste Management Head") {
           navigation.navigate("registerAuthority");
         }
-        if (accountType === "Garbage Collector") {
+        if (accountType === "Barangay Representative") {
           navigation.navigate("registerCollector");
         }
       }
@@ -99,7 +99,7 @@ export default function SignUp({ navigation }) {
     const Type = [
         { key: "Residents / General Users", value: "Residents / General Users" },
         { key: "LGU / Waste Management Head", value: "LGU / Waste Management Head" },
-        // { key: "Garbage Collector", value: "Garbage Collector" },
+        { key: "Barangay Representative", value: "Barangay Representative" },
     ];
 
     return (

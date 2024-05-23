@@ -180,7 +180,7 @@ export default function Login({navigation}) {
 
     let showError = false;
     for(let i = 0; i < users.length; i++) {
-      if((users[i].email === usernameEmail.trim() || users[i].username === usernameEmail.trim()) && (users[i].accountType === 'Residents / General Users' || users[i].accountType === 'LGU / Waste Management Head')) {
+      if((users[i].email === usernameEmail.trim() || users[i].username === usernameEmail.trim()) && (users[i].accountType === 'Residents / General Users' || users[i].accountType === 'LGU / Waste Management Head' || users[i].accountType === 'Barangay Representative')) {
         loginUser();
         showError = false;
         break;
@@ -242,6 +242,9 @@ export default function Login({navigation}) {
     }
     if (navTo === 'Garbage Collector') {
       navigation.navigate('collectorRoute');
+    }
+    if (navTo === 'Barangay Representative') {
+      navigation.navigate('barangayRepRoute');
     }
   }
 

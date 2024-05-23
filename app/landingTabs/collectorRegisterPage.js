@@ -5,22 +5,21 @@ import CheckBox from "../../components/CheckBox";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import uuid from 'react-native-uuid';
-import moment from "moment/moment";
 
 import { db, auth, storage, firebase } from "../../firebase_config";
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import moment from "moment/moment";
 
 import * as ImagePicker from 'expo-image-picker';
 
-export default function Registration2({ navigation }) {
+export default function Registration3({ navigation }) {
     const [agree, setAgree] = useState(false);
     const [province, setProvince] = useState("");
     const [municipality, setMunicipality] = useState("");
     const [barangay, setBarangay] = useState("");
     const [contactNo, setContactNo] = useState("");
-    const [lguCode, setLguCode] = useState("");
     const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
     const [image, setImage] = useState(null);
     const [users, setUsers] = useState();
@@ -28,6 +27,7 @@ export default function Registration2({ navigation }) {
     const [provincesData, setProvincesData] = useState([]);
     const [municipalitiesData, setMunicipalitiesData] = useState([]);
     const [barangaysData, setBarangaysData] = useState([]);
+    const [lguCode, setLguCode] = useState("");
     
     const usersCollection = collection(db, "pendingUsers");
     const usersRef = firebase.firestore().collection("users");
@@ -115,13 +115,10 @@ export default function Registration2({ navigation }) {
                 id: doc.id,
                 ...doc.data(),
             }));
-
             setUsers(newData);
-
         };
 
         const unsubscribe = usersRef.onSnapshot(onSnapshot);
-
         return () => {
             unsubscribe();
         };
@@ -155,7 +152,7 @@ export default function Registration2({ navigation }) {
                 const email = await AsyncStorage.getItem('accountEmail');
                 const password = await AsyncStorage.getItem('accountPass');
                 AsyncStorage.flushGetRequests();
-    
+                
                 let proceed = true;
                 pendingUser.map((user) => {
                     if(email === user.email) {
@@ -167,13 +164,9 @@ export default function Registration2({ navigation }) {
                         proceed = false;
                     }
                 })
-    
+
                 if(proceed) {
                     createUser(accountType, firstName, lastName, username, email, password);
-                    clearForm();
-                    setProvince(""); 
-                    setMunicipality("");
-                    setBarangay("");
                 } else if(!proceed) {
                     alert('The email that you have entered is already in use.');
                 }
@@ -185,14 +178,21 @@ export default function Registration2({ navigation }) {
         }
     }
     
-    
     const createUser = async (accountType, firstName, lastName, username, email, password) => {
         const imageURI = image.uri;
         const imageName = imageURI.substring(imageURI.lastIndexOf('/') + 1);
         const finalImageName = uuid.v1() + imageName;
         const imageDestination = 'userWorkID/' + finalImageName;
-        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
         
+        const response = await fetch(imageURI);
+        const blob = await response.blob();
+        const imageRef = ref(storage, imageDestination);
+        uploadBytes(imageRef, blob).then(() => {
+            console.log("Image Uploaded");
+        });
+
+        const fullDateTime = moment().utcOffset('+08:00').format('YYYY/MM/DD hh:mm:ss a');
+
         let proceed = false;
         users.map((user) => {
             if(lguCode === user.lguCode) {
@@ -201,14 +201,7 @@ export default function Registration2({ navigation }) {
         })
 
         if(proceed) {
-            const response = await fetch(imageURI);
-            const blob = await response.blob();
-            const imageRef = ref(storage, imageDestination);
-            uploadBytes(imageRef, blob).then(() => {
-                console.log("Image Uploaded");
-            });
-
-            await addDoc(usersCollection, {
+            const account = await addDoc(usersCollection, {
                 accountType: accountType,
                 firstName: firstName,
                 lastName: lastName,
@@ -223,7 +216,6 @@ export default function Registration2({ navigation }) {
                 lguCode: lguCode,
                 dateTime: fullDateTime
             });
-
             await AsyncStorage.clear();
             setImage(null);
             clearForm();
@@ -238,13 +230,15 @@ export default function Registration2({ navigation }) {
         setMunicipality("");
         setBarangay("");
         setContactNo("");
+        setBarangay("");
+        setMunicipality("");
+        setProvince("");
         setLguCode("");
     }
 
     function Redirect() {
         alert('Account details submitted. Pending ID verification.');
         navigation.navigate('landing');
-        clearForm();
     }
 
     useEffect(() => {
@@ -267,14 +261,14 @@ export default function Registration2({ navigation }) {
 
     return (
         <ScrollView contentContainerStyle={{flexGrow:1}}>
-            <View style={styles.container}>
+            <View style={{flex: 1, flexDirection: 'column', backgroundColor: '#ffffff', justifyContent: 'flex-start', alignItems: 'center',}}>
                 <View style={{position: 'absolute',width: '100%', alignItems: 'flex-start', top: 30, left: 20}}>
                     <TouchableOpacity onPress={() => {clearForm(); navigation.navigate('register'); setImage(null)}}>
                         <Ionicons name='arrow-back' style={{fontSize: 40, color: 'rgba(16, 139, 0, 1)'}} />
                     </TouchableOpacity>
                 </View>
-                <View style={styles.containerFrm}>
-                    <Text style={styles.title}>CREATE ACCOUNT</Text>
+                <View style={{justifyContent: 'center', alignItems: 'center', marginTop: 100,}}>
+                    <Text style={{fontWeight: "900", fontSize: 30, bottom: 20, color: 'rgba(16, 139, 0, 1)',}}>CREATE ACCOUNT</Text>
                     <SelectList
                         setSelected={(value) => setProvince(value)} // Make sure this corresponds to the correct state setter
                         data={ProvinceOptions}
@@ -398,14 +392,14 @@ export default function Registration2({ navigation }) {
                         </View>
                     }
                 </View>
-                <View style={styles.containerChkbx}>
+                <View style={{flexDirection: "row", marginTop: 15, left: -12, width: 260,}}>
                     <CheckBox
                         onPress={() => setAgree(!agree)}
                         title="I agree to the Terms and Conditions and Privacy Policy"
                         isChecked={agree}
                     />
                 </View>
-                <View style={styles.containerBtn}>
+                <View style={{marginTop: 30, gap: 10, marginBottom: 30}}>
                     <View style={styles.button1}>
                         <TouchableOpacity style={{width: '100%', height: '100%'}} activeOpacity={0.5} onPress={() => { retrieveData() }}>
                             <Text style={styles.buttonTxt1}>
@@ -431,37 +425,8 @@ export default function Registration2({ navigation }) {
         </ScrollView>
     );
 }
-// Start Here
+
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        flexDirection: 'column',
-        backgroundColor: '#ffffff',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-    },
-    containerBtn: {
-        marginTop: 30,
-        gap: 10,
-        marginBottom: 30
-    },
-    containerFrm: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 100,
-    },
-    containerChkbx: {
-        flexDirection: "row",
-        marginTop: 15,
-        left: -12,
-        width: 260,
-    },
-    title: {
-        fontWeight: "900",
-        fontSize: 30,
-        bottom: 20,
-        color: 'rgba(16, 139, 0, 1)',
-    },
     input: {
         height: 40,
         width: 270,
